@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <unordered_map>
+#include <string>
 #include "Entities/Player.h"
 #include "Entities/Items.h"
 #include "Entities/Monster.h"
@@ -28,12 +29,16 @@ public:
 
     // 战斗结果
     enum FightResult { Fight_PlayerWin, Fight_PlayerDead };
-    FightResult fightAt(int x, int y);
+    FightResult fightAt(int x, int y, std::vector<std::string>& outLog);
 
     // 怪物管理
     void spawnMonster(int x, int y, const Monster& m);
     bool hasMonsterAt(int x, int y) const;
     Monster* monsterAt(int x, int y);
+
+    // 存档/读档（简单文本格式）
+    bool saveToFile(const std::string& path) const;
+    bool loadFromFile(const std::string& path);
 
 private:
     std::vector<int> m_map;

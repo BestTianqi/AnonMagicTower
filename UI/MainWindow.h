@@ -2,6 +2,7 @@
 
 #include <QWidget>
 #include "Game/Game.h"
+#include "ui_MainWindow.h"
 
 class MainWindow : public QWidget {
     Q_OBJECT
@@ -14,4 +15,5 @@ protected:
 
 private:
     Game* m_game;
+    Ui::MainWindow ui;
 };

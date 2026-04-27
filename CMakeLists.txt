@@ -9,12 +9,22 @@ set(CMAKE_AUTORCC ON)
 
 find_package(Qt6 COMPONENTS Widgets REQUIRED)
 
-add_executable(mota
+# Sources
+set(SRC
     main.cpp
     Game/Game.cpp
     Entities/Player.cpp
+    Entities/Items.cpp
+    Entities/Monster.cpp
+    Entities/NPC.cpp
+    UI/MapWidget.cpp
     UI/MainWindow.cpp
+    UI/MainWindow.ui
 )
 
-target_include_directories(mota PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+add_executable(mota ${SRC})
+
+# Ensure build directory is in include path so generated ui_*.h are found
+target_include_directories(mota PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
+
 target_link_libraries(mota PRIVATE Qt6::Widgets)

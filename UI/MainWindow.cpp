@@ -1,15 +1,64 @@
 #include "MainWindow.h"
+#include "MapWidget.h"
 #include <QPainter>
 #include <QKeyEvent>
 #include <QMessageBox>
 #include <QString>
+#include <QFileDialog>
+#include <QDir>
+#include <QLayout>
 
 MainWindow::MainWindow(Game* game, QWidget* parent)
     : QWidget(parent), m_game(game)
 {
+    ui.setupUi(this);
     setWindowTitle("魔塔 - 简易框架");
-    resize(640, 480);
+    resize(800, 600);
+
+    // replace placeholder with MapWidget instance
+    MapWidget* mapW = new MapWidget(m_game, this);
+    // find layout item and replace
+    QLayout* lay = ui.mapWidget->parentWidget()->layout();
+    if (lay) {
+        // find index of placeholder widget
+        for (int i = 0; i < lay->count(); ++i) {
+            QLayoutItem* it = lay->itemAt(i);
+            if (it && it->widget() == ui.mapWidget) {
+                // remove placeholder and insert mapW
+                QWidget* placeholder = ui.mapWidget;
+                lay->replaceWidget(placeholder, mapW);
+                placeholder->deleteLater();
+                break;
+            }
+        }
+    }
+
+    // ensure pointer in ui now points to mapW
+    ui.mapWidget = mapW;
+
+    connect(ui.saveButton, &QPushButton::clicked, this, [this]() {
+        QString file = QFileDialog::getSaveFileName(this, "保存存档", QDir::currentPath(), "保存文件 (*.txt)");
+        if (!file.isEmpty()) {
+            bool ok = m_game->saveToFile(file.toStdString());
+            QMessageBox::information(this, "保存", ok ? "保存成功" : "保存失败");
+        }
+    });
+
+    connect(ui.loadButton, &QPushButton::clicked, this, [this]() {
+        QString file = QFileDialog::getOpenFileName(this, "读取存档", QDir::currentPath(), "保存文件 (*.txt)");
+        if (!file.isEmpty()) {
+            bool ok = m_game->loadFromFile(file.toStdString());
+            if (ok) {
+                update();
+                QMessageBox::information(this, "读取", "读取成功");
+            } else {
+                QMessageBox::warning(this, "读取", "读取失败");
+            }
+        }
+    });
 }
+
+// 把原来的 paintEvent 改为在 ui.mapWidget 上绘制。如果 mapWidget 不方便，可保持原逻辑。下面仍使用 MainWindow::paintEvent 绘制整个窗口中的地图区域。
 
 void MainWindow::paintEvent(QPaintEvent* /* event */)
 {
@@ -54,17 +103,16 @@ void MainWindow::paintEvent(QPaintEvent* /* event */)
     QRect pr(m_game->player().x * tileSize, m_game->player().y * tileSize, tileSize, tileSize);
     painter.drawEllipse(pr);
 
-    // draw key counts on top-right
-    painter.setPen(Qt::black);
-    painter.setBrush(Qt::NoBrush);
-    int rx = width() - 150;
-    int ry = 10;
-    QString keyText = QString("R:%1  B:%2  G:%3")
+    // update side panel labels
+    ui.hpLabel->setText(QString("HP: %1").arg(m_game->player().hp));
+    ui.goldLabel->setText(QString("Gold: %1").arg(m_game->player().gold));
+    ui.keysLabel->setText(QString("Keys: R%1 B%2 G%3")
             .arg(m_game->player().KeyCount(KeyType::Red))
             .arg(m_game->player().KeyCount(KeyType::Blue))
-            .arg(m_game->player().KeyCount(KeyType::Green));
-    painter.drawText(rx, ry + 12, keyText);
+            .arg(m_game->player().KeyCount(KeyType::Green)));
 }
+
+// keyPressEvent 保持不变但调用 update() 来刷新 UI
 
 void MainWindow::keyPressEvent(QKeyEvent* event)
 {
@@ -94,10 +142,27 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
         update();
         QMessageBox::information(this, "拾取", "你获得了物品（示例：红钥匙）");
         break;
-    case Game::Move_Encounter:
+    case Game::Move_Encounter: {
         update();
-        QMessageBox::information(this, "遭遇", "遇到怪物！（战斗尚未实现）");
+        // perform fight in-game with log
+        int tx = nx, ty = ny;
+        std::vector<std::string> log;
+        auto fightRes = m_game->fightAt(tx, ty, log);
+
+        // compose log into QString
+        QString dlg;
+        for (const auto &s : log) {
+            dlg += QString::fromStdString(s) + "\n";
+        }
+
+        if (fightRes == Game::Fight_PlayerWin) {
+            update();
+            QMessageBox::information(this, "战斗", dlg);
+        } else {
+            QMessageBox::critical(this, "战斗", dlg);
+        }
         break;
+    }
     case Game::Move_StairsUp:
         update();
         QMessageBox::information(this, "楼梯", "上楼（示例响应）");
