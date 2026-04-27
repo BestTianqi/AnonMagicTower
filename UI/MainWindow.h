@@ -10,10 +10,12 @@ public:
     explicit MainWindow(Game* game, QWidget* parent = nullptr);
 
 protected:
-    void paintEvent(QPaintEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
 
 private:
+    void updateHUD();
+
     Game* m_game;
     Ui::MainWindow ui;
+    int m_floor = 1;
 };
