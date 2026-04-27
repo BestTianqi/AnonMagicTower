@@ -1,6 +1,8 @@
 #include "MainWindow.h"
 #include <QPainter>
 #include <QKeyEvent>
+#include <QMessageBox>
+#include <QString>
 
 MainWindow::MainWindow(Game* game, QWidget* parent)
     : QWidget(parent), m_game(game)
@@ -51,6 +53,17 @@ void MainWindow::paintEvent(QPaintEvent* /* event */)
     painter.setBrush(Qt::blue);
     QRect pr(m_game->player().x * tileSize, m_game->player().y * tileSize, tileSize, tileSize);
     painter.drawEllipse(pr);
+
+    // draw key counts on top-right
+    painter.setPen(Qt::black);
+    painter.setBrush(Qt::NoBrush);
+    int rx = width() - 150;
+    int ry = 10;
+    QString keyText = QString("R:%1  B:%2  G:%3")
+            .arg(m_game->player().KeyCount(KeyType::Red))
+            .arg(m_game->player().KeyCount(KeyType::Blue))
+            .arg(m_game->player().KeyCount(KeyType::Green));
+    painter.drawText(rx, ry + 12, keyText);
 }
 
 void MainWindow::keyPressEvent(QKeyEvent* event)
@@ -68,11 +81,30 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
 
     int nx = m_game->player().x + dx;
     int ny = m_game->player().y + dy;
-    if (nx < 0 || ny < 0 || nx >= m_game->width() || ny >= m_game->height()) return;
-    int tile = m_game->map()[ny * m_game->width() + nx];
-    if (tile == Tile_Wall) return; // can't walk
-
-    m_game->player().x = nx;
-    m_game->player().y = ny;
-    update();
+    auto result = m_game->tryMovePlayer(nx, ny);
+    switch (result) {
+    case Game::Move_Block:
+        // nothing
+        break;
+    case Game::Move_Ok:
+        // moved
+        update();
+        break;
+    case Game::Move_Pickup:
+        update();
+        QMessageBox::information(this, "拾取", "你获得了物品（示例：红钥匙）");
+        break;
+    case Game::Move_Encounter:
+        update();
+        QMessageBox::information(this, "遭遇", "遇到怪物！（战斗尚未实现）");
+        break;
+    case Game::Move_StairsUp:
+        update();
+        QMessageBox::information(this, "楼梯", "上楼（示例响应）");
+        break;
+    case Game::Move_StairsDown:
+        update();
+        QMessageBox::information(this, "楼梯", "下楼（示例响应）");
+        break;
+    }
 }
