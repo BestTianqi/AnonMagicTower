@@ -19,6 +19,7 @@ set(SRC
     Entities/Monster.cpp
     Entities/NPC.cpp
     UI/MapWidget.cpp
+    UI/MapEditor.cpp
     UI/MainWindow.cpp
     UI/MainWindow.ui
 )

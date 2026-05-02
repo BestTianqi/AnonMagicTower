@@ -1,5 +1,6 @@
 #include "MainWindow.h"
 #include "MapWidget.h"
+#include "MapEditor.h"
 #include "Entities/MonsterDB.h"
 #include <QPainter>
 #include <QKeyEvent>
@@ -40,6 +41,12 @@ MainWindow::MainWindow(Game* game, QWidget* parent)
                 QMessageBox::warning(this, QString::fromUtf8("读取"), QString::fromUtf8("读取失败"));
             }
         }
+    });
+
+    connect(ui.editorButton, &QPushButton::clicked, this, [this]() {
+        auto* editor = new MapEditor();
+        editor->setAttribute(Qt::WA_DeleteOnClose);
+        editor->show();
     });
 }
 

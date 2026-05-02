@@ -5,6 +5,8 @@
 #include <unordered_map>
 #include "Game/Game.h"
 
+constexpr int TILE_SIZE = 60;
+
 class MapWidget : public QWidget {
     Q_OBJECT
 public:
@@ -19,11 +21,8 @@ public:
 
 protected:
     void paintEvent(QPaintEvent* event) override;
-    void resizeEvent(QResizeEvent* event) override;
 
 private:
-    int tileSize() const;
-
     Game* m_game;
 
     std::unordered_map<int, QPixmap>        m_tilePix;

@@ -3,37 +3,55 @@
 #include <sstream>
 
 Game::Game()
-    : m_width(10), m_height(8)
+    : m_width(MAP_SIZE), m_height(MAP_SIZE)
 {
 }
 
 bool Game::loadDefaultMap()
 {
-    m_map.assign(m_width * m_height, Tile_Floor);
-    // create border walls
-    for (int x = 0; x < m_width; ++x) {
-        m_map[x] = Tile_Wall;
-        m_map[(m_height-1)*m_width + x] = Tile_Wall;
+    int w = m_width;
+    int h = m_height;
+    m_map.assign(w * h, Tile_Floor);
+
+    // 四周墙壁
+    for (int x = 0; x < w; ++x) {
+        m_map[x]               = Tile_Wall;               // 上边
+        m_map[(h-1)*w + x]     = Tile_Wall;               // 下边
     }
-    for (int y = 0; y < m_height; ++y) {
-        m_map[y*m_width] = Tile_Wall;
-        m_map[y*m_width + (m_width-1)] = Tile_Wall;
+    for (int y = 0; y < h; ++y) {
+        m_map[y*w]             = Tile_Wall;               // 左边
+        m_map[y*w + (w-1)]     = Tile_Wall;               // 右边
     }
 
-    // place some example tiles
-    m_map[1*m_width + 1] = Tile_StairsUp;
-    m_map[4*m_width + 5] = Tile_Item;
+    // 上楼点
+    m_map[1*w + 1] = Tile_StairsUp;
 
-    // place player in the map
-    m_player.x = 1;
-    m_player.y = 2;
-    m_player.hp = 100;
+    // 道具
+    m_map[2*w + 3] = Tile_Item;
+    m_map[3*w + 5] = Tile_Item;
+
+    // 怪物
+    spawnMonster(3, 2, Monster("要乐奈", 25, 8, 1, 3));
+    m_map[2*w + 3] = Tile_Monster;
+
+    spawnMonster(5, 3, Monster("若叶睦", 40, 12, 3, 6));
+    m_map[3*w + 5] = Tile_Monster;
+
+    spawnMonster(7, 4, Monster("丰川祥子", 50, 15, 5, 10));
+    m_map[4*w + 7] = Tile_Monster;
+
+    spawnMonster(10, 6, Monster("高松灯", 30, 18, 2, 8));
+    m_map[6*w + 10] = Tile_Monster;
+
+    // 道具 (覆盖之前怪物占用的位置需要重新设置)
+    m_map[5*w + 8] = Tile_Item;
+
+    // 玩家
+    m_player.x   = 1;
+    m_player.y   = 2;
+    m_player.hp  = 100;
     m_player.atk = 10;
     m_player.def = 5;
-
-    // spawn a monster at (3,2)
-    spawnMonster(3,2, Monster("Goblin", 20, 6, 1));
-    m_map[2*m_width + 3] = Tile_Monster;
 
     return true;
 }
@@ -52,19 +70,19 @@ void Game::setTile(int x, int y, int tile)
 
 void Game::spawnMonster(int x, int y, const Monster& m)
 {
-    int key = y*m_width + x;
+    int key = y * m_width + x;
     m_monsters.emplace(key, m);
 }
 
 bool Game::hasMonsterAt(int x, int y) const
 {
-    int key = y*m_width + x;
+    int key = y * m_width + x;
     return m_monsters.find(key) != m_monsters.end();
 }
 
 Monster* Game::monsterAt(int x, int y)
 {
-    int key = y*m_width + x;
+    int key = y * m_width + x;
     auto it = m_monsters.find(key);
     if (it == m_monsters.end()) return nullptr;
     return &it->second;
@@ -80,15 +98,13 @@ Game::MoveResult Game::tryMovePlayer(int nx, int ny)
     case Tile_Floor:
         m_player.x = nx; m_player.y = ny; return Move_Ok;
     case Tile_Monster:
-        if (hasMonsterAt(nx, ny)) {
-            // do not remove monster here; handle combat in UI
+        if (hasMonsterAt(nx, ny))
             return Move_Encounter;
-        } else {
-            // no monster object, treat as floor
-            m_player.x = nx; m_player.y = ny; return Move_Ok;
+        else {
+            m_player.x = nx; m_player.y = ny;
+            return Move_Ok;
         }
     case Tile_Item:
-        // pick up a key for demo
         m_player.AddKey(KeyType::Red, 1);
         setTile(nx, ny, Tile_Floor);
         m_player.x = nx; m_player.y = ny;
@@ -106,11 +122,10 @@ Game::FightResult Game::fightAt(int x, int y, std::vector<std::string>& outLog)
 {
     Monster* m = monsterAt(x, y);
     if (!m) {
-        outLog.push_back("没有怪物。");
-        return Fight_PlayerWin; // 没有怪物则视为胜利
+        outLog.push_back(std::string("没有怪物。"));
+        return Fight_PlayerWin;
     }
 
-    // 简易回合制：玩家先手
     while (true) {
         int dmgToMonster = m_player.atk;
         m->TakeDamage(dmgToMonster);
@@ -120,12 +135,10 @@ Game::FightResult Game::fightAt(int x, int y, std::vector<std::string>& outLog)
             outLog.push_back(ss.str());
         }
         if (m->IsDead()) {
-            // give gold
             int gold = m->GetGold();
             if (gold > 0) m_player.gold += gold;
 
-            // remove monster and mark tile as floor
-            int key = y*m_width + x;
+            int key = y * m_width + x;
             m_monsters.erase(key);
             setTile(x, y, Tile_Floor);
 
@@ -135,7 +148,6 @@ Game::FightResult Game::fightAt(int x, int y, std::vector<std::string>& outLog)
             return Fight_PlayerWin;
         }
 
-        // monster attack
         int dmgToPlayer = m->Attack() - m_player.def;
         if (dmgToPlayer < 0) dmgToPlayer = 0;
         m_player.hp -= dmgToPlayer;
@@ -145,7 +157,7 @@ Game::FightResult Game::fightAt(int x, int y, std::vector<std::string>& outLog)
             outLog.push_back(ss.str());
         }
         if (m_player.hp <= 0) {
-            outLog.push_back("你被击败了。\n");
+            outLog.push_back(std::string("你被击败了。\n"));
             return Fight_PlayerDead;
         }
     }
@@ -156,28 +168,29 @@ bool Game::saveToFile(const std::string& path) const
     std::ofstream ofs(path);
     if (!ofs) return false;
 
-    // header: width height
     ofs << m_width << " " << m_height << "\n";
 
-    // map
     for (int y = 0; y < m_height; ++y) {
         for (int x = 0; x < m_width; ++x) {
-            ofs << m_map[y*m_width + x] << (x+1==m_width? '\n' : ' ');
+            ofs << m_map[y*m_width + x] << (x+1 == m_width ? '\n' : ' ');
         }
     }
 
-    // player: x y hp atk def gold
-    ofs << m_player.x << " " << m_player.y << " " << m_player.hp << " " << m_player.atk << " " << m_player.def << " " << m_player.gold << "\n";
+    ofs << m_player.x << " " << m_player.y << " "
+        << m_player.hp << " " << m_player.atk << " "
+        << m_player.def << " " << m_player.gold << "\n";
 
-    // keys: count entries then pairs type count
-    ofs << m_player.KeyCount(KeyType::Red) << " " << m_player.KeyCount(KeyType::Blue) << " " << m_player.KeyCount(KeyType::Green) << "\n";
+    ofs << m_player.KeyCount(KeyType::Red) << " "
+        << m_player.KeyCount(KeyType::Blue) << " "
+        << m_player.KeyCount(KeyType::Green) << "\n";
 
-    // monsters: number then for each: key name hp atk def gold
     ofs << m_monsters.size() << "\n";
-    for (auto &kv : m_monsters) {
+    for (auto& kv : m_monsters) {
         int key = kv.first;
-        const Monster &m = kv.second;
-        ofs << key << " " << m.GetName() << " " << m.GetHP() << " " << m.GetATK() << " " << m.GetDEF() << " " << m.GetGold() << "\n";
+        const Monster& m = kv.second;
+        ofs << key << " " << m.GetName() << " "
+            << m.GetHP() << " " << m.GetATK() << " "
+            << m.GetDEF() << " " << m.GetGold() << "\n";
     }
 
     return true;
@@ -190,11 +203,9 @@ bool Game::loadFromFile(const std::string& path)
 
     m_monsters.clear();
 
-    // header
     ifs >> m_width >> m_height;
     m_map.assign(m_width * m_height, Tile_Floor);
 
-    // map
     for (int y = 0; y < m_height; ++y) {
         for (int x = 0; x < m_width; ++x) {
             int v; ifs >> v;
@@ -202,22 +213,15 @@ bool Game::loadFromFile(const std::string& path)
         }
     }
 
-    // player
-    ifs >> m_player.x >> m_player.y >> m_player.hp >> m_player.atk >> m_player.def >> m_player.gold;
+    ifs >> m_player.x >> m_player.y
+        >> m_player.hp >> m_player.atk
+        >> m_player.def >> m_player.gold;
 
-    // keys
-    int r,b,g; ifs >> r >> b >> g;
-    // reset keys by setting private map via AddKey
-    // clear existing keys first
-    // (we assume Player has no clear API; re-add by using UseKey to reduce -> instead set via AddKey after resetting container)
-    // 简单方式：create a temporary player keys reset by reassigning m_player's private map is not possible here; instead call AddKey r times
-    // To keep it simple, we will call AddKey which increments counts; before that we need to reset keys -> not exposed; workaround: use AddKey and hope it's zero initially after loadDefaultMap or new Game
-    // For correctness, we will rely on the fact loadFromFile is called on a fresh Game instance; so just AddKey values.
+    int r, b, g; ifs >> r >> b >> g;
     for (int i = 0; i < r; ++i) m_player.AddKey(KeyType::Red, 1);
     for (int i = 0; i < b; ++i) m_player.AddKey(KeyType::Blue, 1);
     for (int i = 0; i < g; ++i) m_player.AddKey(KeyType::Green, 1);
 
-    // monsters
     size_t mcount; ifs >> mcount;
     for (size_t i = 0; i < mcount; ++i) {
         int key; std::string name; int hp, atk, def, gold;

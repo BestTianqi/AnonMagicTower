@@ -9,34 +9,32 @@
 
 enum TileType { Tile_Empty = 0, Tile_Wall, Tile_Floor, Tile_StairsUp, Tile_StairsDown, Tile_Monster, Tile_Item };
 
+constexpr int MAP_SIZE = 15;
+
 class Game {
 public:
     Game();
     bool loadDefaultMap();
 
     const std::vector<int>& map() const { return m_map; }
-    int width() const { return m_width; }
+    int width()  const { return m_width; }
     int height() const { return m_height; }
 
     Player& player() { return m_player; }
 
-    // 新增：移动相关接口
     enum MoveResult { Move_Ok, Move_Block, Move_Pickup, Move_Encounter, Move_StairsUp, Move_StairsDown, Move_PlayerDead };
 
     int tileAt(int x, int y) const;
     void setTile(int x, int y, int tile);
     MoveResult tryMovePlayer(int nx, int ny);
 
-    // 战斗结果
     enum FightResult { Fight_PlayerWin, Fight_PlayerDead };
     FightResult fightAt(int x, int y, std::vector<std::string>& outLog);
 
-    // 怪物管理
     void spawnMonster(int x, int y, const Monster& m);
     bool hasMonsterAt(int x, int y) const;
     Monster* monsterAt(int x, int y);
 
-    // 存档/读档（简单文本格式）
     bool saveToFile(const std::string& path) const;
     bool loadFromFile(const std::string& path);
 
@@ -46,6 +44,5 @@ private:
     int m_height;
     Player m_player;
 
-    // key = y*width + x
     std::unordered_map<int, Monster> m_monsters;
 };

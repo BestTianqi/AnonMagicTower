@@ -22,19 +22,17 @@ public:
     QLabel*      defLabel    = nullptr;
     QLabel*      goldLabel   = nullptr;
     QLabel*      keysLabel   = nullptr;
-    QPushButton* saveButton  = nullptr;
-    QPushButton* loadButton  = nullptr;
+    QPushButton* saveButton   = nullptr;
+    QPushButton* loadButton   = nullptr;
+    QPushButton* editorButton = nullptr;
 
     void setupUi(QWidget* parent) {
         if (parent->objectName().isEmpty())
             parent->setObjectName("MainWindow");
         parent->resize(1920, 1080);
-        parent->setMinimumSize(960, 540);
+        parent->setMinimumSize(1280, 960);
 
-        mapWidget = new MapWidget(nullptr, parent);
-        mapWidget->setObjectName("mapWidget");
-        mapWidget->setMinimumSize(640, 480);
-
+        // === 侧边栏 ===
         sidePanel = new QWidget(parent);
         sidePanel->setObjectName("sidePanel");
         sidePanel->setFixedWidth(280);
@@ -51,7 +49,6 @@ public:
         QFont statFont;
         statFont.setPointSize(14);
 
-        // floor indicator
         floorLabel = new QLabel(sidePanel);
         floorLabel->setObjectName("floorLabel");
         floorLabel->setText(QString::fromUtf8("第 1 层"));
@@ -60,13 +57,11 @@ public:
         floorLabel->setStyleSheet("color: #c8a23b; padding: 6px;");
         vbox->addWidget(floorLabel);
 
-        // separator
         auto* sep1 = new QFrame(sidePanel);
         sep1->setFrameShape(QFrame::HLine);
         sep1->setStyleSheet("color: #555;");
         vbox->addWidget(sep1);
 
-        // HP
         hpLabel = new QLabel(sidePanel);
         hpLabel->setObjectName("hpLabel");
         hpLabel->setText(QString::fromUtf8("❤ 生命: 100"));
@@ -74,7 +69,6 @@ public:
         hpLabel->setStyleSheet("color: #e05555;");
         vbox->addWidget(hpLabel);
 
-        // ATK
         atkLabel = new QLabel(sidePanel);
         atkLabel->setObjectName("atkLabel");
         atkLabel->setText(QString::fromUtf8("⚔ 攻击: 10"));
@@ -82,7 +76,6 @@ public:
         atkLabel->setStyleSheet("color: #d4952a;");
         vbox->addWidget(atkLabel);
 
-        // DEF
         defLabel = new QLabel(sidePanel);
         defLabel->setObjectName("defLabel");
         defLabel->setText(QString::fromUtf8("🛡 防御: 5"));
@@ -90,13 +83,11 @@ public:
         defLabel->setStyleSheet("color: #3b8bc2;");
         vbox->addWidget(defLabel);
 
-        // separator
         auto* sep2 = new QFrame(sidePanel);
         sep2->setFrameShape(QFrame::HLine);
         sep2->setStyleSheet("color: #555;");
         vbox->addWidget(sep2);
 
-        // Gold
         goldLabel = new QLabel(sidePanel);
         goldLabel->setObjectName("goldLabel");
         goldLabel->setText(QString::fromUtf8("💰 金币: 0"));
@@ -104,7 +95,6 @@ public:
         goldLabel->setStyleSheet("color: #c8a23b;");
         vbox->addWidget(goldLabel);
 
-        // Keys
         keysLabel = new QLabel(sidePanel);
         keysLabel->setObjectName("keysLabel");
         keysLabel->setText(QString::fromUtf8("🔑 钥匙: 红0 蓝0 绿0"));
@@ -112,17 +102,14 @@ public:
         keysLabel->setStyleSheet("color: #aaccaa;");
         vbox->addWidget(keysLabel);
 
-        // spacer
         auto* spacer = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
         vbox->addSpacerItem(spacer);
 
-        // separator before buttons
         auto* sep3 = new QFrame(sidePanel);
         sep3->setFrameShape(QFrame::HLine);
         sep3->setStyleSheet("color: #555;");
         vbox->addWidget(sep3);
 
-        // Save button
         saveButton = new QPushButton(sidePanel);
         saveButton->setObjectName("saveButton");
         saveButton->setText(QString::fromUtf8("💾 保存"));
@@ -134,7 +121,6 @@ public:
         );
         vbox->addWidget(saveButton);
 
-        // Load button
         loadButton = new QPushButton(sidePanel);
         loadButton->setObjectName("loadButton");
         loadButton->setText(QString::fromUtf8("📂 读取"));
@@ -146,15 +132,32 @@ public:
         );
         vbox->addWidget(loadButton);
 
-        // main layout
+        editorButton = new QPushButton(sidePanel);
+        editorButton->setObjectName("editorButton");
+        editorButton->setText(QString::fromUtf8("🛠 地图编辑器"));
+        editorButton->setMinimumHeight(40);
+        editorButton->setStyleSheet(
+            "QPushButton { background: #5a4a3a; color: #d0d0d0; border: 1px solid #a85; "
+            "border-radius: 4px; padding: 8px; font-size: 14px; }"
+            "QPushButton:hover { background: #7a6a4a; }"
+        );
+        vbox->addWidget(editorButton);
+
+        // === 地图控件 900x900 ===
+        mapWidget = new MapWidget(nullptr, parent);
+        mapWidget->setObjectName("mapWidget");
+
+        // === 主布局：居中 地图 + 侧边栏 ===
         auto* hbox = new QHBoxLayout(parent);
         hbox->setObjectName("horizontalLayout");
         hbox->setContentsMargins(0, 0, 0, 0);
         hbox->setSpacing(0);
-        hbox->addWidget(mapWidget);
-        hbox->addWidget(sidePanel);
 
-        // dark background
+        hbox->addStretch();               // 左侧弹性空间
+        hbox->addWidget(mapWidget);       // 地图 900x900
+        hbox->addWidget(sidePanel);       // 侧边栏 280
+        hbox->addStretch();               // 右侧弹性空间
+
         parent->setStyleSheet("QWidget#MainWindow { background-color: #1a1a2e; }");
 
         QMetaObject::connectSlotsByName(parent);
