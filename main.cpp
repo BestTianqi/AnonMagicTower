@@ -10,6 +10,7 @@ int main(int argc, char *argv[])
     game.loadDefaultMap();
 
     MainWindow w(&game);
+    w.loadAssets();
     w.show();
 
     return app.exec();

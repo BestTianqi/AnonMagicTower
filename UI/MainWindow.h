@@ -8,6 +8,7 @@ class MainWindow : public QWidget {
     Q_OBJECT
 public:
     explicit MainWindow(Game* game, QWidget* parent = nullptr);
+    void loadAssets();
 
 protected:
     void keyPressEvent(QKeyEvent* event) override;

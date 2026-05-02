@@ -1,0 +1,31 @@
+<RCC>
+    <qresource prefix="/images">
+        <!-- 地砖 -->
+        <file>images/wall.png</file>
+        <file>images/floor.png</file>
+        <file>images/stairs_up.png</file>
+        <file>images/stairs_down.png</file>
+        <file>images/item.png</file>
+        <!-- 玩家 -->
+        <file>images/player.png</file>
+        <!-- 18种怪物 -->
+        <file>images/monster_01.png</file>
+        <file>images/monster_02.png</file>
+        <file>images/monster_03.png</file>
+        <file>images/monster_04.png</file>
+        <file>images/monster_05.png</file>
+        <file>images/monster_06.png</file>
+        <file>images/monster_07.png</file>
+        <file>images/monster_08.png</file>
+        <file>images/monster_09.png</file>
+        <file>images/monster_10.png</file>
+        <file>images/monster_11.png</file>
+        <file>images/monster_12.png</file>
+        <file>images/monster_13.png</file>
+        <file>images/monster_14.png</file>
+        <file>images/monster_15.png</file>
+        <file>images/monster_16.png</file>
+        <file>images/monster_17.png</file>
+        <file>images/monster_18.png</file>
+    </qresource>
+</RCC>

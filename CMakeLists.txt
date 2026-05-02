@@ -12,6 +12,7 @@ find_package(Qt6 COMPONENTS Widgets REQUIRED)
 # Sources
 set(SRC
     main.cpp
+    resources.qrc
     Game/Game.cpp
     Entities/Player.cpp
     Entities/Items.cpp

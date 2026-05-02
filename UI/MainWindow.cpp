@@ -1,5 +1,6 @@
 #include "MainWindow.h"
 #include "MapWidget.h"
+#include "Entities/MonsterDB.h"
 #include <QPainter>
 #include <QKeyEvent>
 #include <QMessageBox>
@@ -40,6 +41,30 @@ MainWindow::MainWindow(Game* game, QWidget* parent)
             }
         }
     });
+}
+
+void MainWindow::loadAssets()
+{
+    auto* mw = ui.mapWidget;
+
+    // 地砖
+    mw->loadTileImage(Tile_Wall,       ":/images/wall.png");
+    mw->loadTileImage(Tile_Floor,      ":/images/floor.png");
+    mw->loadTileImage(Tile_StairsUp,   ":/images/stairs_up.png");
+    mw->loadTileImage(Tile_StairsDown, ":/images/stairs_down.png");
+    mw->loadTileImage(Tile_Item,       ":/images/item.png");
+
+    // 玩家
+    mw->loadPlayerImage(":/images/player.png");
+
+    // 18种怪物
+    auto monsters = MonsterDB::all();
+    for (size_t i = 0; i < monsters.size(); ++i) {
+        QString path = QString(":/images/monster_%1.png").arg(i + 1, 2, 10, QChar('0'));
+        mw->loadMonsterImage(monsters[i].GetName(), path);
+    }
+
+    mw->update();
 }
 
 void MainWindow::updateHUD()
