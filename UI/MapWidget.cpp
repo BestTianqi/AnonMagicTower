@@ -64,7 +64,7 @@ void MapWidget::paintEvent(QPaintEvent*)
         }
     }
 
-    // 玩家
+    // 玩家1
     int px = m_game->player().x;
     int py = m_game->player().y;
     QRect pr(px * TILE_SIZE, py * TILE_SIZE, TILE_SIZE, TILE_SIZE);
