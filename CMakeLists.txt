@@ -20,6 +20,7 @@ set(SRC
     Entities/NPC.cpp
     UI/MapWidget.cpp
     UI/MapEditor.cpp
+    UI/MenuWindow.cpp
     UI/MainWindow.cpp
     UI/MainWindow.ui
 )

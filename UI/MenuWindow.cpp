@@ -1,0 +1,70 @@
+#include "MenuWindow.h"
+#include "MainWindow.h"
+#include "Game/Game.h"
+
+#include <QApplication>
+#include <QFileDialog>
+#include <QMessageBox>
+
+MenuWindow::MenuWindow(QWidget* parent)
+    : QWidget(parent)
+{
+    ui.setupUi(this);
+    setWindowTitle(QString::fromUtf8("魔塔"));
+
+    connect(ui.newGameBtn,  &QPushButton::clicked, this, &MenuWindow::onNewGame);
+    connect(ui.loadGameBtn, &QPushButton::clicked, this, &MenuWindow::onLoadGame);
+    connect(ui.settingsBtn, &QPushButton::clicked, this, &MenuWindow::onSettings);
+}
+
+void MenuWindow::onNewGame()
+{
+    auto* game = new Game();
+    game->loadDefaultMap();
+    enterGame(game);
+}
+
+void MenuWindow::onLoadGame()
+{
+    QString file = QFileDialog::getOpenFileName(this,
+        QString::fromUtf8("读取存档"),
+        QString(),
+        QString::fromUtf8("保存文件 (*.txt)"));
+    if (file.isEmpty()) return;
+
+    auto* game = new Game();
+    if (!game->loadFromFile(file.toStdString())) {
+        QMessageBox::warning(this, QString::fromUtf8("读取失败"),
+            QString::fromUtf8("无法读取存档文件。"));
+        delete game;
+        return;
+    }
+    enterGame(game);
+}
+
+void MenuWindow::onSettings()
+{
+    QMessageBox::information(this, QString::fromUtf8("设置"),
+        QString::fromUtf8("设置功能开发中…\n\n"
+            "操作说明：\n"
+            "方向键：移动\n"
+            "Shift+点击：地图编辑器中放置玩家\n"
+            "右键：地图编辑器中擦除"));
+}
+
+void MenuWindow::enterGame(Game* game)
+{
+    m_gameWindow = new MainWindow(game);
+    m_gameWindow->loadAssets();
+    m_gameWindow->show();
+
+    // 游戏窗口关闭时回到菜单
+    connect(m_gameWindow, &QWidget::destroyed, this, [this]() {
+        m_gameWindow = nullptr;
+    });
+    // 或者直接检测关闭事件来重新显示菜单
+    m_gameWindow->setAttribute(Qt::WA_DeleteOnClose);
+    connect(m_gameWindow, &QObject::destroyed, this, &QWidget::show);
+
+    hide();
+}
