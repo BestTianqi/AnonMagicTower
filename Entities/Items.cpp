@@ -1,5 +1,6 @@
 #include "Items.h"
 #include "Player.h"
+#include <QString>
 
 // Item
 Item::Item(const std::string& name, int value)
@@ -91,4 +92,62 @@ int Key::valueForType(KeyType t) {
     case KeyType::Green: return 3;
     default: return 0;
     }
+}
+
+PenguinDoll::PenguinDoll()
+    : Item(QString::fromUtf8("企鹅玩偶").toStdString(), 0) {}
+
+void PenguinDoll::Apply(Player& player) const {
+    player.hasPenguinDoll = true;
+}
+
+MatchaParfait::MatchaParfait()
+    : Item(QString::fromUtf8("抹茶芭菲").toStdString(), 0) {}
+
+void MatchaParfait::Apply(Player& player) const {
+    player.hasMatchaParfait = true;
+}
+
+AnonGlasses::AnonGlasses()
+    : Item(QString::fromUtf8("匿名眼镜").toStdString(), 0) {}
+
+void AnonGlasses::Apply(Player& player) const {
+    player.hasGlasses = true;
+}
+
+TempShield::TempShield()
+    : Item(QString::fromUtf8("临时护盾").toStdString(), 0) {}
+
+void TempShield::Apply(Player& player) const {
+    player.def += 10;
+}
+
+StairUpper::StairUpper()
+    : Item(QString::fromUtf8("上楼器").toStdString(), 0) {}
+
+void StairUpper::Apply(Player&) const {
+    // 效果由 UI 层处理（切换楼层）
+}
+
+StairLower::StairLower()
+    : Item(QString::fromUtf8("下楼器").toStdString(), 0) {}
+
+void StairLower::Apply(Player&) const {
+    // 效果由 UI 层处理（切换楼层）
+}
+
+WallBreaker::WallBreaker()
+    : Item(QString::fromUtf8("破墙锤").toStdString(), 0) {}
+
+void WallBreaker::Apply(Player&) const {
+    // 效果由 UI 层处理（摧毁相邻墙壁）
+}
+
+MagicKey::MagicKey()
+    : Item(QString::fromUtf8("万能钥匙").toStdString(), 0) {}
+
+void MagicKey::Apply(Player& player) const {
+    player.AddKey(KeyType::Red, 1);
+    player.AddKey(KeyType::Blue, 1);
+    player.AddKey(KeyType::Green, 1);
 }

@@ -26,7 +26,15 @@ enum class ItemType {
     Weapon,
     Armor,
     Treasure,
-    Key
+    Key,
+    PenguinDoll,
+    MatchaParfait,
+    TempShield,
+    StairUpper,
+    StairLower,
+    WallBreaker,
+    MagicKey,
+    AnonGlasses
 };
 
 class Potion : public Item {
@@ -65,7 +73,6 @@ private:
     int m_gold;
 };
 
-// Key 保留声明（之前已存在）
 enum class KeyType {
     Red,
     Blue,
@@ -91,4 +98,51 @@ private:
     static int valueForType(KeyType t);
 };
 
+class PenguinDoll : public Item {
+public:
+    PenguinDoll();
+    void Apply(Player& player) const override;
+};
 
+class MatchaParfait : public Item {
+public:
+    MatchaParfait();
+    void Apply(Player& player) const override;
+};
+
+class TempShield : public Item {
+public:
+    TempShield();
+    void Apply(Player& player) const override;
+private:
+};
+
+class StairUpper : public Item {
+public:
+    StairUpper();
+    void Apply(Player& player) const override;
+};
+
+class StairLower : public Item {
+public:
+    StairLower();
+    void Apply(Player& player) const override;
+};
+
+class WallBreaker : public Item {
+public:
+    WallBreaker();
+    void Apply(Player& player) const override;
+};
+
+class MagicKey : public Item {
+public:
+    MagicKey();
+    void Apply(Player& player) const override;
+};
+
+class AnonGlasses : public Item {
+public:
+    AnonGlasses();
+    void Apply(Player& player) const override;
+};

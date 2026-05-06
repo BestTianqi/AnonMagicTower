@@ -40,3 +40,24 @@ const std::vector<Item>& Player::Inventory() const
 {
     return m_items;
 }
+
+int Player::InventoryCount() const
+{
+    return (int)m_items.size();
+}
+
+bool Player::UseItem(int index)
+{
+    if (index < 0 || index >= (int)m_items.size())
+        return false;
+    m_items[index].Apply(*this);
+    m_items.erase(m_items.begin() + index);
+    return true;
+}
+
+const Item* Player::GetItem(int index) const
+{
+    if (index < 0 || index >= (int)m_items.size())
+        return nullptr;
+    return &m_items[index];
+}
