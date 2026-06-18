@@ -4,15 +4,14 @@ set(CMAKE_CXX_STANDARD 17)
 
 # Enable Qt automoc/autouic/autorcc
 set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTOUIC ON)
-set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC OFF)
+set(CMAKE_AUTORCC OFF)
 
 find_package(Qt6 COMPONENTS Widgets REQUIRED)
 
 # Sources
 set(SRC
     main.cpp
-    resources.qrc
     Game/Game.cpp
     Entities/Player.cpp
     Entities/Items.cpp
@@ -22,7 +21,6 @@ set(SRC
     UI/MapEditor.cpp
     UI/MenuWindow.cpp
     UI/MainWindow.cpp
-    UI/MainWindow.ui
 )
 
 add_executable(mota ${SRC})

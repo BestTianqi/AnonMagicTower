@@ -19,6 +19,7 @@ public:
     std::string Interact(Player& player);
 
     bool HasGivenReward() const { return m_given; }
+    void SetGiven(bool v) { m_given = v; }
 
 private:
     std::string m_name;

@@ -15,8 +15,10 @@ protected:
 
 private:
     void updateHUD();
+    void showInventory();
+    void showNPCDialog(int x, int y);
+    QString getItemDescription(const Item* item) const;
 
     Game* m_game;
     Ui::MainWindow ui;
-    int m_floor = 1;
 };

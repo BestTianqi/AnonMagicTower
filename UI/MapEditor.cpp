@@ -348,7 +348,7 @@ void MapEditor::onSave()
             auto& t = tiles[y * 15 + x];
             if (t.type == Tile_Monster && !t.monsterName.empty()) {
                 Monster m = MonsterDB::get(t.monsterName);
-                out << x << " " << y << " " << m.GetName() << " "
+                out << x << " " << y << " " << QString::fromStdString(m.GetName()) << " "
                     << m.GetHP() << " " << m.GetATK() << " "
                     << m.GetDEF() << " " << m.GetGold() << "\n";
             }
@@ -393,9 +393,9 @@ void MapEditor::onLoad()
     in >> monCount;
     for (int i = 0; i < monCount; ++i) {
         int mx, my, mhp, matk, mdef, mgold;
-        std::string mname;
+        QString mname;
         in >> mx >> my >> mname >> mhp >> matk >> mdef >> mgold;
-        tiles[my * 15 + mx].monsterName = mname;
+        tiles[my * 15 + mx].monsterName = mname.toStdString();
     }
 
     m_edit->setTiles(tiles);

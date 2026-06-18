@@ -8,9 +8,13 @@
 #include <QString>
 #include <QFileDialog>
 #include <QDir>
+#include <QDialog>
+#include <QVBoxLayout>
+#include <QListWidget>
+#include <QDialogButtonBox>
 
 MainWindow::MainWindow(Game* game, QWidget* parent)
-    : QWidget(parent), m_game(game), m_floor(1)
+    : QWidget(parent), m_game(game)
 {
     ui.setupUi(this);
     setWindowTitle(QString::fromUtf8("魔塔"));
@@ -33,7 +37,6 @@ MainWindow::MainWindow(Game* game, QWidget* parent)
         if (!file.isEmpty()) {
             bool ok = m_game->loadFromFile(file.toStdString());
             if (ok) {
-                m_floor = 1;
                 ui.mapWidget->update();
                 updateHUD();
                 QMessageBox::information(this, QString::fromUtf8("读取"), QString::fromUtf8("读取成功"));
@@ -48,23 +51,27 @@ MainWindow::MainWindow(Game* game, QWidget* parent)
         editor->setAttribute(Qt::WA_DeleteOnClose);
         editor->show();
     });
+
+    connect(ui.invButton, &QPushButton::clicked, this, &MainWindow::showInventory);
 }
 
 void MainWindow::loadAssets()
 {
     auto* mw = ui.mapWidget;
 
-    // 地砖
+    // 尝试加载真实图片（如果不存在则使用占位图）
     mw->loadTileImage(Tile_Wall,       ":/images/wall.png");
     mw->loadTileImage(Tile_Floor,      ":/images/floor.png");
     mw->loadTileImage(Tile_StairsUp,   ":/images/stairs_up.png");
     mw->loadTileImage(Tile_StairsDown, ":/images/stairs_down.png");
     mw->loadTileImage(Tile_Item,       ":/images/item.png");
+    mw->loadTileImage(Tile_DoorRed,    ":/images/door_red.png");
+    mw->loadTileImage(Tile_DoorBlue,   ":/images/door_blue.png");
+    mw->loadTileImage(Tile_DoorGreen,  ":/images/door_green.png");
+    mw->loadTileImage(Tile_NPC,        ":/images/npc.png");
 
-    // 玩家
     mw->loadPlayerImage(":/images/player.png");
 
-    // 18种怪物
     auto monsters = MonsterDB::all();
     for (size_t i = 0; i < monsters.size(); ++i) {
         QString path = QString(":/images/monster_%1.png").arg(i + 1, 2, 10, QChar('0'));
@@ -74,9 +81,154 @@ void MainWindow::loadAssets()
     mw->update();
 }
 
+QString MainWindow::getItemDescription(const Item* item) const
+{
+    if (!item) return QString::fromUtf8("(空)");
+
+    QString name = QString::fromStdString(item->GetName());
+    int val = item->GetValue();
+
+    if (name == "Potion")
+        return QString::fromUtf8("恢复 %1 点生命值").arg(val);
+    if (name == "Weapon")
+        return QString::fromUtf8("攻击力 +%1").arg(val);
+    if (name == "Armor")
+        return QString::fromUtf8("防御力 +%1").arg(val);
+    if (name == "Treasure")
+        return QString::fromUtf8("获得 %1 金币").arg(val);
+    if (name == "Red Key")
+        return QString::fromUtf8("红钥匙 ×1");
+    if (name == "Blue Key")
+        return QString::fromUtf8("蓝钥匙 ×1");
+    if (name == "Green Key")
+        return QString::fromUtf8("绿钥匙 ×1");
+    if (name == QString::fromUtf8("万能钥匙"))
+        return QString::fromUtf8("红蓝绿钥匙各 +1");
+    if (name == QString::fromUtf8("匿名眼镜"))
+        return QString::fromUtf8("可以查看怪物属性");
+    if (name == QString::fromUtf8("破墙锤"))
+        return QString::fromUtf8("下一次移动可以摧毁墙壁");
+    if (name == QString::fromUtf8("上楼器"))
+        return QString::fromUtf8("可以从当前位置上楼");
+    if (name == QString::fromUtf8("下楼器"))
+        return QString::fromUtf8("可以从当前位置下楼");
+    if (name == QString::fromUtf8("临时护盾"))
+        return QString::fromUtf8("防御力 +10");
+    if (name == QString::fromUtf8("企鹅玩偶"))
+        return QString::fromUtf8("神秘的企鹅玩偶");
+    if (name == QString::fromUtf8("抹茶芭菲"))
+        return QString::fromUtf8("美味的抹茶芭菲");
+
+    return name;
+}
+
+void MainWindow::showInventory()
+{
+    auto& inv = m_game->player().Inventory();
+    int count = m_game->player().InventoryCount();
+
+    QDialog dlg(this);
+    dlg.setWindowTitle(QString::fromUtf8("背包"));
+    dlg.resize(400, 400);
+    dlg.setStyleSheet("QDialog { background-color: #1a1a2e; color: #d0d0d0; }");
+
+    auto* layout = new QVBoxLayout(&dlg);
+
+    auto* label = new QLabel(QString::fromUtf8("背包 (共 %1 件物品)").arg(count), &dlg);
+    label->setStyleSheet("color: #c8a23b; font-size: 16px; font-weight: bold; padding: 8px;");
+    layout->addWidget(label);
+
+    auto* list = new QListWidget(&dlg);
+    list->setStyleSheet(
+        "QListWidget { background: #0d0d1a; color: #d0d0d0; border: 1px solid #555; "
+        "font-size: 14px; }"
+        "QListWidget::item { padding: 6px; border-bottom: 1px solid #333; }"
+        "QListWidget::item:selected { background: #3a3a6a; }"
+        "QListWidget::item:hover { background: #2a2a4a; }"
+    );
+
+    if (count == 0) {
+        auto* emptyItem = new QListWidgetItem(QString::fromUtf8("背包是空的"), list);
+        emptyItem->setFlags(emptyItem->flags() & ~Qt::ItemIsSelectable);
+        emptyItem->setForeground(QColor("#666688"));
+    } else {
+        for (int i = 0; i < count; ++i) {
+            auto* item = m_game->player().GetItem(i);
+            if (item) {
+                QString text = QString::fromStdString(item->GetName()) + " — " + getItemDescription(item);
+                auto* listItem = new QListWidgetItem(text, list);
+                listItem->setData(Qt::UserRole, i);
+                listItem->setToolTip(QString::fromUtf8("双击使用"));
+            }
+        }
+    }
+    layout->addWidget(list);
+
+    auto* btnBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg);
+    btnBox->button(QDialogButtonBox::Ok)->setText(QString::fromUtf8("使用"));
+    btnBox->button(QDialogButtonBox::Cancel)->setText(QString::fromUtf8("关闭"));
+    btnBox->setStyleSheet(
+        "QPushButton { background: #3a3a5a; color: #d0d0d0; border: 1px solid #66a; "
+        "border-radius: 4px; padding: 6px 16px; font-size: 14px; }"
+        "QPushButton:hover { background: #4a4a7a; }"
+    );
+    layout->addWidget(btnBox);
+
+    connect(btnBox, &QDialogButtonBox::accepted, &dlg, [&]() {
+        auto* cur = list->currentItem();
+        if (!cur || count == 0) return;
+        int idx = cur->data(Qt::UserRole).toInt();
+        if (idx >= 0 && idx < count) {
+            auto* item = m_game->player().GetItem(idx);
+            if (item) {
+                QString msg = QString::fromUtf8("使用了 %1: %2")
+                    .arg(QString::fromStdString(item->GetName()))
+                    .arg(getItemDescription(item));
+                m_game->player().UseItem(idx);
+                updateHUD();
+                QMessageBox::information(&dlg, QString::fromUtf8("使用物品"), msg);
+                dlg.accept();
+            }
+        }
+    });
+    connect(btnBox, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+    connect(list, &QListWidget::itemDoubleClicked, btnBox, &QDialogButtonBox::accepted);
+
+    dlg.exec();
+}
+
+void MainWindow::showNPCDialog(int x, int y)
+{
+    NPC* npc = m_game->npcAt(x, y);
+    if (!npc) return;
+
+    bool hadReward = !npc->HasGivenReward();
+
+    std::string reply = npc->Interact(m_game->player());
+
+    if (hadReward && npc->HasGivenReward()) {
+        // NPC 给了奖励
+        QMessageBox::information(this,
+            QString::fromStdString(npc->GetName()),
+            QString::fromStdString(reply));
+    } else {
+        // 显示对话
+        const auto& dialog = npc->Dialog();
+        QString fullDialog;
+        for (size_t i = 0; i < dialog.size(); ++i) {
+            fullDialog += QString::fromStdString(npc->GetName()) + ": " + QString::fromStdString(dialog[i]);
+            if (i + 1 < dialog.size()) fullDialog += "\n";
+        }
+        QMessageBox::information(this,
+            QString::fromStdString(npc->GetName()),
+            fullDialog);
+    }
+}
+
 void MainWindow::updateHUD()
 {
-    ui.floorLabel->setText(QString::fromUtf8("第 %1 层").arg(m_floor));
+    int floor = m_game->currentFloor();
+    ui.floorLabel->setText(QString::fromUtf8("第 %1 层").arg(floor));
     ui.hpLabel->setText(QString::fromUtf8("❤ 生命: %1").arg(m_game->player().hp));
     ui.atkLabel->setText(QString::fromUtf8("⚔ 攻击: %1").arg(m_game->player().atk));
     ui.defLabel->setText(QString::fromUtf8("🛡 防御: %1").arg(m_game->player().def));
@@ -85,6 +237,12 @@ void MainWindow::updateHUD()
         .arg(m_game->player().KeyCount(KeyType::Red))
         .arg(m_game->player().KeyCount(KeyType::Blue))
         .arg(m_game->player().KeyCount(KeyType::Green)));
+
+    // 显示特殊状态
+    QString status;
+    if (m_game->player().hasGlasses) status += QString::fromUtf8("👁 ");
+    if (m_game->player().wallBreakerUsed) status += QString::fromUtf8("🔨 ");
+    ui.invButton->setText(QString::fromUtf8("🎒 背包 (%1)").arg(m_game->player().InventoryCount()));
 }
 
 void MainWindow::keyPressEvent(QKeyEvent* event)
@@ -100,6 +258,27 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
         return;
     }
 
+    // 检查上楼器/下楼器
+    if (m_game->player().stairUpUsed) {
+        m_game->player().stairUpUsed = false;
+        m_game->goUpFloor();
+        // 将玩家放置在新楼层入口附近
+        m_game->player().x = 1;
+        m_game->player().y = m_game->height() - 2;
+        ui.mapWidget->update();
+        updateHUD();
+        return;
+    }
+    if (m_game->player().stairDownUsed) {
+        m_game->player().stairDownUsed = false;
+        m_game->goDownFloor();
+        m_game->player().x = 1;
+        m_game->player().y = 1;
+        ui.mapWidget->update();
+        updateHUD();
+        return;
+    }
+
     int nx = m_game->player().x + dx;
     int ny = m_game->player().y + dy;
     auto result = m_game->tryMovePlayer(nx, ny);
@@ -107,14 +286,46 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
     switch (result) {
     case Game::Move_Block:
         break;
+    case Game::Move_DoorLocked: {
+        int tile = m_game->tileAt(nx, ny);
+        QString keyName;
+        if (tile == Tile_DoorRed) keyName = QString::fromUtf8("红钥匙");
+        else if (tile == Tile_DoorBlue) keyName = QString::fromUtf8("蓝钥匙");
+        else if (tile == Tile_DoorGreen) keyName = QString::fromUtf8("绿钥匙");
+        QMessageBox::information(this, QString::fromUtf8("门已锁"),
+            QString::fromUtf8("需要 %1 才能打开这扇门。").arg(keyName));
+        break;
+    }
     case Game::Move_Ok:
         ui.mapWidget->update();
+        updateHUD();
         break;
     case Game::Move_Pickup:
         ui.mapWidget->update();
         updateHUD();
         break;
     case Game::Move_Encounter: {
+        Monster* m = m_game->monsterAt(nx, ny);
+        // 如果有眼镜，显示怪物属性
+        if (m && m_game->player().hasGlasses) {
+            QString info = QString::fromUtf8(
+                "【怪物信息】\n名称: %1\n生命: %2  攻击: %3  防御: %4  金币: %5\n\n"
+                "你的攻击: %6  你的防御: %7\n"
+                "预计造成伤害: %8/回合\n预计受到伤害: %9/回合\n\n是否战斗？")
+                .arg(QString::fromStdString(m->GetName()))
+                .arg(m->GetHP()).arg(m->GetATK()).arg(m->GetDEF()).arg(m->GetGold())
+                .arg(m_game->player().atk).arg(m_game->player().def)
+                .arg(std::max(0, m_game->player().atk - m->GetDEF()))
+                .arg(std::max(0, m->GetATK() - m_game->player().def));
+
+            auto reply = QMessageBox::question(this, QString::fromUtf8("遭遇怪物"), info,
+                QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
+            if (reply != QMessageBox::Yes) {
+                // 取消战斗
+                break;
+            }
+        }
+
         ui.mapWidget->update();
         std::vector<std::string> log;
         auto fightRes = m_game->fightAt(nx, ny, log);
@@ -133,13 +344,23 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
         }
         break;
     }
+    case Game::Move_NPC: {
+        showNPCDialog(nx, ny);
+        updateHUD();
+        break;
+    }
     case Game::Move_StairsUp:
-        m_floor++;
+        m_game->goUpFloor();
+        // 将玩家放置在新楼层入口
+        m_game->player().x = 1;
+        m_game->player().y = m_game->height() - 2;
         ui.mapWidget->update();
         updateHUD();
         break;
     case Game::Move_StairsDown:
-        if (m_floor > 1) m_floor--;
+        m_game->goDownFloor();
+        m_game->player().x = 1;
+        m_game->player().y = 1;
         ui.mapWidget->update();
         updateHUD();
         break;

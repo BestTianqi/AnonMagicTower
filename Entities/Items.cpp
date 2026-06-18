@@ -125,22 +125,22 @@ void TempShield::Apply(Player& player) const {
 StairUpper::StairUpper()
     : Item(QString::fromUtf8("上楼器").toStdString(), 0) {}
 
-void StairUpper::Apply(Player&) const {
-    // 效果由 UI 层处理（切换楼层）
+void StairUpper::Apply(Player& player) const {
+    player.stairUpUsed = true;
 }
 
 StairLower::StairLower()
     : Item(QString::fromUtf8("下楼器").toStdString(), 0) {}
 
-void StairLower::Apply(Player&) const {
-    // 效果由 UI 层处理（切换楼层）
+void StairLower::Apply(Player& player) const {
+    player.stairDownUsed = true;
 }
 
 WallBreaker::WallBreaker()
     : Item(QString::fromUtf8("破墙锤").toStdString(), 0) {}
 
-void WallBreaker::Apply(Player&) const {
-    // 效果由 UI 层处理（摧毁相邻墙壁）
+void WallBreaker::Apply(Player& player) const {
+    player.wallBreakerUsed = true;
 }
 
 MagicKey::MagicKey()

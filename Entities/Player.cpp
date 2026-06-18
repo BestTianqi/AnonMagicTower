@@ -31,12 +31,12 @@ int Player::KeyCount(KeyType type) const
     return it->second;
 }
 
-void Player::AddItem(const Item& item)
+void Player::AddItem(std::unique_ptr<Item> item)
 {
-    m_items.push_back(item);
+    m_items.push_back(std::move(item));
 }
 
-const std::vector<Item>& Player::Inventory() const
+const std::vector<std::unique_ptr<Item>>& Player::Inventory() const
 {
     return m_items;
 }
@@ -50,7 +50,7 @@ bool Player::UseItem(int index)
 {
     if (index < 0 || index >= (int)m_items.size())
         return false;
-    m_items[index].Apply(*this);
+    m_items[index]->Apply(*this);
     m_items.erase(m_items.begin() + index);
     return true;
 }
@@ -59,5 +59,5 @@ const Item* Player::GetItem(int index) const
 {
     if (index < 0 || index >= (int)m_items.size())
         return nullptr;
-    return &m_items[index];
+    return m_items[index].get();
 }

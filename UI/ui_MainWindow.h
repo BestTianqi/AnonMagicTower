@@ -14,14 +14,15 @@ QT_BEGIN_NAMESPACE
 
 class Ui_MainWindow {
 public:
-    MapWidget*   mapWidget   = nullptr;
-    QWidget*     sidePanel   = nullptr;
-    QLabel*      floorLabel  = nullptr;
-    QLabel*      hpLabel     = nullptr;
-    QLabel*      atkLabel    = nullptr;
-    QLabel*      defLabel    = nullptr;
-    QLabel*      goldLabel   = nullptr;
-    QLabel*      keysLabel   = nullptr;
+    MapWidget*   mapWidget    = nullptr;
+    QWidget*     sidePanel    = nullptr;
+    QLabel*      floorLabel   = nullptr;
+    QLabel*      hpLabel      = nullptr;
+    QLabel*      atkLabel     = nullptr;
+    QLabel*      defLabel     = nullptr;
+    QLabel*      goldLabel    = nullptr;
+    QLabel*      keysLabel    = nullptr;
+    QPushButton* invButton    = nullptr;
     QPushButton* saveButton   = nullptr;
     QPushButton* loadButton   = nullptr;
     QPushButton* editorButton = nullptr;
@@ -109,6 +110,17 @@ public:
         sep3->setFrameShape(QFrame::HLine);
         sep3->setStyleSheet("color: #555;");
         vbox->addWidget(sep3);
+
+        invButton = new QPushButton(sidePanel);
+        invButton->setObjectName("invButton");
+        invButton->setText(QString::fromUtf8("🎒 背包"));
+        invButton->setMinimumHeight(40);
+        invButton->setStyleSheet(
+            "QPushButton { background: #3a3a6a; color: #d0d0d0; border: 1px solid #66a; "
+            "border-radius: 4px; padding: 8px; font-size: 14px; }"
+            "QPushButton:hover { background: #4a4a8a; }"
+        );
+        vbox->addWidget(invButton);
 
         saveButton = new QPushButton(sidePanel);
         saveButton->setObjectName("saveButton");

@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cmake .. -G \"MinGW Makefiles\")",
+      "Bash(cmake --build .)",
+      "Bash(./mota.exe)"
+    ]
+  }
+}

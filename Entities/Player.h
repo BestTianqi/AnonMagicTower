@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <memory>
 
 #include "Items.h"
 
@@ -19,17 +20,19 @@ public:
     bool hasGlasses = false;
     bool hasPenguinDoll = false;
     bool hasMatchaParfait = false;
-
+    bool wallBreakerUsed = false;  // 破墙锤已激活，下次移动撞墙时破墙
+    bool stairUpUsed = false;      // 上楼器已激活
+    bool stairDownUsed = false;    // 下楼器已激活
 
     // 钥匙相关接口
     void AddKey(KeyType type, int count = 1);
     bool HasKey(KeyType type) const;
-    bool UseKey(KeyType type); // 如果有钥匙则消耗并返回 true
+    bool UseKey(KeyType type);
     int KeyCount(KeyType type) const;
 
     // 通用物品背包接口
-    void AddItem(const Item& item);
-    const std::vector<Item>& Inventory() const;
+    void AddItem(std::unique_ptr<Item> item);
+    const std::vector<std::unique_ptr<Item>>& Inventory() const;
     int  InventoryCount() const;
 
     // 使用道具：按索引使用背包中的道具，成功返回 true
@@ -39,5 +42,5 @@ public:
 
 private:
     std::unordered_map<KeyType, int> m_keys;
-    std::vector<Item> m_items;
+    std::vector<std::unique_ptr<Item>> m_items;
 };

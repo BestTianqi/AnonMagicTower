@@ -23,6 +23,8 @@ protected:
     void paintEvent(QPaintEvent* event) override;
 
 private:
+    void generatePlaceholders();
+
     Game* m_game;
 
     std::unordered_map<int, QPixmap>        m_tilePix;

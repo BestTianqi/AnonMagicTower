@@ -12,7 +12,8 @@ public:
     int GetDEF()  const { return m_def; }
     int GetGold() const { return m_gold; }
 
-    int  TakeDamage(int dmg);
+    int  TakeDamage(int dmg);      // 旧版：内部减def (保留兼容)
+    int  TakeDamageRaw(int dmg);   // 新版：直接扣血
     bool IsDead() const { return m_hp <= 0; }
     int  Attack() const { return m_atk; }
 

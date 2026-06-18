@@ -12,3 +12,9 @@ int Monster::TakeDamage(int dmg)
     m_hp -= real;
     return m_hp;
 }
+
+int Monster::TakeDamageRaw(int dmg)
+{
+    m_hp -= dmg;
+    return m_hp;
+}
