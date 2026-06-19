@@ -3,7 +3,10 @@
     "allow": [
       "Bash(cmake .. -G \"MinGW Makefiles\")",
       "Bash(cmake --build .)",
-      "Bash(./mota.exe)"
+      "Bash(./mota.exe)",
+      "Bash(qmake6 --version)",
+      "Bash(qmake --version)",
+      "Bash(rm -f d:/workspace/mota/build/mota.exe && cd d:/workspace/mota/build && cmake --build . 2>&1)"
     ]
   }
 }

@@ -9,12 +9,14 @@
 #include <QHBoxLayout>
 #include <QGroupBox>
 #include <QFileDialog>
+#include <QDir>
 #include <QMessageBox>
 #include <QFile>
 #include <QTextStream>
 #include <QFrame>
 #include <QScrollArea>
 #include <QApplication>
+#include <algorithm>
 
 // ==================== MapEditWidget ====================
 
@@ -264,33 +266,31 @@ MapEditor::MapEditor(QWidget* parent)
     mainLayout->addWidget(m_edit);
 
     // === 右侧面板 ===
-    auto* scroll = new QScrollArea(this);
-    scroll->setFixedWidth(380);
-    scroll->setWidgetResizable(true);
-    scroll->setStyleSheet("QScrollArea { border: 1px solid #444; }");
+    auto* rightPanel = new QWidget(this);
+    rightPanel->setFixedWidth(380);
+    auto* rightLayout = new QVBoxLayout(rightPanel);
+    rightLayout->setContentsMargins(4, 4, 4, 4);
+    rightLayout->setSpacing(4);
 
-    auto* panel = new QWidget(scroll);
-    auto* pbox = new QVBoxLayout(panel);
-    pbox->setContentsMargins(10, 10, 10, 10);
-    pbox->setSpacing(6);
-    scroll->setWidget(panel);
-    mainLayout->addWidget(scroll);
+    mainLayout->addWidget(rightPanel);
+
+    // ====== 固定区域：楼层管理 + 图块类型（始终可见） ======
 
     // -- 楼层管理 --
-    auto* floorGroup = new QGroupBox(QString::fromUtf8("楼层管理"), panel);
+    auto* floorGroup = new QGroupBox(QString::fromUtf8("楼层管理"), rightPanel);
     auto* fbox = new QHBoxLayout(floorGroup);
-    auto* prevBtn = new QPushButton(QString::fromUtf8("◀"), floorGroup);
+    auto* prevBtn = new QPushButton(QString::fromUtf8("<"), floorGroup);
     prevBtn->setFixedWidth(30);
     m_floorSpin = new QSpinBox(floorGroup);
     m_floorSpin->setRange(1, 20);
     m_floorSpin->setValue(1);
     m_floorSpin->setStyleSheet("QSpinBox { background: #222; color: #fff; border: 1px solid #555; padding: 4px; font-size: 14px; }");
-    auto* nextBtn = new QPushButton(QString::fromUtf8("▶"), floorGroup);
+    auto* nextBtn = new QPushButton(QString::fromUtf8(">"), floorGroup);
     nextBtn->setFixedWidth(30);
-    auto* addFloorBtn = new QPushButton(QString::fromUtf8("＋"), floorGroup);
+    auto* addFloorBtn = new QPushButton(QString::fromUtf8("+"), floorGroup);
     addFloorBtn->setFixedWidth(30);
     addFloorBtn->setToolTip(QString::fromUtf8("添加楼层"));
-    m_removeFloorBtn = new QPushButton(QString::fromUtf8("－"), floorGroup);
+    m_removeFloorBtn = new QPushButton(QString::fromUtf8("-"), floorGroup);
     m_removeFloorBtn->setFixedWidth(30);
     m_removeFloorBtn->setToolTip(QString::fromUtf8("删除当前楼层"));
     m_floorCountLabel = new QLabel(QString::fromUtf8("/ 1"), floorGroup);
@@ -301,36 +301,77 @@ MapEditor::MapEditor(QWidget* parent)
     fbox->addWidget(nextBtn);
     fbox->addWidget(addFloorBtn);
     fbox->addWidget(m_removeFloorBtn);
-    pbox->addWidget(floorGroup);
+    rightLayout->addWidget(floorGroup);
 
-    // -- 图块类型 --
-    auto* tileGroup = new QGroupBox(QString::fromUtf8("图块类型"), panel);
-    auto* tbox = new QVBoxLayout(tileGroup);
-    m_tileGroup = new QButtonGroup(this);
-    m_tileGroup->setExclusive(true);
+    // -- 图块类型（彩色按钮面板，始终可见） --
+    auto* tileGroup = new QGroupBox(QString::fromUtf8("图块类型 (点击选择)"), rightPanel);
+    auto* tgrid = new QGridLayout(tileGroup);
+    tgrid->setSpacing(3);
 
-    struct TileBtn { int type; QString text; QString color; };
+    struct TileBtn { int type; QString text; QString bgColor; };
     TileBtn btns[] = {
-        { Tile_Wall,       QString::fromUtf8("墙"),     "#555" },
-        { Tile_Floor,      QString::fromUtf8("地板"),   "#aaa" },
-        { Tile_StairsUp,   QString::fromUtf8("上楼梯"), "#aa0" },
-        { Tile_StairsDown, QString::fromUtf8("下楼梯"), "#a0a" },
-        { Tile_Monster,    QString::fromUtf8("怪物"),   "#f55" },
-        { Tile_Item,       QString::fromUtf8("道具"),   "#5f5" },
-        { Tile_DoorRed,    QString::fromUtf8("红门"),   "#f44" },
-        { Tile_DoorBlue,   QString::fromUtf8("蓝门"),   "#44f" },
-        { Tile_DoorGreen,  QString::fromUtf8("绿门"),   "#4a4" },
-        { Tile_NPC,        QString::fromUtf8("NPC"),    "#fa0" },
+        { Tile_Wall,       QString::fromUtf8(" 墙 "),      "#666" },
+        { Tile_Floor,      QString::fromUtf8(" 地板 "),    "#4a4" },
+        { Tile_StairsUp,   QString::fromUtf8(" 上楼梯 "),  "#bb0" },
+        { Tile_StairsDown, QString::fromUtf8(" 下楼梯 "),  "#b6b" },
+        { Tile_Monster,    QString::fromUtf8(" 怪物 "),    "#d44" },
+        { Tile_Item,       QString::fromUtf8(" 道具 "),    "#4c4" },
+        { Tile_DoorRed,    QString::fromUtf8(" 红门 "),    "#d33" },
+        { Tile_DoorBlue,   QString::fromUtf8(" 蓝门 "),    "#44d" },
+        { Tile_DoorGreen,  QString::fromUtf8(" 绿门 "),    "#3b3" },
+        { Tile_NPC,        QString::fromUtf8(" NPC "),     "#db3" },
     };
 
     for (int i = 0; i < 10; ++i) {
-        auto* rb = new QRadioButton(
-            QString("<span style='color:%1'>■</span> %2").arg(btns[i].color, btns[i].text), tileGroup);
-        m_tileGroup->addButton(rb, btns[i].type);
-        tbox->addWidget(rb);
-        if (btns[i].type == Tile_Wall) rb->setChecked(true);
+        auto* btn = new QPushButton(btns[i].text, tileGroup);
+        btn->setFixedHeight(34);
+        btn->setCursor(Qt::PointingHandCursor);
+        btn->setStyleSheet(QString(
+            "QPushButton { background-color: %1; color: #fff; border: 2px solid #888; "
+            "border-radius: 3px; font-size: 13px; font-weight: bold; }"
+            "QPushButton:hover { border-color: #fff; }"
+        ).arg(btns[i].bgColor));
+        tgrid->addWidget(btn, i / 5, i % 5);
+
+        int tileType = btns[i].type;
+        QString tileName = btns[i].text;
+        connect(btn, &QPushButton::pressed, this, [this, tileType, tileName]() {
+            m_currentTileType = tileType;
+            m_edit->setCurrentTile(tileType);
+            updatePanelForTile(tileType);
+            int idx = m_tileCombo->findData(tileType);
+            if (idx >= 0) m_tileCombo->setCurrentIndex(idx);
+            setWindowTitle(QString::fromUtf8("地图编辑器 [%1]").arg(tileName.trimmed()));
+            m_statusLabel->setText(QString::fromUtf8(">> 当前选中: %1 (type=%2) <<").arg(tileName.trimmed()).arg(tileType));
+        });
     }
-    pbox->addWidget(tileGroup);
+    rightLayout->addWidget(tileGroup);
+
+    // 隐藏的 combobox 用于状态同步
+    m_tileCombo = new QComboBox();
+    m_tileCombo->addItem(QString::fromUtf8("墙"),       Tile_Wall);
+    m_tileCombo->addItem(QString::fromUtf8("地板"),      Tile_Floor);
+    m_tileCombo->addItem(QString::fromUtf8("上楼梯"),    Tile_StairsUp);
+    m_tileCombo->addItem(QString::fromUtf8("下楼梯"),    Tile_StairsDown);
+    m_tileCombo->addItem(QString::fromUtf8("怪物"),      Tile_Monster);
+    m_tileCombo->addItem(QString::fromUtf8("道具"),      Tile_Item);
+    m_tileCombo->addItem(QString::fromUtf8("红门"),      Tile_DoorRed);
+    m_tileCombo->addItem(QString::fromUtf8("蓝门"),      Tile_DoorBlue);
+    m_tileCombo->addItem(QString::fromUtf8("绿门"),      Tile_DoorGreen);
+    m_tileCombo->addItem(QString::fromUtf8("NPC"),        Tile_NPC);
+    m_tileCombo->setVisible(false);
+
+    // ====== 可滚动区域：属性面板 ======
+    auto* scroll = new QScrollArea(rightPanel);
+    scroll->setWidgetResizable(true);
+    scroll->setStyleSheet("QScrollArea { border: 1px solid #444; }");
+
+    auto* panel = new QWidget(scroll);
+    auto* pbox = new QVBoxLayout(panel);
+    pbox->setContentsMargins(8, 8, 8, 8);
+    pbox->setSpacing(4);
+    scroll->setWidget(panel);
+    rightLayout->addWidget(scroll, 1);
 
     // -- 怪物选择面板 --
     auto* monGroup = new QGroupBox(QString::fromUtf8("怪物属性"), panel);
@@ -344,34 +385,83 @@ MapEditor::MapEditor(QWidget* parent)
     pbox->addWidget(monGroup);
 
     // -- 道具选择面板 --
-    auto* itemGroup = new QGroupBox(QString::fromUtf8("道具属性"), panel);
+    auto* itemGroup = new QGroupBox(QString::fromUtf8("道具选择"), panel);
     auto* ibox = new QVBoxLayout(itemGroup);
     m_itemPanel = new QWidget(itemGroup);
     auto* ilay = new QVBoxLayout(m_itemPanel);
     ilay->setContentsMargins(0, 0, 0, 0);
-    m_itemCombo = new QComboBox(m_itemPanel);
-    m_itemCombo->setStyleSheet("QComboBox { background: #222; border: 1px solid #555; padding: 4px; }");
-    // 普通物品
-    for (int i = 0; g_itemDefs[i].name; ++i)
-        m_itemCombo->addItem(QString::fromUtf8(g_itemDefs[i].name));
-    m_itemCombo->insertSeparator(m_itemCombo->count());
-    // 特殊物品
-    for (int i = 0; g_specialItems[i]; ++i)
-        m_itemCombo->addItem(QString::fromUtf8(g_specialItems[i]));
 
+    // 数值行
     auto* valLay = new QHBoxLayout();
     m_itemValueLabel = new QLabel(QString::fromUtf8("数值:"), m_itemPanel);
     m_itemValueSpin = new QSpinBox(m_itemPanel);
     m_itemValueSpin->setRange(1, 9999);
     m_itemValueSpin->setValue(50);
-    m_itemValueSpin->setStyleSheet("QSpinBox { background: #222; border: 1px solid #555; padding: 4px; width: 60px; }");
+    m_itemValueSpin->setStyleSheet("QSpinBox { background: #222; color: #fff; border: 1px solid #555; padding: 4px; }");
     valLay->addWidget(m_itemValueLabel);
     valLay->addWidget(m_itemValueSpin);
     valLay->addStretch();
-
-    ilay->addWidget(new QLabel(QString::fromUtf8("道具类型:"), m_itemPanel));
-    ilay->addWidget(m_itemCombo);
     ilay->addLayout(valLay);
+
+    // 道具按钮网格
+    auto* igrid = new QGridLayout();
+    igrid->setSpacing(2);
+
+    struct ItemBtn { QString name; int val; QString color; bool hasValue; QString tip; };
+    ItemBtn itemBtns[] = {
+        { QString::fromUtf8("生命药"), 50, "#d44", true,  QString::fromUtf8("恢复生命值") },
+        { QString::fromUtf8("武器"),   5,  "#d82", true,  QString::fromUtf8("攻击力+") },
+        { QString::fromUtf8("防具"),   3,  "#48d", true,  QString::fromUtf8("防御力+") },
+        { QString::fromUtf8("金币"),   10, "#da0", true,  QString::fromUtf8("获得金币") },
+        { QString::fromUtf8("红钥匙"), 0,  "#d33", false, QString::fromUtf8("红钥匙 x1") },
+        { QString::fromUtf8("蓝钥匙"), 0,  "#33d", false, QString::fromUtf8("蓝钥匙 x1") },
+        { QString::fromUtf8("绿钥匙"), 0,  "#3a3", false, QString::fromUtf8("绿钥匙 x1") },
+        { QString::fromUtf8("万能钥匙"), 0, "#84d", false, QString::fromUtf8("红蓝绿钥匙各+1") },
+        { QString::fromUtf8("匿名眼镜"), 0, "#4aa", false, QString::fromUtf8("可查看怪物属性") },
+        { QString::fromUtf8("破墙锤"),   0, "#864", false, QString::fromUtf8("摧毁墙壁") },
+        { QString::fromUtf8("上楼器"),   0, "#aa0", false, QString::fromUtf8("从当前位置上楼") },
+        { QString::fromUtf8("下楼器"),   0, "#a6a", false, QString::fromUtf8("从当前位置下楼") },
+        { QString::fromUtf8("临时护盾"), 0, "#68d", false, QString::fromUtf8("防御力+10") },
+        { QString::fromUtf8("企鹅玩偶"), 0, "#d6a", false, QString::fromUtf8("神秘的企鹅玩偶") },
+        { QString::fromUtf8("抹茶芭菲"), 0, "#8c6", false, QString::fromUtf8("美味的抹茶芭菲") },
+    };
+    const int itemBtnCount = sizeof(itemBtns) / sizeof(itemBtns[0]);
+
+    // 隐藏的组合框，同步用
+    m_itemCombo = new QComboBox();
+    m_itemCombo->setVisible(false);
+
+    for (int i = 0; i < itemBtnCount; ++i) {
+        auto* ibtn = new QPushButton(itemBtns[i].name, m_itemPanel);
+        ibtn->setFixedHeight(30);
+        ibtn->setCursor(Qt::PointingHandCursor);
+        ibtn->setToolTip(itemBtns[i].tip);
+        ibtn->setStyleSheet(QString(
+            "QPushButton { background-color: %1; color: #fff; border: 2px solid #666; "
+            "border-radius: 3px; font-size: 12px; font-weight: bold; }"
+            "QPushButton:hover { border-color: #fff; }"
+        ).arg(itemBtns[i].color));
+        igrid->addWidget(ibtn, i / 3, i % 3);
+
+        QString iname = itemBtns[i].name;
+        int ival = itemBtns[i].val;
+        bool hasVal = itemBtns[i].hasValue;
+
+        connect(ibtn, &QPushButton::pressed, this, [this, iname, ival, hasVal]() {
+            m_selectedItemName = iname;
+            m_selectedItemValue = hasVal ? m_itemValueSpin->value() : ival;
+            m_itemValueLabel->setVisible(hasVal);
+            m_itemValueSpin->setVisible(hasVal);
+            if (hasVal) m_itemValueSpin->setValue(ival);
+            m_edit->setCurrentItem(iname.toStdString(), m_selectedItemValue);
+            // 同步隐藏 combobox
+            int idx = m_itemCombo->findText(iname);
+            if (idx >= 0) m_itemCombo->setCurrentIndex(idx);
+            m_statusLabel->setText(QString::fromUtf8("道具: %1  — 在左侧地图放置").arg(iname));
+        });
+        m_itemCombo->addItem(itemBtns[i].name);
+    }
+    ilay->addLayout(igrid);
     ibox->addWidget(m_itemPanel);
     pbox->addWidget(itemGroup);
 
@@ -417,111 +507,117 @@ MapEditor::MapEditor(QWidget* parent)
     pLay->addWidget(playerLabel);
     pbox->addWidget(playerGroup);
 
-    // -- 状态 --
-    m_statusLabel = new QLabel(QString::fromUtf8("就绪 — 左键放置 右键擦除 Shift+左键放玩家"), panel);
+    // -- 状态（固定在底部，始终可见） --
+    m_statusLabel = new QLabel(QString::fromUtf8("就绪 — 左键放置 右键擦除 Shift+左键放玩家"), rightPanel);
     m_statusLabel->setWordWrap(true);
-    m_statusLabel->setStyleSheet("color: #888; font-size: 11px; padding: 4px;");
-    pbox->addWidget(m_statusLabel);
+    m_statusLabel->setStyleSheet("color: #aaa; font-size: 11px; padding: 4px;");
+    rightLayout->addWidget(m_statusLabel);
 
-    pbox->addStretch();
-
-    // -- 操作按钮 --
-    auto* sep = new QFrame(panel);
+    // -- 操作按钮（固定在底部，始终可见） --
+    auto* sep = new QFrame(rightPanel);
     sep->setFrameShape(QFrame::HLine);
     sep->setStyleSheet("color: #555;");
-    pbox->addWidget(sep);
+    rightLayout->addWidget(sep);
 
     auto btnStyle = QString(
         "QPushButton { min-height: 36px; border-radius: 4px; padding: 6px; font-size: 13px; }"
-        "QPushButton:hover { filter: brightness(1.3); }"
     );
 
-    auto* newBtn = new QPushButton(QString::fromUtf8("🆕 新建地图"), panel);
+    auto* newBtn = new QPushButton(QString::fromUtf8("新建地图"), rightPanel);
     newBtn->setStyleSheet(btnStyle + "QPushButton { background: #3a4a5a; color: #d0d0d0; }");
-    pbox->addWidget(newBtn);
+    rightLayout->addWidget(newBtn);
 
-    auto* loadBtn = new QPushButton(QString::fromUtf8("📂 加载地图"), panel);
+    auto* loadBtn = new QPushButton(QString::fromUtf8("加载地图"), rightPanel);
     loadBtn->setStyleSheet(btnStyle + "QPushButton { background: #4a4a5a; color: #d0d0d0; }");
-    pbox->addWidget(loadBtn);
+    rightLayout->addWidget(loadBtn);
 
-    auto* saveBtn = new QPushButton(QString::fromUtf8("💾 保存地图"), panel);
+    auto* saveBtn = new QPushButton(QString::fromUtf8("保存地图"), rightPanel);
     saveBtn->setStyleSheet(btnStyle + "QPushButton { background: #3a5a3a; color: #d0d0d0; }");
-    pbox->addWidget(saveBtn);
+    rightLayout->addWidget(saveBtn);
 
-    auto* testBtn = new QPushButton(QString::fromUtf8("▶ 测试游玩"), panel);
+    auto* exportBtn = new QPushButton(QString::fromUtf8("导出当前层 (.map)"), rightPanel);
+    exportBtn->setStyleSheet(btnStyle + "QPushButton { background: #3a4a3a; color: #d0d0d0; }");
+    rightLayout->addWidget(exportBtn);
+
+    auto* defaultBtn = new QPushButton(QString::fromUtf8("设为默认地图"), rightPanel);
+    defaultBtn->setStyleSheet(btnStyle + "QPushButton { background: #5a4a1a; color: #ffd; }");
+    rightLayout->addWidget(defaultBtn);
+
+    auto* testBtn = new QPushButton(QString::fromUtf8("测试游玩"), rightPanel);
     testBtn->setStyleSheet(btnStyle + "QPushButton { background: #5a3a1a; color: #ffd; font-weight: bold; }");
-    pbox->addWidget(testBtn);
+    rightLayout->addWidget(testBtn);
 
-    auto* clearBtn = new QPushButton(QString::fromUtf8("🔄 清空当前层"), panel);
+    auto* clearBtn = new QPushButton(QString::fromUtf8("清空当前层"), rightPanel);
     clearBtn->setStyleSheet(btnStyle + "QPushButton { background: #5a3a3a; color: #d0d0d0; }");
-    pbox->addWidget(clearBtn);
-
-    pbox->addSpacing(10);
+    rightLayout->addWidget(clearBtn);
 
     // ====== 信号连接 ======
 
-    // 楼层切换
-    connect(m_floorSpin, QOverload<int>::of(&QSpinBox::valueChanged), this, &MapEditor::onFloorChanged);
+    // 楼层切换 — 直接调用 switchToFloor，不依赖 spinbox 信号链
+    connect(m_floorSpin, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int floor) {
+        switchToFloor(floor);
+    });
     connect(prevBtn, &QPushButton::clicked, this, [this]() {
-        if (m_floorSpin->value() > 1) m_floorSpin->setValue(m_floorSpin->value() - 1);
+        if (m_currentFloor > 1)
+            switchToFloor(m_currentFloor - 1);
     });
     connect(nextBtn, &QPushButton::clicked, this, [this]() {
-        if (m_floorSpin->value() < m_floorSpin->maximum())
-            m_floorSpin->setValue(m_floorSpin->value() + 1);
+        int maxFloor = 1;
+        for (auto& kv : m_floors) if (kv.first > maxFloor) maxFloor = kv.first;
+        if (m_currentFloor < maxFloor || (int)m_floors.size() < 20)
+            switchToFloor(m_currentFloor + 1);
     });
     connect(addFloorBtn, &QPushButton::clicked, this, &MapEditor::addFloor);
     connect(m_removeFloorBtn, &QPushButton::clicked, this, &MapEditor::removeFloor);
 
-    // 图块切换
-    connect(m_tileGroup, QOverload<int>::of(&QButtonGroup::idClicked), this, &MapEditor::onTileTypeChanged);
+    // 图块切换 — 通过每个 radiobutton 的 clicked 信号处理
 
     // 怪物选择
     connect(m_monsterCombo, &QComboBox::currentTextChanged, this, [this](const QString& name) {
         m_edit->setCurrentMonster(name.toStdString());
     });
 
-    // 道具选择
-    connect(m_itemCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int idx) {
-        QString name = m_itemCombo->currentText();
-        bool isSpecial = false;
-        for (int i = 0; g_specialItems[i]; ++i)
-            if (name == QString::fromUtf8(g_specialItems[i])) { isSpecial = true; break; }
-
-        m_itemValueLabel->setVisible(!isSpecial);
-        m_itemValueSpin->setVisible(!isSpecial);
-        int val = isSpecial ? 0 : m_itemValueSpin->value();
-        m_edit->setCurrentItem(name.toStdString(), val);
-    });
+    // 道具数值微调时更新当前道具
     connect(m_itemValueSpin, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int val) {
-        if (m_tileGroup->checkedId() == Tile_Item)
-            m_edit->setCurrentItem(m_itemCombo->currentText().toStdString(), val);
+        if (m_tileCombo->currentData().toInt() == Tile_Item && !m_selectedItemName.isEmpty()) {
+            m_selectedItemValue = val;
+            m_edit->setCurrentItem(m_selectedItemName.toStdString(), val);
+        }
     });
 
     // NPC 编辑 → 实时更新
     auto updateNpc = [this]() {
-        if (m_tileGroup->checkedId() == Tile_NPC)
+        if (m_tileCombo->currentData().toInt() == Tile_NPC)
             m_edit->setCurrentNPC(m_npcNameEdit->text().toStdString());
     };
     connect(m_npcNameEdit, &QLineEdit::textChanged, this, updateNpc);
 
     // 编辑区信号
     connect(m_edit, &MapEditWidget::tileChanged, this, [this](int x, int y) {
-        m_statusLabel->setText(QString::fromUtf8("已编辑: (%1, %2)").arg(x).arg(y));
+        m_statusLabel->setText(QString::fromUtf8("已放置 %1 于 (%2, %3)")
+            .arg(m_tileCombo->currentText())
+            .arg(x).arg(y));
     });
-    connect(m_edit, &MapEditWidget::playerMoved, this, [this](int x, int y) {
-        m_statusLabel->setText(QString::fromUtf8("玩家位置: (%1, %2)").arg(x).arg(y));
+    connect(m_edit, &MapEditWidget::playerMoved, this, [this, playerLabel](int x, int y) {
+        m_statusLabel->setText(QString::fromUtf8("玩家位置: (%1, %2) — Shift+左键可移动").arg(x).arg(y));
+        playerLabel->setText(QString::fromUtf8("当前: (%1, %2)").arg(x).arg(y));
     });
 
     // 按钮
-    connect(newBtn,   &QPushButton::clicked, this, &MapEditor::onNewMap);
-    connect(saveBtn,  &QPushButton::clicked, this, &MapEditor::onSave);
-    connect(loadBtn,  &QPushButton::clicked, this, &MapEditor::onLoad);
-    connect(testBtn,  &QPushButton::clicked, this, &MapEditor::onTestPlay);
-    connect(clearBtn, &QPushButton::clicked, m_edit, &MapEditWidget::clearFloor);
+    connect(newBtn,     &QPushButton::clicked, this, &MapEditor::onNewMap);
+    connect(saveBtn,    &QPushButton::clicked, this, &MapEditor::onSave);
+    connect(exportBtn,  &QPushButton::clicked, this, &MapEditor::onExportFloor);
+    connect(loadBtn,    &QPushButton::clicked, this, &MapEditor::onLoad);
+    connect(defaultBtn, &QPushButton::clicked, this, &MapEditor::onSaveAsDefault);
+    connect(testBtn,    &QPushButton::clicked, this, &MapEditor::onTestPlay);
+    connect(clearBtn,   &QPushButton::clicked, m_edit, &MapEditWidget::clearFloor);
 
     // 初始状态
+    m_edit->setCurrentTile(Tile_Wall);
     m_edit->setCurrentMonster(m_monsterCombo->currentText().toStdString());
-    m_edit->setCurrentItem(m_itemCombo->currentText().toStdString(), m_itemValueSpin->value());
+    m_selectedItemName = QString::fromUtf8("生命药");
+    m_selectedItemValue = 50;
+    m_edit->setCurrentItem(m_selectedItemName.toStdString(), m_selectedItemValue);
     m_edit->setCurrentNPC(m_npcNameEdit->text().toStdString());
     m_floors[1] = m_edit->floorData();
     updatePanelForTile(Tile_Wall);
@@ -534,9 +630,10 @@ void MapEditor::storeCurrentFloor()
     m_floors[m_currentFloor] = m_edit->floorData();
 }
 
-void MapEditor::switchToFloor(int floor)
+void MapEditor::switchToFloor(int floor, bool storeCurrent)
 {
-    storeCurrentFloor();
+    if (storeCurrent)
+        storeCurrentFloor();
     m_currentFloor = floor;
     if (m_floors.find(floor) == m_floors.end()) {
         EditorFloor ef;
@@ -553,11 +650,6 @@ void MapEditor::switchToFloor(int floor)
     m_floorCountLabel->setText(QString("/ %1").arg((int)m_floors.size()));
     m_removeFloorBtn->setEnabled(m_floors.size() > 1);
     m_statusLabel->setText(QString::fromUtf8("切换到第 %1 层").arg(floor));
-}
-
-void MapEditor::onFloorChanged(int floor)
-{
-    switchToFloor(floor);
 }
 
 void MapEditor::addFloor()
@@ -588,7 +680,7 @@ void MapEditor::removeFloor()
     int nearest = 1;
     for (auto& kv : m_floors) { nearest = kv.first; break; }
     m_floorSpin->setMaximum(20);
-    switchToFloor(nearest);
+    switchToFloor(nearest, false);  // 不保存旧数据，已被删除
 }
 
 void MapEditor::updatePanelForTile(int tileType)
@@ -597,9 +689,9 @@ void MapEditor::updatePanelForTile(int tileType)
     bool isItem    = (tileType == Tile_Item);
     bool isNPC     = (tileType == Tile_NPC);
 
-    m_monsterCombo->parentWidget()->parentWidget()->setVisible(isMonster); // monster group
-    m_itemPanel->parentWidget()->parentWidget()->setVisible(isItem);      // item group
-    m_npcPanel->parentWidget()->parentWidget()->setVisible(isNPC);        // npc group
+    m_monsterCombo->parentWidget()->setVisible(isMonster);  // monGroup
+    m_itemPanel->parentWidget()->setVisible(isItem);        // itemGroup
+    m_npcPanel->parentWidget()->setVisible(isNPC);          // npcGroup
 
     // 更新道具数值标签可见性
     QString itemName = m_itemCombo->currentText();
@@ -614,6 +706,8 @@ void MapEditor::onTileTypeChanged(int id)
 {
     m_edit->setCurrentTile(id);
     updatePanelForTile(id);
+    m_statusLabel->setText(QString::fromUtf8("当前图块: %1  — 左键放置 右键擦除 Shift+左键放玩家")
+        .arg(m_tileCombo->currentText()));
 }
 
 // ====== 新建 ======
@@ -645,13 +739,22 @@ void MapEditor::onNewMap()
 
 static std::unique_ptr<Item> createItem(const std::string& name, int value)
 {
-    if (name == "Potion") return std::make_unique<Potion>(value);
-    if (name == "Weapon") return std::make_unique<Weapon>(value);
-    if (name == "Armor")  return std::make_unique<Armor>(value);
+    // English names (from save files)
+    if (name == "Potion")   return std::make_unique<Potion>(value);
+    if (name == "Weapon")   return std::make_unique<Weapon>(value);
+    if (name == "Armor")    return std::make_unique<Armor>(value);
     if (name == "Treasure") return std::make_unique<Treasure>(value);
     if (name == "Red Key")  return std::make_unique<Key>(KeyType::Red);
     if (name == "Blue Key") return std::make_unique<Key>(KeyType::Blue);
     if (name == "Green Key") return std::make_unique<Key>(KeyType::Green);
+    // Chinese names (from editor buttons)
+    if (name == QString::fromUtf8("生命药").toStdString())   return std::make_unique<Potion>(value);
+    if (name == QString::fromUtf8("武器").toStdString())     return std::make_unique<Weapon>(value);
+    if (name == QString::fromUtf8("防具").toStdString())     return std::make_unique<Armor>(value);
+    if (name == QString::fromUtf8("金币").toStdString())     return std::make_unique<Treasure>(value);
+    if (name == QString::fromUtf8("红钥匙").toStdString())   return std::make_unique<Key>(KeyType::Red);
+    if (name == QString::fromUtf8("蓝钥匙").toStdString())   return std::make_unique<Key>(KeyType::Blue);
+    if (name == QString::fromUtf8("绿钥匙").toStdString())   return std::make_unique<Key>(KeyType::Green);
     if (name == QString::fromUtf8("万能钥匙").toStdString()) return std::make_unique<MagicKey>();
     if (name == QString::fromUtf8("匿名眼镜").toStdString()) return std::make_unique<AnonGlasses>();
     if (name == QString::fromUtf8("破墙锤").toStdString())   return std::make_unique<WallBreaker>();
@@ -663,35 +766,35 @@ static std::unique_ptr<Item> createItem(const std::string& name, int value)
     return nullptr;
 }
 
-void MapEditor::onSave()
+bool MapEditor::saveToPath(const QString& path)
 {
-    QString path = QFileDialog::getSaveFileName(this,
-        QString::fromUtf8("保存地图"), QString(),
-        QString::fromUtf8("魔塔存档 (*.txt)"));
-    if (path.isEmpty()) return;
-
     storeCurrentFloor();
 
     QFile file(path);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
         QMessageBox::warning(this, QString::fromUtf8("错误"), QString::fromUtf8("无法写入文件"));
-        return;
+        return false;
     }
+
+    // 按楼层号排序
+    std::vector<std::pair<int, EditorFloor*>> sorted;
+    for (auto& fp : m_floors)
+        sorted.push_back({fp.first, &fp.second});
+    std::sort(sorted.begin(), sorted.end(),
+        [](auto& a, auto& b) { return a.first < b.first; });
 
     QTextStream out(&file);
     out << "15 15\n";
-    out << "1\n";                        // current floor = 1
-    out << m_floors.size() << "\n";      // floor count
+    out << m_currentFloor << "\n";
+    out << sorted.size() << "\n";
 
-    for (auto& fp : m_floors) {
-        int fnum = fp.first;
-        auto& ef = fp.second;
+    for (auto& [fnum, ef] : sorted) {
         out << fnum << "\n";
 
         // 地图网格
         for (int y = 0; y < 15; ++y) {
             for (int x = 0; x < 15; ++x) {
-                out << ef.tiles[y * 15 + x].type;
+                out << ef->tiles[y * 15 + x].type;
                 if (x < 14) out << " ";
             }
             out << "\n";
@@ -699,13 +802,13 @@ void MapEditor::onSave()
 
         // 地面物品（含钥匙）
         int itemCount = 0;
-        for (auto& t : ef.tiles)
+        for (auto& t : ef->tiles)
             if (t.type == Tile_Item && !t.itemName.empty())
                 ++itemCount;
         out << itemCount << "\n";
         for (int y = 0; y < 15; ++y) {
             for (int x = 0; x < 15; ++x) {
-                auto& t = ef.tiles[y * 15 + x];
+                auto& t = ef->tiles[y * 15 + x];
                 if (t.type == Tile_Item && !t.itemName.empty())
                     out << x << " " << y << " " << QString::fromStdString(t.itemName)
                         << " " << t.itemValue << "\n";
@@ -714,13 +817,13 @@ void MapEditor::onSave()
 
         // 怪物
         int monCount = 0;
-        for (auto& t : ef.tiles)
+        for (auto& t : ef->tiles)
             if (t.type == Tile_Monster && !t.monsterName.empty())
                 ++monCount;
         out << monCount << "\n";
         for (int y = 0; y < 15; ++y) {
             for (int x = 0; x < 15; ++x) {
-                auto& t = ef.tiles[y * 15 + x];
+                auto& t = ef->tiles[y * 15 + x];
                 if (t.type == Tile_Monster && !t.monsterName.empty()) {
                     Monster m = MonsterDB::get(t.monsterName);
                     out << (y * 15 + x) << " " << QString::fromStdString(m.GetName()) << " "
@@ -732,13 +835,13 @@ void MapEditor::onSave()
 
         // NPC
         int npcCount = 0;
-        for (auto& t : ef.tiles)
+        for (auto& t : ef->tiles)
             if (t.type == Tile_NPC && !t.npcName.empty())
                 ++npcCount;
         out << npcCount << "\n";
         for (int y = 0; y < 15; ++y) {
             for (int x = 0; x < 15; ++x) {
-                auto& t = ef.tiles[y * 15 + x];
+                auto& t = ef->tiles[y * 15 + x];
                 if (t.type == Tile_NPC && !t.npcName.empty()) {
                     out << x << " " << y << " " << QString::fromStdString(t.npcName) << " "
                         << "0 " << t.npcDialog.size() << " "
@@ -751,15 +854,120 @@ void MapEditor::onSave()
         }
     }
 
-    // 玩家（Floor 1）
+    // 玩家数据 (取第一层玩家位置)
     auto& f1 = m_floors[1];
-    out << f1.playerX << " " << f1.playerY << " 100 10 5 0\n";  // x y hp atk def gold
-    out << "0 0 0\n";    // keys
-    out << "0 0 0\n";    // special flags
-    out << "0\n";         // inventory count
+    out << f1.playerX << " " << f1.playerY << " 100 10 5 0\n";
+    out << "0 0 0\n";
+    out << "0 0 0\n";
+    out << "0\n";
 
     file.close();
-    m_statusLabel->setText(QString::fromUtf8("已保存: %1").arg(path));
+    return true;
+}
+
+void MapEditor::onSave()
+{
+    QString path = QFileDialog::getSaveFileName(this,
+        QString::fromUtf8("保存地图"), QString(),
+        QString::fromUtf8("魔塔存档 (*.txt)"));
+    if (path.isEmpty()) return;
+
+    int floorCount = (int)m_floors.size();
+    if (saveToPath(path)) {
+        m_statusLabel->setText(QString::fromUtf8("已保存 %1 层到: %2").arg(floorCount).arg(path));
+        QMessageBox::information(this, QString::fromUtf8("保存成功"),
+            QString::fromUtf8("已保存 %1 个楼层。\n\n"
+                "提示：在游戏中需要放置楼梯(↑上/↓下)\n"
+                "才能在不同楼层间切换！").arg(floorCount));
+    }
+}
+
+void MapEditor::onSaveAsDefault()
+{
+    int floorCount = (int)m_floors.size();
+    QString path = QDir::currentPath() + "/default_map.txt";
+    if (saveToPath(path)) {
+        m_statusLabel->setText(QString::fromUtf8("已设默认地图 (%1 层)！新游戏将使用此地图。").arg(floorCount));
+        QMessageBox::information(this, QString::fromUtf8("默认地图"),
+            QString::fromUtf8("已保存 %1 个楼层为默认地图。\n\n"
+                "新游戏将加载此地图。\n"
+                "提示：确保已放置楼梯(↑上/↓下)！").arg(floorCount));
+    }
+}
+
+void MapEditor::onExportFloor()
+{
+    storeCurrentFloor();
+    auto it = m_floors.find(m_currentFloor);
+    if (it == m_floors.end()) return;
+
+    QString path = QFileDialog::getSaveFileName(this,
+        QString::fromUtf8("导出当前层"),
+        QString::fromUtf8("floor_%1.map").arg(m_currentFloor),
+        QString::fromUtf8("地图文件 (*.map)"));
+    if (path.isEmpty()) return;
+
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QMessageBox::warning(this, QString::fromUtf8("错误"), QString::fromUtf8("无法写入文件"));
+        return;
+    }
+
+    auto& ef = it->second;
+    QTextStream out(&file);
+
+    // 格式: 15x15 网格 + 玩家位置 + 怪物/物品/NPC 数据
+    out << "15 15\n";
+    for (int y = 0; y < 15; ++y) {
+        for (int x = 0; x < 15; ++x) {
+            out << ef.tiles[y * 15 + x].type;
+            if (x < 14) out << " ";
+        }
+        out << "\n";
+    }
+
+    out << ef.playerX << " " << ef.playerY << "\n";
+
+    // 怪物列表
+    std::vector<std::pair<int, EditorTile*>> monsters;
+    std::vector<std::pair<int, EditorTile*>> items;
+    std::vector<std::pair<int, EditorTile*>> npcs;
+    for (int y = 0; y < 15; ++y)
+        for (int x = 0; x < 15; ++x) {
+            auto& t = ef.tiles[y * 15 + x];
+            if (t.type == Tile_Monster && !t.monsterName.empty())
+                monsters.push_back({y * 15 + x, &t});
+            else if (t.type == Tile_Item && !t.itemName.empty())
+                items.push_back({y * 15 + x, &t});
+            else if (t.type == Tile_NPC && !t.npcName.empty())
+                npcs.push_back({y * 15 + x, &t});
+        }
+
+    out << monsters.size() << "\n";
+    for (auto& [key, t] : monsters) {
+        Monster m = MonsterDB::get(t->monsterName);
+        out << (key % 15) << " " << (key / 15) << " "
+            << QString::fromStdString(m.GetName()) << " "
+            << m.GetHP() << " " << m.GetATK() << " " << m.GetDEF() << " " << m.GetGold() << "\n";
+    }
+
+    out << items.size() << "\n";
+    for (auto& [key, t] : items) {
+        out << (key % 15) << " " << (key / 15) << " "
+            << QString::fromStdString(t->itemName) << " " << t->itemValue << "\n";
+    }
+
+    out << npcs.size() << "\n";
+    for (auto& [key, t] : npcs) {
+        out << (key % 15) << " " << (key / 15) << " "
+            << QString::fromStdString(t->npcName) << " 0 "
+            << t->npcDialog.size() << "\n";
+        for (auto& d : t->npcDialog)
+            out << QString::fromStdString(d) << "\n";
+    }
+
+    file.close();
+    m_statusLabel->setText(QString::fromUtf8("已导出当前层: %1").arg(path));
 }
 
 void MapEditor::onLoad()
@@ -797,7 +1005,7 @@ void MapEditor::onLoad()
         }
         m_floors[1] = ef;
         m_floorSpin->setMaximum(1);
-        switchToFloor(1);
+        switchToFloor(1, false);
         m_statusLabel->setText(QString::fromUtf8("已加载 .map: %1").arg(path));
         return;
     }
@@ -874,7 +1082,7 @@ void MapEditor::onLoad()
     int maxFloor = 1;
     for (auto& kv : m_floors) if (kv.first > maxFloor) maxFloor = kv.first;
     m_floorSpin->setMaximum(std::max(maxFloor, 1));
-    switchToFloor(1);
+    switchToFloor(1, false);
     m_statusLabel->setText(QString::fromUtf8("已加载: %1 (%2 层)").arg(path).arg(floorCount));
 }
 

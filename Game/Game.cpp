@@ -34,6 +34,16 @@ void Game::initFloor(int floor)
 
 bool Game::loadDefaultMap()
 {
+    // 优先加载用户设计的默认地图
+    {
+        std::ifstream check("default_map.txt");
+        if (check.good()) {
+            check.close();
+            if (loadFromFile("default_map.txt"))
+                return true;
+        }
+    }
+
     m_floor = 1;
     MapData::loadAllFloors(*this);
     m_currentFloor = &m_floors[1];

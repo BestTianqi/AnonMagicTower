@@ -93,15 +93,20 @@ private:
     void onSave();
     void onLoad();
     void onNewMap();
+    void onSaveAsDefault();
     void onTestPlay();
+    void onExportFloor();
+    bool saveToPath(const QString& path);
     void onTileTypeChanged(int id);
-    void onFloorChanged(int floor);
     void addFloor();
     void removeFloor();
     void updatePanelForTile(int tileType);
 
     MapEditWidget* m_edit;
-    QButtonGroup*  m_tileGroup;
+    QComboBox*     m_tileCombo;
+    int            m_currentTileType = 1;  // Tile_Wall
+    QString        m_selectedItemName;
+    int            m_selectedItemValue = 50;
     QSpinBox*      m_floorSpin;
     QLabel*        m_floorCountLabel;
     QLabel*        m_statusLabel;
@@ -123,5 +128,5 @@ private:
     int m_currentFloor = 1;
 
     void storeCurrentFloor();
-    void switchToFloor(int floor);
+    void switchToFloor(int floor, bool storeCurrent = true);
 };
