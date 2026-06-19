@@ -32,4 +32,5 @@ private:
     QPixmap m_playerPix;
     QPixmap m_defaultMonsterPix;
     QPixmap m_defaultItemPix;
+    QPixmap m_darkWallRevealed;
 };

@@ -912,6 +912,7 @@ bool MapEditor::saveToPath(const QString& path)
         [](auto& a, auto& b) { return a.first < b.first; });
 
     QTextStream out(&file);
+    out << "MOTA2\n";
     out << "15 15\n";
     out << m_currentFloor << "\n";
     out << sorted.size() << "\n";
@@ -981,24 +982,32 @@ bool MapEditor::saveToPath(const QString& path)
             }
         }
 
-        // 商店
-        int shopCount = 0;
-        for (auto& t : ef->tiles)
-            if (t.type == Tile_Shop && (t.shopPotionPrice > 0 || t.shopWeaponPrice > 0 || t.shopArmorPrice > 0))
-                ++shopCount;
-        out << shopCount << "\n";
-        for (int y = 0; y < 15; ++y) {
-            for (int x = 0; x < 15; ++x) {
-                auto& t = ef->tiles[y * 15 + x];
+    }
+
+
+    // 商店 (SHOP block)
+    {
+        size_t totalShops = 0;
+        for (auto& [fnum, ef] : sorted) {
+            for (auto& t : ef->tiles)
                 if (t.type == Tile_Shop && (t.shopPotionPrice > 0 || t.shopWeaponPrice > 0 || t.shopArmorPrice > 0))
-                    out << x << " " << y << " " << t.shopPotionPrice << " "
-                        << t.shopWeaponPrice << " " << t.shopArmorPrice << " "
-                        << t.shopPotionValue << " " << t.shopWeaponValue << " "
-                        << t.shopArmorValue << "\n";
+                    ++totalShops;
+        }
+        out << "SHOP\n" << totalShops << "\n";
+        for (auto& [fnum, ef] : sorted) {
+            for (int y = 0; y < 15; ++y) {
+                for (int x = 0; x < 15; ++x) {
+                    auto& t = ef->tiles[y * 15 + x];
+                    if (t.type == Tile_Shop && (t.shopPotionPrice > 0 || t.shopWeaponPrice > 0 || t.shopArmorPrice > 0))
+                        out << fnum << " " << x << " " << y << " "
+                            << t.shopPotionPrice << " " << t.shopWeaponPrice << " "
+                            << t.shopArmorPrice << " "
+                            << t.shopPotionValue << " " << t.shopWeaponValue << " "
+                            << t.shopArmorValue << "\n";
+                }
             }
         }
     }
-
     // 玩家数据 (取第一层玩家位置)
     auto& f1 = m_floors[1];
     out << f1.playerX << " " << f1.playerY << " 100 10 5 0\n";
@@ -1214,7 +1223,23 @@ void MapEditor::onLoad()
     }
 
     QTextStream in(&file);
-    int mw, mh; in >> mw >> mh;
+
+    // 检测版本标记
+    QString version;
+    in >> version;
+    bool isV2 = (version == "MOTA2");
+    int mw, mh;
+    if (!isV2) {
+        mw = version.toInt();
+        in >> mh;
+    } else {
+        in >> mw >> mh;
+    }
+    if (mw != 15 || mh != 15) {
+        QMessageBox::warning(this, QString::fromUtf8("错误"), QString::fromUtf8("仅支持 15x15"));
+        return;
+    }
+
     int currentFloor; in >> currentFloor;
     int floorCount; in >> floorCount;
 
@@ -1264,29 +1289,66 @@ void MapEditor::onLoad()
             }
         }
 
-        // 商店
-        int scount; in >> scount;
-        for (int i = 0; i < scount; ++i) {
-            int sx, sy, pp, wp, ap, pv = 200, wv = 5, av = 8;
-            in >> sx >> sy >> pp >> wp >> ap;
-            QString rest = in.readLine(); // 读剩余数值或空行
-            QTextStream rs(&rest);
-            rs >> pv >> wv >> av;
-            auto& t = ef.tiles[sy * 15 + sx];
-            t.shopPotionPrice = pp;
-            t.shopWeaponPrice = wp;
-            t.shopArmorPrice  = ap;
-            t.shopPotionValue = pv;
-            t.shopWeaponValue = wv;
-            t.shopArmorValue  = av;
+        // 商店 (仅旧格式 per-floor)
+        if (!isV2) {
+            int scount; in >> scount;
+            for (int i = 0; i < scount; ++i) {
+                int sx, sy, pp, wp, ap, pv = 200, wv = 5, av = 8;
+                in >> sx >> sy >> pp >> wp >> ap;
+                QString rest = in.readLine();
+                if (!rest.trimmed().isEmpty()) {
+                    QTextStream rs(&rest);
+                    rs >> pv >> wv >> av;
+                }
+                auto& t = ef.tiles[sy * 15 + sx];
+                t.shopPotionPrice = pp;
+                t.shopWeaponPrice = wp;
+                t.shopArmorPrice  = ap;
+                t.shopPotionValue = pv;
+                t.shopWeaponValue = wv;
+                t.shopArmorValue  = av;
+            }
         }
 
         m_floors[fnum] = ef;
     }
 
-    // 玩家位置
-    int px, py, php, patk, pdef, pgold;
-    in >> px >> py >> php >> patk >> pdef >> pgold;
+    // 商店 (SHOP block, 新格式) 或旧格式直接进入玩家数据
+    int px = 0, py = 0, php = 100, patk = 10, pdef = 5, pgold = 0;
+    if (isV2) {
+        // V2 格式: 跳过空行, 读取 SHOP 标记
+        QString marker = in.readLine().trimmed();
+        if (marker.isEmpty()) marker = in.readLine().trimmed();
+        if (marker == "SHOP") {
+            int totalShops; in >> totalShops;
+            for (int i = 0; i < totalShops; ++i) {
+                int fnum, sx, sy, pp, wp, ap, pv = 200, wv = 5, av = 8;
+                in >> fnum >> sx >> sy >> pp >> wp >> ap;
+                QString rest = in.readLine();
+                if (!rest.trimmed().isEmpty()) {
+                    QTextStream rs(&rest);
+                    rs >> pv >> wv >> av;
+                }
+                auto it = m_floors.find(fnum);
+                if (it != m_floors.end()) {
+                    auto& t = it->second.tiles[sy * 15 + sx];
+                    t.shopPotionPrice = pp;
+                    t.shopWeaponPrice = wp;
+                    t.shopArmorPrice  = ap;
+                    t.shopPotionValue = pv;
+                    t.shopWeaponValue = wv;
+                    t.shopArmorValue  = av;
+                }
+            }
+            // 读取玩家数据
+            in >> px >> py >> php >> patk >> pdef >> pgold;
+        }
+    } else {
+        // 旧格式: 读取玩家数据行
+        in >> px >> py >> php >> patk >> pdef >> pgold;
+    }
+
+    // 应用玩家位置到第一层
     if (m_floors.find(1) != m_floors.end()) {
         m_floors[1].playerX = px;
         m_floors[1].playerY = py;

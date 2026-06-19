@@ -219,6 +219,11 @@ Game::MoveResult Game::tryMovePlayer(int nx, int ny)
         }
         return Move_Block;
 
+    case Tile_DarkWall:
+        setTile(nx, ny, Tile_Floor);
+        m_player.x = nx; m_player.y = ny;
+        return Move_Ok;
+
     case Tile_Floor:
         m_player.x = nx; m_player.y = ny;
         // 消耗移动类道具标记
@@ -349,6 +354,7 @@ bool Game::saveToFile(const std::string& path) const
     std::ofstream ofs(path);
     if (!ofs) return false;
 
+    ofs << "MOTA2\n";
     ofs << m_width << " " << m_height << "\n";
     ofs << m_floor << "\n";
     ofs << m_floors.size() << "\n";
@@ -401,27 +407,25 @@ bool Game::saveToFile(const std::string& path) const
             for (auto& d : n.Dialog())
                 ofs << d << "\n";
         }
+
     }
 
-    // 商店 (所有楼层)
-    {
-        // 统计所有楼层商店总数
-        size_t totalShops = 0;
-        for (auto& fp : m_floors)
-            totalShops += fp.second.shops.size();
-        ofs << "SHOP " << totalShops << "\n";
-        for (auto& fp : m_floors) {
-            int fnum = fp.first;
-            for (auto& skv : fp.second.shops) {
-                int x = skv.first % m_width;
-                int y = skv.first / m_width;
-                const ShopData& s = skv.second;
-                ofs << fnum << " " << x << " " << y << " "
-                    << s.potionPrice << " " << s.weaponPrice << " "
-                    << s.armorPrice << " "
-                    << s.potionValue << " " << s.weaponValue << " "
-                    << s.armorValue << "\n";
-            }
+    // 商店 (SHOP block)
+    size_t totalShops = 0;
+    for (auto& fp : m_floors)
+        totalShops += fp.second.shops.size();
+    ofs << "SHOP\n" << totalShops << "\n";
+    for (auto& fp : m_floors) {
+        int fnum = fp.first;
+        for (auto& skv : fp.second.shops) {
+            int x = skv.first % m_width;
+            int y = skv.first / m_width;
+            const ShopData& s = skv.second;
+            ofs << fnum << " " << x << " " << y << " "
+                << s.potionPrice << " " << s.weaponPrice << " "
+                << s.armorPrice << " "
+                << s.potionValue << " " << s.weaponValue << " "
+                << s.armorValue << "\n";
         }
     }
 
@@ -437,6 +441,11 @@ bool Game::saveToFile(const std::string& path) const
     // 特殊物品标记
     ofs << m_player.hasGlasses << " " << m_player.hasPenguinDoll << " "
         << m_player.hasMatchaParfait << "\n";
+
+    // 扩展标记 (v2)
+    ofs << "EXTRA " << m_player.hasLuckyCoin << " " << m_player.shopUseCount << " "
+        << m_player.wallBreakerUsed << " " << m_player.stairUpUsed << " "
+        << m_player.stairDownUsed << "\n";
 
     // 背包物品
     ofs << m_player.InventoryCount() << "\n";
@@ -481,6 +490,8 @@ static std::unique_ptr<Item> createItemByName(const std::string& iname, int ival
         return std::make_unique<PenguinDoll>();
     if (iname == QString::fromUtf8("抹茶芭菲").toStdString())
         return std::make_unique<MatchaParfait>();
+    if (iname == QString::fromUtf8("幸运金币").toStdString())
+        return std::make_unique<LuckyCoin>();
     return nullptr;
 }
 
@@ -491,7 +502,17 @@ bool Game::loadFromFile(const std::string& path)
 
     m_floors.clear();
 
-    ifs >> m_width >> m_height;
+    // 检测版本标记
+    std::string version;
+    ifs >> version;
+    bool isV2 = (version == "MOTA2");
+    if (!isV2) {
+        // 旧格式: version 就是 m_width
+        m_width = std::stoi(version);
+        ifs >> m_height;
+    } else {
+        ifs >> m_width >> m_height;
+    }
     ifs >> m_floor;
 
     size_t floorCount;
@@ -548,6 +569,19 @@ bool Game::loadFromFile(const std::string& path)
             fd.npcs.emplace(key, std::move(npc));
         }
 
+        // 商店 (仅旧格式 per-floor)
+        if (!isV2) {
+            size_t scount; ifs >> scount;
+            for (size_t i = 0; i < scount; ++i) {
+                int sx, sy, pp, wp, ap, pv = 200, wv = 5, av = 8;
+                ifs >> sx >> sy >> pp >> wp >> ap;
+                if (ifs.peek() != '\n' && ifs.peek() != '\r' && ifs.peek() != EOF)
+                    ifs >> pv >> wv >> av;
+                int key = sy * m_width + sx;
+                fd.shops.emplace(key, ShopData{pp, wp, ap, pv, wv, av});
+            }
+        }
+
         m_floors[fnum] = std::move(fd);
     }
 
@@ -580,8 +614,17 @@ bool Game::loadFromFile(const std::string& path)
     bool hasGl, hasPen, hasMat;
     ifs >> hasGl >> hasPen >> hasMat;
 
-    int invCount;
-    ifs >> invCount;
+    // 扩展标记 (v2, 可选)
+    bool hasLc = false; int shopUse = 0;
+    bool wbUsed = false, suUsed = false, sdUsed = false;
+    std::string invToken;
+    ifs >> invToken;
+    if (invToken == "EXTRA") {
+        ifs >> hasLc >> shopUse >> wbUsed >> suUsed >> sdUsed;
+        ifs >> invToken; // 下一个是背包数量
+    }
+    // invToken 现在是背包数量（或旧格式直接读取的数字）
+    int invCount = std::stoi(invToken);
 
     // 重置并恢复玩家数据
     m_player = Player();
@@ -594,6 +637,11 @@ bool Game::loadFromFile(const std::string& path)
     m_player.hasGlasses = hasGl;
     m_player.hasPenguinDoll = hasPen;
     m_player.hasMatchaParfait = hasMat;
+    m_player.hasLuckyCoin = hasLc;
+    m_player.shopUseCount = shopUse;
+    m_player.wallBreakerUsed = wbUsed;
+    m_player.stairUpUsed = suUsed;
+    m_player.stairDownUsed = sdUsed;
 
     for (int i = 0; i < invCount; ++i) {
         std::string iname; int ival;

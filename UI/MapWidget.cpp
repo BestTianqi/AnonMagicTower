@@ -41,6 +41,10 @@ void MapWidget::generatePlaceholders()
     m_tilePix[Tile_Floor] = makePixmap(QColor(180, 170, 150), QColor(150, 140, 120), "");
     // 墙壁
     m_tilePix[Tile_Wall] = makePixmap(QColor(55, 55, 60), QColor(40, 40, 45), "");
+    // 暗墙（无眼镜时和墙一样）
+    m_tilePix[Tile_DarkWall] = makePixmap(QColor(55, 55, 60), QColor(40, 40, 45), "");
+    // 暗墙（有眼镜时变浅）
+    m_darkWallRevealed = makePixmap(QColor(100, 95, 85), QColor(75, 70, 60), "暗", QColor(180, 180, 160), 10);
     // 上楼
     m_tilePix[Tile_StairsUp] = makePixmap(QColor(180, 160, 50), QColor(140, 120, 30),
         QString::fromUtf8("↑"), Qt::black, 20);
@@ -270,6 +274,9 @@ void MapWidget::paintEvent(QPaintEvent*)
                     continue;
                 }
             }
+
+            if (t == Tile_DarkWall && m_game->player().hasGlasses)
+                pix = &m_darkWallRevealed;
 
             if (!pix) {
                 auto it = m_tilePix.find(t);

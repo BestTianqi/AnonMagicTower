@@ -8,7 +8,14 @@
       "Bash(qmake --version)",
       "Bash(rm -f d:/workspace/mota/build/mota.exe && cd d:/workspace/mota/build && cmake --build . 2>&1)",
       "Bash(taskkill /f /im mota.exe)",
-      "Bash(powershell -Command \"Stop-Process -Name mota -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 1\")"
+      "Bash(powershell -Command \"Stop-Process -Name mota -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 1\")",
+      "Bash(cat \"d:\\\\\\\\workspace\\\\\\\\mota\\\\\\\\build\\\\\\\\default_map.txt\")",
+      "Bash(python3)",
+      "Bash(git -C \"d:\\\\workspace\\\\mota\" checkout -- UI/MapEditor.cpp)",
+      "Bash(powershell -Command \"Stop-Process -Name mota -Force -ErrorAction SilentlyContinue\")",
+      "Bash(git -C \"d:\\\\workspace\\\\mota\" log --oneline -5 -- \"build/default_map.txt\")",
+      "Bash(git -C \"d:\\\\workspace\\\\mota\" stash list)",
+      "Bash(powershell -Command \"if \\(Get-Process -Name mota -ErrorAction SilentlyContinue\\) { echo 'RUNNING' } else { echo 'CRASHED' }\")"
     ]
   }
 }

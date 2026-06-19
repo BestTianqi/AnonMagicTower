@@ -75,6 +75,7 @@ void MainWindow::loadAssets()
     mw->loadTileImage(Tile_DoorGreen,  ":/images/door_green.png");
     mw->loadTileImage(Tile_NPC,        ":/images/npc.png");
     mw->loadTileImage(Tile_Shop,       ":/images/shop.png");
+    mw->loadTileImage(Tile_DarkWall,   ":/images/dark_wall.png");
 
     mw->loadPlayerImage(":/images/player.png");
 
