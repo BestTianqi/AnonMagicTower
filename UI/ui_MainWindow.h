@@ -22,6 +22,7 @@ public:
     QLabel*      defLabel     = nullptr;
     QLabel*      goldLabel    = nullptr;
     QLabel*      keysLabel    = nullptr;
+    QLabel*      invItemsLabel = nullptr;
     QPushButton* invButton    = nullptr;
     QPushButton* saveButton   = nullptr;
     QPushButton* loadButton   = nullptr;
@@ -102,6 +103,13 @@ public:
         keysLabel->setFont(statFont);
         keysLabel->setStyleSheet("color: #aaccaa;");
         vbox->addWidget(keysLabel);
+
+        invItemsLabel = new QLabel(sidePanel);
+        invItemsLabel->setObjectName("invItemsLabel");
+        invItemsLabel->setText("");
+        invItemsLabel->setWordWrap(true);
+        invItemsLabel->setStyleSheet("color: #8899aa; font-size: 12px; padding: 4px;");
+        vbox->addWidget(invItemsLabel);
 
         auto* spacer = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
         vbox->addSpacerItem(spacer);

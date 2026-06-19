@@ -13,6 +13,7 @@ public:
 private slots:
     void onNewGame();
     void onLoadGame();
+    void onMapEditor();
     void onSettings();
 
 private:

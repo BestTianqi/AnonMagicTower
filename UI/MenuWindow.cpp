@@ -1,5 +1,6 @@
 #include "MenuWindow.h"
 #include "MainWindow.h"
+#include "MapEditor.h"
 #include "Game/Game.h"
 
 #include <QApplication>
@@ -12,9 +13,10 @@ MenuWindow::MenuWindow(QWidget* parent)
     ui.setupUi(this);
     setWindowTitle(QString::fromUtf8("魔塔"));
 
-    connect(ui.newGameBtn,  &QPushButton::clicked, this, &MenuWindow::onNewGame);
-    connect(ui.loadGameBtn, &QPushButton::clicked, this, &MenuWindow::onLoadGame);
-    connect(ui.settingsBtn, &QPushButton::clicked, this, &MenuWindow::onSettings);
+    connect(ui.newGameBtn,   &QPushButton::clicked, this, &MenuWindow::onNewGame);
+    connect(ui.loadGameBtn,  &QPushButton::clicked, this, &MenuWindow::onLoadGame);
+    connect(ui.mapEditorBtn, &QPushButton::clicked, this, &MenuWindow::onMapEditor);
+    connect(ui.settingsBtn,  &QPushButton::clicked, this, &MenuWindow::onSettings);
 }
 
 void MenuWindow::onNewGame()
@@ -42,6 +44,13 @@ void MenuWindow::onLoadGame()
     enterGame(game);
 }
 
+void MenuWindow::onMapEditor()
+{
+    auto* editor = new MapEditor();
+    editor->setAttribute(Qt::WA_DeleteOnClose);
+    editor->show();
+}
+
 void MenuWindow::onSettings()
 {
     QMessageBox::information(this, QString::fromUtf8("设置"),
@@ -57,6 +66,9 @@ void MenuWindow::enterGame(Game* game)
     m_gameWindow = new MainWindow(game);
     m_gameWindow->loadAssets();
     m_gameWindow->show();
+    m_gameWindow->raise();
+    m_gameWindow->activateWindow();
+    m_gameWindow->setFocus();
 
     // 游戏窗口关闭时回到菜单
     connect(m_gameWindow, &QWidget::destroyed, this, [this]() {

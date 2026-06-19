@@ -1,4 +1,5 @@
 #include "Game.h"
+#include "MapData.h"
 #include <QString>
 #include <fstream>
 #include <sstream>
@@ -13,13 +14,17 @@ void Game::initFloor(int floor)
     if (m_floors.find(floor) == m_floors.end()) {
         FloorData fd;
         fd.map.assign(m_width * m_height, Tile_Floor);
-        // 四周墙壁
+        // 两圈墙壁 (rows 0,1,13,14 and cols 0,1,13,14)
         for (int x = 0; x < m_width; ++x) {
-            fd.map[x]                      = Tile_Wall;
-            fd.map[(m_height-1)*m_width + x] = Tile_Wall;
+            fd.map[0 * m_width + x]                = Tile_Wall;
+            fd.map[1 * m_width + x]                = Tile_Wall;
+            fd.map[(m_height-2)*m_width + x]       = Tile_Wall;
+            fd.map[(m_height-1)*m_width + x]       = Tile_Wall;
         }
         for (int y = 0; y < m_height; ++y) {
-            fd.map[y*m_width]              = Tile_Wall;
+            fd.map[y*m_width + 0]       = Tile_Wall;
+            fd.map[y*m_width + 1]       = Tile_Wall;
+            fd.map[y*m_width + (m_width-2)] = Tile_Wall;
             fd.map[y*m_width + (m_width-1)] = Tile_Wall;
         }
         m_floors[floor] = std::move(fd);
@@ -30,167 +35,16 @@ void Game::initFloor(int floor)
 bool Game::loadDefaultMap()
 {
     m_floor = 1;
-    loadDefaultFloor1();
-    loadDefaultFloor2();
+    MapData::loadAllFloors(*this);
+    m_currentFloor = &m_floors[1];
 
-    m_player.x   = 1;
-    m_player.y   = 2;
+    m_player.x   = 2;
+    m_player.y   = 3;
     m_player.hp  = 100;
     m_player.atk = 10;
     m_player.def = 5;
 
     return true;
-}
-
-void Game::loadDefaultFloor1()
-{
-    initFloor(1);
-    auto& f = *m_currentFloor;
-
-    // 上楼点
-    f.map[1*m_width + 1] = Tile_StairsUp;
-
-    // 墙壁迷宫
-    f.map[2*m_width + 4] = Tile_Wall;
-    f.map[3*m_width + 4] = Tile_Wall;
-    f.map[4*m_width + 4] = Tile_Wall;
-    f.map[5*m_width + 2] = Tile_Wall;
-    f.map[5*m_width + 3] = Tile_Wall;
-    f.map[6*m_width + 6] = Tile_Wall;
-    f.map[7*m_width + 6] = Tile_Wall;
-    f.map[8*m_width + 6] = Tile_Wall;
-
-    // 红门
-    f.map[1*m_width + 5] = Tile_DoorRed;
-
-    // 蓝门
-    f.map[3*m_width + 2] = Tile_DoorBlue;
-
-    // 绿门
-    f.map[7*m_width + 3] = Tile_DoorGreen;
-
-    // 道具
-    addItemAt(2, 3, std::make_unique<Key>(KeyType::Red));
-    f.map[3*m_width + 2] = Tile_Item;
-
-    addItemAt(3, 5, std::make_unique<Potion>(50));
-    f.map[5*m_width + 3] = Tile_Item;
-
-    addItemAt(4, 1, std::make_unique<Weapon>(5));
-    f.map[1*m_width + 4] = Tile_Item;
-
-    addItemAt(5, 8, std::make_unique<Treasure>(10));
-    f.map[8*m_width + 5] = Tile_Item;
-
-    addItemAt(2, 7, std::make_unique<Key>(KeyType::Blue));
-    f.map[7*m_width + 2] = Tile_Item;
-
-    addItemAt(6, 1, std::make_unique<Armor>(3));
-    f.map[1*m_width + 6] = Tile_Item;
-
-    addItemAt(8, 1, std::make_unique<MagicKey>());
-    f.map[1*m_width + 8] = Tile_Item;
-
-    addItemAt(10, 1, std::make_unique<AnonGlasses>());
-    f.map[1*m_width + 10] = Tile_Item;
-
-    addItemAt(12, 3, std::make_unique<WallBreaker>());
-    f.map[3*m_width + 12] = Tile_Item;
-
-    addItemAt(8, 10, std::make_unique<TempShield>());
-    f.map[10*m_width + 8] = Tile_Item;
-
-    // 怪物
-    spawnMonster(3, 3, Monster("要乐奈", 25, 8, 1, 3));
-    f.map[3*m_width + 3] = Tile_Monster;
-
-    spawnMonster(5, 5, Monster("若叶睦", 40, 12, 3, 6));
-    f.map[5*m_width + 5] = Tile_Monster;
-
-    spawnMonster(7, 1, Monster("丰川祥子", 50, 15, 5, 10));
-    f.map[1*m_width + 7] = Tile_Monster;
-
-    spawnMonster(10, 3, Monster("高松灯", 30, 18, 2, 8));
-    f.map[3*m_width + 10] = Tile_Monster;
-
-    spawnMonster(10, 8, Monster("椎名立希", 45, 22, 5, 12));
-    f.map[8*m_width + 10] = Tile_Monster;
-
-    spawnMonster(4, 10, Monster("祐天寺若麦", 60, 16, 10, 15));
-    f.map[10*m_width + 4] = Tile_Monster;
-
-    // NPC
-    addNPCAt(12, 8, NPC("向导", {"欢迎来到魔塔！收集钥匙打开门，击败怪物提升实力。",
-                                  "眼镜可以看穿怪物的属性。",
-                                  "破墙锤可以摧毁一堵墙壁。"},
-                         std::make_unique<Potion>(30)));
-    f.map[8*m_width + 12] = Tile_NPC;
-
-    addNPCAt(4, 6, NPC("商人", {"我可以卖给你一些装备。"},
-                         std::make_unique<Weapon>(3)));
-    f.map[6*m_width + 4] = Tile_NPC;
-}
-
-void Game::loadDefaultFloor2()
-{
-    initFloor(2);
-    auto& f = *m_currentFloor;
-
-    // 下楼点
-    f.map[1*m_width + 1] = Tile_StairsDown;
-
-    // 墙壁
-    f.map[2*m_width + 3] = Tile_Wall;
-    f.map[2*m_width + 5] = Tile_Wall;
-    f.map[2*m_width + 7] = Tile_Wall;
-    f.map[3*m_width + 3] = Tile_Wall;
-    f.map[3*m_width + 5] = Tile_Wall;
-    f.map[3*m_width + 7] = Tile_Wall;
-    f.map[6*m_width + 2] = Tile_Wall;
-    f.map[6*m_width + 3] = Tile_Wall;
-    f.map[6*m_width + 4] = Tile_Wall;
-    f.map[6*m_width + 5] = Tile_Wall;
-
-    // 红门
-    f.map[1*m_width + 7] = Tile_DoorRed;
-
-    // 蓝门
-    f.map[5*m_width + 7] = Tile_DoorBlue;
-
-    // 道具
-    addItemAt(2, 2, std::make_unique<Weapon>(8));
-    f.map[2*m_width + 2] = Tile_Item;
-
-    addItemAt(4, 4, std::make_unique<Armor>(5));
-    f.map[4*m_width + 4] = Tile_Item;
-
-    addItemAt(1, 10, std::make_unique<Potion>(100));
-    f.map[10*m_width + 1] = Tile_Item;
-
-    addItemAt(3, 10, std::make_unique<Treasure>(25));
-    f.map[10*m_width + 3] = Tile_Item;
-
-    addItemAt(10, 10, std::make_unique<StairLower>());
-    f.map[10*m_width + 10] = Tile_Item;
-
-    // 怪物
-    spawnMonster(4, 2, Monster("三角初华", 75, 18, 10, 20));
-    f.map[2*m_width + 4] = Tile_Monster;
-
-    spawnMonster(8, 2, Monster("长崎素世", 55, 24, 5, 16));
-    f.map[2*m_width + 8] = Tile_Monster;
-
-    spawnMonster(8, 6, Monster("八幡海铃", 80, 16, 12, 18));
-    f.map[6*m_width + 8] = Tile_Monster;
-
-    spawnMonster(10, 6, Monster("大要乐奈", 100, 22, 12, 25));
-    f.map[6*m_width + 10] = Tile_Monster;
-
-    spawnMonster(6, 10, Monster("大高松灯", 70, 28, 8, 28));
-    f.map[10*m_width + 6] = Tile_Monster;
-
-    spawnMonster(12, 10, Monster("大椎名立希", 60, 33, 6, 30));
-    f.map[10*m_width + 12] = Tile_Monster;
 }
 
 int Game::tileAt(int x, int y) const
@@ -278,10 +132,21 @@ void Game::goUpFloor()
 {
     m_floor++;
     if (m_floors.find(m_floor) == m_floors.end()) {
-        // 自动生成新楼层
         initFloor(m_floor);
     }
     m_currentFloor = &m_floors[m_floor];
+
+    // 在新楼层找到下楼楼梯，将玩家放在旁边
+    for (int y = 2; y < m_height - 2; ++y)
+        for (int x = 2; x < m_width - 2; ++x)
+            if (m_currentFloor->map[y * m_width + x] == Tile_StairsDown) {
+                m_player.x = x;
+                m_player.y = y;
+                return;
+            }
+    // fallback: 放在左下角
+    m_player.x = 2;
+    m_player.y = m_height - 3;
 }
 
 void Game::goDownFloor()
@@ -289,6 +154,18 @@ void Game::goDownFloor()
     if (m_floor <= 1) return;
     m_floor--;
     m_currentFloor = &m_floors[m_floor];
+
+    // 在前楼层找到上楼楼梯，将玩家放在旁边
+    for (int y = 2; y < m_height - 2; ++y)
+        for (int x = 2; x < m_width - 2; ++x)
+            if (m_currentFloor->map[y * m_width + x] == Tile_StairsUp) {
+                m_player.x = x;
+                m_player.y = y;
+                return;
+            }
+    // fallback: 放在左上角
+    m_player.x = 2;
+    m_player.y = 2;
 }
 
 Game::MoveResult Game::tryMovePlayer(int nx, int ny)
@@ -470,16 +347,19 @@ bool Game::saveToFile(const std::string& path) const
                 << m.GetDEF() << " " << m.GetGold() << "\n";
         }
 
-        // NPC (仅保存对话，奖励物品通过物品系统保存)
+        // NPC
         ofs << fd.npcs.size() << "\n";
         for (auto& nkv : fd.npcs) {
             int key = nkv.first;
             const NPC& n = nkv.second;
             int x = key % m_width;
             int y = key / m_width;
+            const Item* reward = n.GetReward();
             ofs << x << " " << y << " " << n.GetName() << " "
                 << n.HasGivenReward() << " "
-                << n.Dialog().size() << "\n";
+                << n.Dialog().size() << " "
+                << (reward ? reward->GetName() : "-") << " "
+                << (reward ? reward->GetValue() : 0) << "\n";
             for (auto& d : n.Dialog())
                 ofs << d << "\n";
         }
@@ -591,7 +471,8 @@ bool Game::loadFromFile(const std::string& path)
         size_t ncount; ifs >> ncount;
         for (size_t i = 0; i < ncount; ++i) {
             int nx, ny; std::string nname; bool given; size_t dsize;
-            ifs >> nx >> ny >> nname >> given >> dsize;
+            std::string rewardName; int rewardValue;
+            ifs >> nx >> ny >> nname >> given >> dsize >> rewardName >> rewardValue;
             ifs.ignore();
             std::vector<std::string> dialog;
             for (size_t d = 0; d < dsize; ++d) {
@@ -601,7 +482,8 @@ bool Game::loadFromFile(const std::string& path)
                 dialog.push_back(line);
             }
             int key = ny * m_width + nx;
-            auto npc = NPC(nname, dialog, nullptr);
+            auto reward = (rewardName == "-") ? nullptr : createItemByName(rewardName, rewardValue);
+            auto npc = NPC(nname, dialog, std::move(reward));
             npc.SetGiven(given);
             fd.npcs.emplace(key, std::move(npc));
         }

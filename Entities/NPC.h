@@ -20,6 +20,7 @@ public:
 
     bool HasGivenReward() const { return m_given; }
     void SetGiven(bool v) { m_given = v; }
+    const Item* GetReward() const { return m_reward.get(); }
 
 private:
     std::string m_name;

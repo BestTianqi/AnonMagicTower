@@ -71,6 +71,8 @@ public:
     void goDownFloor();
     void initFloor(int floor);
 
+    int posKey(int x, int y) const { return y * m_width + x; }
+
     bool saveToFile(const std::string& path) const;
     bool loadFromFile(const std::string& path);
 
@@ -85,9 +87,4 @@ private:
 
     FloorData& currentFloorData() { return *m_currentFloor; }
     const FloorData& currentFloorData() const { return *m_currentFloor; }
-
-    int posKey(int x, int y) const { return y * m_width + x; }
-
-    void loadDefaultFloor1();
-    void loadDefaultFloor2();
 };

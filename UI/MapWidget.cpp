@@ -100,6 +100,68 @@ QSize MapWidget::sizeHint() const
     return QSize(900, 900);
 }
 
+// 根据道具名称返回对应颜色和标签
+static void itemAppearance(const std::string& name, QColor& fill, QColor& border,
+                           QString& label, QColor& textColor)
+{
+    QString qname = QString::fromStdString(name);
+
+    // 钥匙类
+    if (qname == QString::fromUtf8("Red Key") || qname == QString::fromUtf8("红钥匙"))
+        { fill = QColor(200, 45, 45); border = QColor(160, 20, 20);
+          label = QString::fromUtf8("红钥"); textColor = QColor(255, 220, 100); return; }
+    if (qname == QString::fromUtf8("Blue Key") || qname == QString::fromUtf8("蓝钥匙"))
+        { fill = QColor(45, 60, 200); border = QColor(20, 30, 160);
+          label = QString::fromUtf8("蓝钥"); textColor = QColor(255, 220, 100); return; }
+    if (qname == QString::fromUtf8("Green Key") || qname == QString::fromUtf8("绿钥匙"))
+        { fill = QColor(45, 180, 60); border = QColor(20, 140, 30);
+          label = QString::fromUtf8("绿钥"); textColor = QColor(255, 220, 100); return; }
+    if (qname == QString::fromUtf8("万能钥匙"))
+        { fill = QColor(130, 60, 200); border = QColor(90, 30, 160);
+          label = QString::fromUtf8("万能钥"); textColor = QColor(255, 220, 100); return; }
+
+    // 属性类
+    if (qname == QString::fromUtf8("Potion") || qname == QString::fromUtf8("药水"))
+        { fill = QColor(200, 60, 60); border = QColor(150, 30, 30);
+          label = QString::fromUtf8("生命药"); textColor = Qt::white; return; }
+    if (qname == QString::fromUtf8("Weapon") || qname == QString::fromUtf8("武器"))
+        { fill = QColor(210, 140, 40); border = QColor(160, 100, 20);
+          label = QString::fromUtf8("武器"); textColor = Qt::white; return; }
+    if (qname == QString::fromUtf8("Armor") || qname == QString::fromUtf8("防具"))
+        { fill = QColor(60, 120, 200); border = QColor(30, 80, 160);
+          label = QString::fromUtf8("防具"); textColor = Qt::white; return; }
+    if (qname == QString::fromUtf8("Treasure") || qname == QString::fromUtf8("金币"))
+        { fill = QColor(220, 180, 40); border = QColor(170, 130, 20);
+          label = QString::fromUtf8("金币"); textColor = QColor(100, 60, 0); return; }
+
+    // 特殊道具
+    if (qname == QString::fromUtf8("匿名眼镜"))
+        { fill = QColor(40, 180, 180); border = QColor(20, 130, 130);
+          label = QString::fromUtf8("眼镜"); textColor = Qt::white; return; }
+    if (qname == QString::fromUtf8("破墙锤"))
+        { fill = QColor(140, 100, 70); border = QColor(100, 70, 40);
+          label = QString::fromUtf8("破墙锤"); textColor = Qt::white; return; }
+    if (qname == QString::fromUtf8("上楼器"))
+        { fill = QColor(180, 170, 60); border = QColor(140, 130, 30);
+          label = QString::fromUtf8("上楼器"); textColor = Qt::black; return; }
+    if (qname == QString::fromUtf8("下楼器"))
+        { fill = QColor(160, 110, 180); border = QColor(120, 80, 140);
+          label = QString::fromUtf8("下楼器"); textColor = Qt::white; return; }
+    if (qname == QString::fromUtf8("临时护盾"))
+        { fill = QColor(80, 160, 220); border = QColor(50, 120, 180);
+          label = QString::fromUtf8("护盾"); textColor = Qt::white; return; }
+    if (qname == QString::fromUtf8("企鹅玩偶"))
+        { fill = QColor(220, 130, 170); border = QColor(170, 80, 120);
+          label = QString::fromUtf8("企鹅"); textColor = Qt::white; return; }
+    if (qname == QString::fromUtf8("抹茶芭菲"))
+        { fill = QColor(140, 200, 100); border = QColor(90, 150, 50);
+          label = QString::fromUtf8("芭菲"); textColor = Qt::white; return; }
+
+    // fallback
+    fill = QColor(60, 170, 60); border = QColor(40, 130, 40);
+    label = QString::fromUtf8("宝"); textColor = QColor(255, 255, 100);
+}
+
 void MapWidget::paintEvent(QPaintEvent*)
 {
     QPainter painter(this);
@@ -124,6 +186,19 @@ void MapWidget::paintEvent(QPaintEvent*)
                         pix = &it->second;
                 }
                 if (!pix) pix = &m_defaultMonsterPix;
+            }
+
+            if (t == Tile_Item && !pix) {
+                const Item* item = m_game->itemAt(x, y);
+                if (item) {
+                    QColor fill, border, textColor;
+                    QString label;
+                    itemAppearance(item->GetName(), fill, border, label, textColor);
+                    int fontSize = label.length() > 2 ? 9 : 11;
+                    QPixmap generated = makePixmap(fill, border, label, textColor, fontSize);
+                    painter.drawPixmap(r, generated);
+                    continue;
+                }
             }
 
             if (!pix) {

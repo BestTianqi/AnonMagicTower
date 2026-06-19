@@ -16,10 +16,12 @@
 MainWindow::MainWindow(Game* game, QWidget* parent)
     : QWidget(parent), m_game(game)
 {
+    setFocusPolicy(Qt::StrongFocus);
     ui.setupUi(this);
     setWindowTitle(QString::fromUtf8("魔塔"));
 
     ui.mapWidget->setGame(m_game);
+    ui.mapWidget->setFocusPolicy(Qt::NoFocus);
     updateHUD();
 
     connect(ui.saveButton, &QPushButton::clicked, this, [this]() {
@@ -238,15 +240,38 @@ void MainWindow::updateHUD()
         .arg(m_game->player().KeyCount(KeyType::Blue))
         .arg(m_game->player().KeyCount(KeyType::Green)));
 
+    // 显示背包物品列表（金币和钥匙下方）
+    int invCount = m_game->player().InventoryCount();
+    if (invCount > 0) {
+        QString items;
+        for (int i = 0; i < invCount; ++i) {
+            auto* item = m_game->player().GetItem(i);
+            if (item) {
+                if (!items.isEmpty()) items += " ";
+                items += QString::fromStdString(item->GetName());
+            }
+        }
+        ui.invItemsLabel->setText(QString::fromUtf8("🎒 物品: %1").arg(items));
+        ui.invItemsLabel->setVisible(true);
+    } else {
+        ui.invItemsLabel->setVisible(false);
+    }
+
     // 显示特殊状态
     QString status;
     if (m_game->player().hasGlasses) status += QString::fromUtf8("👁 ");
     if (m_game->player().wallBreakerUsed) status += QString::fromUtf8("🔨 ");
-    ui.invButton->setText(QString::fromUtf8("🎒 背包 (%1)").arg(m_game->player().InventoryCount()));
+    ui.invButton->setText(QString::fromUtf8("🎒 背包 (%1)").arg(invCount));
 }
 
 void MainWindow::keyPressEvent(QKeyEvent* event)
 {
+    // 玩家已死亡则不响应
+    if (m_game->player().hp <= 0) {
+        QWidget::keyPressEvent(event);
+        return;
+    }
+
     int dx = 0, dy = 0;
     switch (event->key()) {
     case Qt::Key_Left:  dx = -1; break;
@@ -262,9 +287,6 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
     if (m_game->player().stairUpUsed) {
         m_game->player().stairUpUsed = false;
         m_game->goUpFloor();
-        // 将玩家放置在新楼层入口附近
-        m_game->player().x = 1;
-        m_game->player().y = m_game->height() - 2;
         ui.mapWidget->update();
         updateHUD();
         return;
@@ -272,8 +294,6 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
     if (m_game->player().stairDownUsed) {
         m_game->player().stairDownUsed = false;
         m_game->goDownFloor();
-        m_game->player().x = 1;
-        m_game->player().y = 1;
         ui.mapWidget->update();
         updateHUD();
         return;
@@ -341,6 +361,8 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
         } else {
             QMessageBox::critical(this, QString::fromUtf8("战斗"), dlg);
             updateHUD();
+            gameOver();
+            return;
         }
         break;
     }
@@ -351,21 +373,53 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
     }
     case Game::Move_StairsUp:
         m_game->goUpFloor();
-        // 将玩家放置在新楼层入口
-        m_game->player().x = 1;
-        m_game->player().y = m_game->height() - 2;
         ui.mapWidget->update();
         updateHUD();
         break;
     case Game::Move_StairsDown:
         m_game->goDownFloor();
-        m_game->player().x = 1;
-        m_game->player().y = 1;
         ui.mapWidget->update();
         updateHUD();
         break;
     case Game::Move_PlayerDead:
         updateHUD();
+        gameOver();
         break;
+    }
+}
+
+void MainWindow::gameOver()
+{
+    QMessageBox msgBox(this);
+    msgBox.setWindowTitle(QString::fromUtf8("游戏结束"));
+    msgBox.setText(QString::fromUtf8("你被击败了！\n\n游戏结束。"));
+    msgBox.setIcon(QMessageBox::Critical);
+    msgBox.setStyleSheet(
+        "QMessageBox { background-color: #1a1a2e; color: #d0d0d0; }"
+        "QLabel { color: #d0d0d0; font-size: 14px; }"
+        "QPushButton { background: #3a3a5a; color: #d0d0d0; border: 1px solid #66a;"
+        " border-radius: 4px; padding: 6px 16px; min-width: 80px; }"
+        "QPushButton:hover { background: #4a4a7a; }"
+    );
+
+    QPushButton* restartBtn = msgBox.addButton(QString::fromUtf8("重新开始"), QMessageBox::ActionRole);
+    QPushButton* menuBtn    = msgBox.addButton(QString::fromUtf8("返回主菜单"), QMessageBox::RejectRole);
+    msgBox.setDefaultButton(restartBtn);
+
+    msgBox.exec();
+
+    if (msgBox.clickedButton() == restartBtn) {
+        // 重新开始：创建新的 Game 并重新加载
+        delete m_game;
+        auto* newGame = new Game();
+        newGame->loadDefaultMap();
+        m_game = newGame;
+        ui.mapWidget->setGame(m_game);
+        ui.mapWidget->update();
+        updateHUD();
+        setFocus();
+    } else {
+        // 返回主菜单：关闭当前窗口，MenuWindow 会自动显示
+        close();
     }
 }
