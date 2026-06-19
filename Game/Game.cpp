@@ -152,7 +152,7 @@ bool Game::breakWall(int x, int y)
     return false;
 }
 
-void Game::goUpFloor()
+void Game::goUpFloor(int srcX, int srcY)
 {
     m_floor++;
     if (m_floors.find(m_floor) == m_floors.end()) {
@@ -160,36 +160,46 @@ void Game::goUpFloor()
     }
     m_currentFloor = &m_floors[m_floor];
 
-    // 在新楼层找到下楼楼梯，将玩家放在旁边
-    for (int y = 2; y < m_height - 2; ++y)
-        for (int x = 2; x < m_width - 2; ++x)
+    // 在新楼层找到距离源位置最近的对应楼梯
+    int bestDist = 9999, bestX = -1, bestY = -1;
+    for (int y = 0; y < m_height; ++y)
+        for (int x = 0; x < m_width; ++x)
             if (m_currentFloor->map[y * m_width + x] == Tile_StairsDown) {
-                m_player.x = x;
-                m_player.y = y;
-                return;
+                int dist = (x - srcX) * (x - srcX) + (y - srcY) * (y - srcY);
+                if (dist < bestDist) { bestDist = dist; bestX = x; bestY = y; }
             }
-    // fallback: 放在左下角
-    m_player.x = 2;
-    m_player.y = m_height - 3;
+    if (bestX >= 0) {
+        m_player.x = bestX;
+        m_player.y = bestY;
+        return;
+    }
+    // fallback
+    m_player.x = m_width / 2;
+    m_player.y = m_height / 2;
 }
 
-void Game::goDownFloor()
+void Game::goDownFloor(int srcX, int srcY)
 {
     if (m_floor <= 1) return;
     m_floor--;
     m_currentFloor = &m_floors[m_floor];
 
-    // 在前楼层找到上楼楼梯，将玩家放在旁边
-    for (int y = 2; y < m_height - 2; ++y)
-        for (int x = 2; x < m_width - 2; ++x)
+    // 在前楼层找到距离源位置最近的对应楼梯
+    int bestDist = 9999, bestX = -1, bestY = -1;
+    for (int y = 0; y < m_height; ++y)
+        for (int x = 0; x < m_width; ++x)
             if (m_currentFloor->map[y * m_width + x] == Tile_StairsUp) {
-                m_player.x = x;
-                m_player.y = y;
-                return;
+                int dist = (x - srcX) * (x - srcX) + (y - srcY) * (y - srcY);
+                if (dist < bestDist) { bestDist = dist; bestX = x; bestY = y; }
             }
-    // fallback: 放在左上角
-    m_player.x = 2;
-    m_player.y = 2;
+    if (bestX >= 0) {
+        m_player.x = bestX;
+        m_player.y = bestY;
+        return;
+    }
+    // fallback
+    m_player.x = m_width / 2;
+    m_player.y = m_height / 2;
 }
 
 Game::MoveResult Game::tryMovePlayer(int nx, int ny)
@@ -305,6 +315,7 @@ Game::FightResult Game::fightAt(int x, int y, std::vector<std::string>& outLog)
         }
         if (m->IsDead()) {
             int gold = m->GetGold();
+            if (m_player.hasLuckyCoin) gold *= 2;
             if (gold > 0) m_player.gold += gold;
 
             int key = posKey(x, y);
@@ -407,7 +418,9 @@ bool Game::saveToFile(const std::string& path) const
                 const ShopData& s = skv.second;
                 ofs << fnum << " " << x << " " << y << " "
                     << s.potionPrice << " " << s.weaponPrice << " "
-                    << s.armorPrice << "\n";
+                    << s.armorPrice << " "
+                    << s.potionValue << " " << s.weaponValue << " "
+                    << s.armorValue << "\n";
             }
         }
     }
@@ -547,11 +560,13 @@ bool Game::loadFromFile(const std::string& path)
     if (marker == "SHOP") {
         size_t totalShops; ifs >> totalShops;
         for (size_t i = 0; i < totalShops; ++i) {
-            int fnum, sx, sy, pp, wp, ap;
+            int fnum, sx, sy, pp, wp, ap, pv = 200, wv = 5, av = 8;
             ifs >> fnum >> sx >> sy >> pp >> wp >> ap;
+            if (ifs.peek() != '\n' && ifs.peek() != EOF)
+                ifs >> pv >> wv >> av;
             auto it = m_floors.find(fnum);
             if (it != m_floors.end())
-                it->second.shops.emplace(sy * m_width + sx, ShopData{pp, wp, ap});
+                it->second.shops.emplace(sy * m_width + sx, ShopData{pp, wp, ap, pv, wv, av});
         }
         // 读取玩家数据
         ifs >> px >> py >> php >> patk >> pdef >> pgold;

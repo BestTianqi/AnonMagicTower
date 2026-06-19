@@ -30,6 +30,9 @@ struct ShopData {
     int potionPrice = 0;
     int weaponPrice = 0;
     int armorPrice  = 0;
+    int potionValue = 200;
+    int weaponValue = 5;
+    int armorValue  = 8;
 };
 
 struct FloorData {
@@ -78,8 +81,8 @@ public:
     const ShopData* shopAt(int x, int y) const;
 
     bool breakWall(int x, int y);
-    void goUpFloor();
-    void goDownFloor();
+    void goUpFloor(int srcX, int srcY);
+    void goDownFloor(int srcX, int srcY);
     void initFloor(int floor);
 
     int posKey(int x, int y) const { return y * m_width + x; }

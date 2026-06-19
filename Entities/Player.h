@@ -20,6 +20,8 @@ public:
     bool hasGlasses = false;
     bool hasPenguinDoll = false;
     bool hasMatchaParfait = false;
+    bool hasLuckyCoin = false;
+    int shopUseCount = 0;
     bool wallBreakerUsed = false;  // 破墙锤已激活，下次移动撞墙时破墙
     bool stairUpUsed = false;      // 上楼器已激活
     bool stairDownUsed = false;    // 下楼器已激活

@@ -34,7 +34,8 @@ enum class ItemType {
     StairLower,
     WallBreaker,
     MagicKey,
-    AnonGlasses
+    AnonGlasses,
+    LuckyCoin
 };
 
 class Potion : public Item {
@@ -144,5 +145,11 @@ public:
 class AnonGlasses : public Item {
 public:
     AnonGlasses();
+    void Apply(Player& player) const override;
+};
+
+class LuckyCoin : public Item {
+public:
+    LuckyCoin();
     void Apply(Player& player) const override;
 };

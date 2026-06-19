@@ -60,6 +60,9 @@ void MapEditWidget::placeTile(int x, int y)
     t.shopPotionPrice = 0;
     t.shopWeaponPrice = 0;
     t.shopArmorPrice  = 0;
+    t.shopPotionValue = 200;
+    t.shopWeaponValue = 5;
+    t.shopArmorValue  = 8;
 
     if (m_currentTile == Tile_Monster)
         t.monsterName = m_currentMonster;
@@ -72,6 +75,9 @@ void MapEditWidget::placeTile(int x, int y)
         t.shopPotionPrice = m_shopPotionPrice;
         t.shopWeaponPrice = m_shopWeaponPrice;
         t.shopArmorPrice  = m_shopArmorPrice;
+        t.shopPotionValue = m_shopPotionValue;
+        t.shopWeaponValue = m_shopWeaponValue;
+        t.shopArmorValue  = m_shopArmorValue;
     }
 
     update();
@@ -91,6 +97,7 @@ void MapEditWidget::paintEvent(QPaintEvent*)
 
             QColor fill;
             QString label;
+            QString itemDesc;
 
             switch (t.type) {
             case Tile_Wall:       fill = QColor(55, 55, 60);   break;
@@ -100,11 +107,7 @@ void MapEditWidget::paintEvent(QPaintEvent*)
             case Tile_DoorRed:    fill = QColor(180, 60, 50);   label = QString::fromUtf8("红门"); break;
             case Tile_DoorBlue:   fill = QColor(50, 70, 180);   label = QString::fromUtf8("蓝门"); break;
             case Tile_DoorGreen:  fill = QColor(50, 160, 70);   label = QString::fromUtf8("绿门"); break;
-            case Tile_Monster:    fill = QColor(200, 80, 80);
-                label = t.monsterName.empty()
-                    ? QString::fromUtf8("怪")
-                    : QString::fromStdString(t.monsterName);
-                break;
+            case Tile_Monster:    fill = QColor(200, 80, 80);   break;
             case Tile_Item: {
                 fill = QColor(60, 170, 60);
                 label = QString::fromUtf8("宝");
@@ -121,13 +124,17 @@ void MapEditWidget::paintEvent(QPaintEvent*)
                         { fill = QColor(130, 60, 200); label = QString::fromUtf8("万能钥"); }
                     // 属性
                     else if (iname == QString::fromUtf8("Potion") || iname == QString::fromUtf8("药水"))
-                        { fill = QColor(200, 60, 60); label = QString::fromUtf8("生命药"); }
+                        { fill = QColor(200, 60, 60); label = QString::fromUtf8("生命药");
+                          itemDesc = QString("+%1HP").arg(t.itemValue); }
                     else if (iname == QString::fromUtf8("Weapon") || iname == QString::fromUtf8("武器"))
-                        { fill = QColor(210, 140, 40); label = QString::fromUtf8("武器"); }
+                        { fill = QColor(210, 140, 40); label = QString::fromUtf8("武器");
+                          itemDesc = QString("ATK+%1").arg(t.itemValue); }
                     else if (iname == QString::fromUtf8("Armor") || iname == QString::fromUtf8("防具"))
-                        { fill = QColor(60, 120, 200); label = QString::fromUtf8("防具"); }
+                        { fill = QColor(60, 120, 200); label = QString::fromUtf8("防具");
+                          itemDesc = QString("DEF+%1").arg(t.itemValue); }
                     else if (iname == QString::fromUtf8("Treasure") || iname == QString::fromUtf8("金币"))
-                        { fill = QColor(220, 180, 40); label = QString::fromUtf8("金币"); }
+                        { fill = QColor(220, 180, 40); label = QString::fromUtf8("金币");
+                          itemDesc = QString("%1G").arg(t.itemValue); }
                     // 特殊
                     else if (iname == QString::fromUtf8("匿名眼镜"))
                         { fill = QColor(40, 180, 180); label = QString::fromUtf8("眼镜"); }
@@ -143,6 +150,8 @@ void MapEditWidget::paintEvent(QPaintEvent*)
                         { fill = QColor(220, 130, 170); label = QString::fromUtf8("企鹅"); }
                     else if (iname == QString::fromUtf8("抹茶芭菲"))
                         { fill = QColor(140, 200, 100); label = QString::fromUtf8("芭菲"); }
+                    else if (iname == QString::fromUtf8("幸运金币"))
+                        { fill = QColor(240, 200, 20); label = QString::fromUtf8("幸运币"); }
                     else
                         { label = iname.left(4); }
                 }
@@ -163,7 +172,40 @@ void MapEditWidget::paintEvent(QPaintEvent*)
             painter.setPen(QPen(QColor(50, 50, 50), 1));
             painter.drawRect(r);
 
-            if (!label.isEmpty()) {
+            if (t.type == Tile_Monster) {
+                QString name = t.monsterName.empty()
+                    ? QString::fromUtf8("怪")
+                    : QString::fromStdString(t.monsterName);
+                QFont f;
+                f.setPixelSize(12);
+                f.setBold(true);
+                painter.setFont(f);
+                painter.setPen(Qt::white);
+                painter.drawText(r.adjusted(0, 3, 0, 0), Qt::AlignHCenter | Qt::AlignTop, name);
+
+                if (!t.monsterName.empty()) {
+                    Monster m = MonsterDB::get(t.monsterName);
+                    f.setPixelSize(9);
+                    f.setBold(false);
+                    painter.setFont(f);
+                    painter.setPen(QColor(240, 240, 200));
+                    painter.drawText(r.adjusted(2, 24, -2, 0), Qt::AlignHCenter | Qt::AlignTop,
+                        QString("HP:%1 ATK:%2").arg(m.GetHP()).arg(m.GetATK()));
+                    painter.drawText(r.adjusted(2, 38, -2, 0), Qt::AlignHCenter | Qt::AlignTop,
+                        QString("DEF:%1 G:%2").arg(m.GetDEF()).arg(m.GetGold()));
+                }
+            } else if (t.type == Tile_Item && !itemDesc.isEmpty()) {
+                QFont f;
+                f.setPixelSize(11);
+                f.setBold(true);
+                painter.setFont(f);
+                painter.setPen(Qt::white);
+                painter.drawText(r.adjusted(0, 2, 0, 0), Qt::AlignHCenter | Qt::AlignTop, label);
+                f.setPixelSize(10);
+                f.setBold(false);
+                painter.setFont(f);
+                painter.drawText(r.adjusted(2, 28, -2, 0), Qt::AlignHCenter | Qt::AlignTop, itemDesc);
+            } else if (!label.isEmpty()) {
                 QFont f;
                 f.setPixelSize(label.length() > 2 ? 11 : 14);
                 f.setBold(true);
@@ -256,7 +298,7 @@ static const ItemDef g_itemDefs[] = {
 };
 static const char* g_specialItems[] = {
     "万能钥匙", "匿名眼镜", "破墙锤", "上楼器", "下楼器",
-    "临时护盾", "企鹅玩偶", "抹茶芭菲", nullptr
+    "临时护盾", "企鹅玩偶", "抹茶芭菲", "幸运金币", nullptr
 };
 
 MapEditor::MapEditor(QWidget* parent)
@@ -437,6 +479,7 @@ MapEditor::MapEditor(QWidget* parent)
         { QString::fromUtf8("临时护盾"), 0, "#68d", false, QString::fromUtf8("防御力+10") },
         { QString::fromUtf8("企鹅玩偶"), 0, "#d6a", false, QString::fromUtf8("神秘的企鹅玩偶") },
         { QString::fromUtf8("抹茶芭菲"), 0, "#8c6", false, QString::fromUtf8("美味的抹茶芭菲") },
+        { QString::fromUtf8("幸运金币"), 0, "#da0", false, QString::fromUtf8("打怪和拾取金币翻倍") },
     };
     const int itemBtnCount = sizeof(itemBtns) / sizeof(itemBtns[0]);
 
@@ -519,23 +562,45 @@ MapEditor::MapEditor(QWidget* parent)
     auto* slay = new QVBoxLayout(m_shopPanel);
     slay->setContentsMargins(0, 0, 0, 0);
 
-    auto makePriceRow = [&](const QString& label, QSpinBox*& spin) {
+    auto makeShopRow = [&](const QString& name, QSpinBox*& priceSpin, QSpinBox*& valueSpin,
+                           int defaultPrice, int defaultValue,
+                           const QString& valueSuffix, const QString& valuePrefix) {
+        auto* group = new QVBoxLayout();
+        auto* label = new QLabel(name, m_shopPanel);
+        label->setStyleSheet("color: #c8a23b; font-weight: bold; font-size: 12px;");
+        group->addWidget(label);
+
         auto* row = new QHBoxLayout();
-        row->addWidget(new QLabel(label, m_shopPanel));
-        spin = new QSpinBox(m_shopPanel);
-        spin->setRange(0, 9999);
-        spin->setValue(0);
-        spin->setPrefix(QString::fromUtf8("C "));
-        spin->setSuffix(QString::fromUtf8(" G"));
-        spin->setStyleSheet("QSpinBox { background: #222; color: #fff; border: 1px solid #555; padding: 4px; }");
-        spin->setToolTip(QString::fromUtf8("0 表示不售卖"));
-        row->addWidget(spin);
-        slay->addLayout(row);
+        row->addWidget(new QLabel(QString::fromUtf8("价格:"), m_shopPanel));
+        priceSpin = new QSpinBox(m_shopPanel);
+        priceSpin->setRange(0, 9999);
+        priceSpin->setValue(defaultPrice);
+        priceSpin->setPrefix(QString::fromUtf8("C "));
+        priceSpin->setSuffix(QString::fromUtf8(" G"));
+        priceSpin->setStyleSheet("QSpinBox { background: #222; color: #fff; border: 1px solid #555; padding: 4px; }");
+        priceSpin->setToolTip(QString::fromUtf8("0 表示不售卖"));
+        row->addWidget(priceSpin);
+
+        row->addWidget(new QLabel(QString::fromUtf8(" 数值:"), m_shopPanel));
+        valueSpin = new QSpinBox(m_shopPanel);
+        valueSpin->setRange(1, 9999);
+        valueSpin->setValue(defaultValue);
+        valueSpin->setPrefix(valuePrefix);
+        valueSpin->setSuffix(valueSuffix);
+        valueSpin->setStyleSheet("QSpinBox { background: #222; color: #fff; border: 1px solid #555; padding: 4px; }");
+        row->addWidget(valueSpin);
+        row->addStretch();
+
+        group->addLayout(row);
+        slay->addLayout(group);
     };
 
-    makePriceRow(QString::fromUtf8("生命药 (+50HP) 价格:"), m_shopPotionPriceSpin);
-    makePriceRow(QString::fromUtf8("武器 (+5ATK) 价格:"),   m_shopWeaponPriceSpin);
-    makePriceRow(QString::fromUtf8("防具 (+3DEF) 价格:"),   m_shopArmorPriceSpin);
+    makeShopRow(QString::fromUtf8("生命药"), m_shopPotionPriceSpin, m_shopPotionValueSpin,
+        0, 200, QString::fromUtf8(" HP"), QString::fromUtf8("+"));
+    makeShopRow(QString::fromUtf8("武器"),   m_shopWeaponPriceSpin, m_shopWeaponValueSpin,
+        0, 5, QString::fromUtf8(" ATK"), QString::fromUtf8("+"));
+    makeShopRow(QString::fromUtf8("防具"),   m_shopArmorPriceSpin,  m_shopArmorValueSpin,
+        0, 8, QString::fromUtf8(" DEF"), QString::fromUtf8("+"));
 
     sbox->addWidget(m_shopPanel);
     pbox->addWidget(shopGroup);
@@ -640,11 +705,17 @@ MapEditor::MapEditor(QWidget* parent)
             m_edit->setCurrentShop(
                 m_shopPotionPriceSpin->value(),
                 m_shopWeaponPriceSpin->value(),
-                m_shopArmorPriceSpin->value());
+                m_shopArmorPriceSpin->value(),
+                m_shopPotionValueSpin->value(),
+                m_shopWeaponValueSpin->value(),
+                m_shopArmorValueSpin->value());
     };
     connect(m_shopPotionPriceSpin, QOverload<int>::of(&QSpinBox::valueChanged), this, updateShop);
     connect(m_shopWeaponPriceSpin, QOverload<int>::of(&QSpinBox::valueChanged), this, updateShop);
     connect(m_shopArmorPriceSpin,  QOverload<int>::of(&QSpinBox::valueChanged), this, updateShop);
+    connect(m_shopPotionValueSpin, QOverload<int>::of(&QSpinBox::valueChanged), this, updateShop);
+    connect(m_shopWeaponValueSpin, QOverload<int>::of(&QSpinBox::valueChanged), this, updateShop);
+    connect(m_shopArmorValueSpin,  QOverload<int>::of(&QSpinBox::valueChanged), this, updateShop);
 
     // 编辑区信号
     connect(m_edit, &MapEditWidget::tileChanged, this, [this](int x, int y) {
@@ -819,6 +890,7 @@ static std::unique_ptr<Item> createItem(const std::string& name, int value)
     if (name == QString::fromUtf8("临时护盾").toStdString()) return std::make_unique<TempShield>();
     if (name == QString::fromUtf8("企鹅玩偶").toStdString()) return std::make_unique<PenguinDoll>();
     if (name == QString::fromUtf8("抹茶芭菲").toStdString()) return std::make_unique<MatchaParfait>();
+    if (name == QString::fromUtf8("幸运金币").toStdString()) return std::make_unique<LuckyCoin>();
     return nullptr;
 }
 
@@ -920,7 +992,9 @@ bool MapEditor::saveToPath(const QString& path)
                 auto& t = ef->tiles[y * 15 + x];
                 if (t.type == Tile_Shop && (t.shopPotionPrice > 0 || t.shopWeaponPrice > 0 || t.shopArmorPrice > 0))
                     out << x << " " << y << " " << t.shopPotionPrice << " "
-                        << t.shopWeaponPrice << " " << t.shopArmorPrice << "\n";
+                        << t.shopWeaponPrice << " " << t.shopArmorPrice << " "
+                        << t.shopPotionValue << " " << t.shopWeaponValue << " "
+                        << t.shopArmorValue << "\n";
             }
         }
     }
@@ -1048,7 +1122,8 @@ void MapEditor::onExportFloor()
     out << shops.size() << "\n";
     for (auto& [key, t] : shops) {
         out << (key % 15) << " " << (key / 15) << " "
-            << t->shopPotionPrice << " " << t->shopWeaponPrice << " " << t->shopArmorPrice << "\n";
+            << t->shopPotionPrice << " " << t->shopWeaponPrice << " " << t->shopArmorPrice << " "
+            << t->shopPotionValue << " " << t->shopWeaponValue << " " << t->shopArmorValue << "\n";
     }
 
     file.close();
@@ -1112,11 +1187,17 @@ void MapEditor::onLoad()
         // 商店
         int scount; in >> scount;
         for (int i = 0; i < scount; ++i) {
-            int sx, sy, pp, wp, ap;
+            int sx, sy, pp, wp, ap, pv = 200, wv = 5, av = 8;
             in >> sx >> sy >> pp >> wp >> ap;
+            QString rest = in.readLine(); // 读剩余数值或空行
+            QTextStream rs(&rest);
+            rs >> pv >> wv >> av;
             ef.tiles[sy * 15 + sx].shopPotionPrice = pp;
             ef.tiles[sy * 15 + sx].shopWeaponPrice = wp;
             ef.tiles[sy * 15 + sx].shopArmorPrice  = ap;
+            ef.tiles[sy * 15 + sx].shopPotionValue = pv;
+            ef.tiles[sy * 15 + sx].shopWeaponValue = wv;
+            ef.tiles[sy * 15 + sx].shopArmorValue  = av;
         }
         m_floors[1] = ef;
         m_floorSpin->setMaximum(1);
@@ -1186,12 +1267,18 @@ void MapEditor::onLoad()
         // 商店
         int scount; in >> scount;
         for (int i = 0; i < scount; ++i) {
-            int sx, sy, pp, wp, ap;
+            int sx, sy, pp, wp, ap, pv = 200, wv = 5, av = 8;
             in >> sx >> sy >> pp >> wp >> ap;
+            QString rest = in.readLine(); // 读剩余数值或空行
+            QTextStream rs(&rest);
+            rs >> pv >> wv >> av;
             auto& t = ef.tiles[sy * 15 + sx];
             t.shopPotionPrice = pp;
             t.shopWeaponPrice = wp;
             t.shopArmorPrice  = ap;
+            t.shopPotionValue = pv;
+            t.shopWeaponValue = wv;
+            t.shopArmorValue  = av;
         }
 
         m_floors[fnum] = ef;
@@ -1280,7 +1367,8 @@ void MapEditor::onTestPlay()
             for (int x = 0; x < 15; ++x) {
                 auto& t = ef.tiles[y * 15 + x];
                 if (t.type == Tile_Shop)
-                    game->addShopAt(x, y, {t.shopPotionPrice, t.shopWeaponPrice, t.shopArmorPrice});
+                    game->addShopAt(x, y, {t.shopPotionPrice, t.shopWeaponPrice, t.shopArmorPrice,
+                                           t.shopPotionValue, t.shopWeaponValue, t.shopArmorValue});
             }
     }
 

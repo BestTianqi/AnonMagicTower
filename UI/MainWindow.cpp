@@ -124,6 +124,8 @@ QString MainWindow::getItemDescription(const Item* item) const
         return QString::fromUtf8("神秘的企鹅玩偶");
     if (name == QString::fromUtf8("抹茶芭菲"))
         return QString::fromUtf8("美味的抹茶芭菲");
+    if (name == QString::fromUtf8("幸运金币"))
+        return QString::fromUtf8("打怪和拾取金币翻倍");
 
     return name;
 }
@@ -237,38 +239,44 @@ void MainWindow::showShopDialog(int x, int y)
     if (!shop) return;
 
     Player& p = m_game->player();
+    int surcharge = p.shopUseCount * 60;
 
     struct ShopItem {
         QString name;
-        int price;
+        int basePrice;
+        int actualPrice;
         QString effectDesc;
         std::function<void()> apply;
     };
 
     std::vector<ShopItem> items;
     items.push_back({QString::fromUtf8("生命药"), shop->potionPrice,
-        QString::fromUtf8("生命 +50"),
-        [&]() { p.hp += 50; p.gold -= shop->potionPrice; }});
+        shop->potionPrice > 0 ? shop->potionPrice + surcharge : 0,
+        QString::fromUtf8("生命 +%1").arg(shop->potionValue),
+        [&, hpVal = shop->potionValue]() { p.hp += hpVal; p.gold -= shop->potionPrice + p.shopUseCount * 60; p.shopUseCount++; }});
     items.push_back({QString::fromUtf8("武器"), shop->weaponPrice,
-        QString::fromUtf8("攻击 +5"),
-        [&]() { p.atk += 5; p.gold -= shop->weaponPrice; }});
+        shop->weaponPrice > 0 ? shop->weaponPrice + surcharge : 0,
+        QString::fromUtf8("攻击 +%1").arg(shop->weaponValue),
+        [&, atkVal = shop->weaponValue]() { p.atk += atkVal; p.gold -= shop->weaponPrice + p.shopUseCount * 60; p.shopUseCount++; }});
     items.push_back({QString::fromUtf8("防具"), shop->armorPrice,
-        QString::fromUtf8("防御 +3"),
-        [&]() { p.def += 3; p.gold -= shop->armorPrice; }});
+        shop->armorPrice > 0 ? shop->armorPrice + surcharge : 0,
+        QString::fromUtf8("防御 +%1").arg(shop->armorValue),
+        [&, defVal = shop->armorValue]() { p.def += defVal; p.gold -= shop->armorPrice + p.shopUseCount * 60; p.shopUseCount++; }});
 
     QDialog dlg(this);
     dlg.setWindowTitle(QString::fromUtf8("商店"));
-    dlg.setFixedSize(360, 320);
+    dlg.setFixedSize(360, 360);
     dlg.setStyleSheet("QDialog { background-color: #1a1a2e; color: #d0d0d0; }");
 
     auto* layout = new QVBoxLayout(&dlg);
     layout->setSpacing(10);
     layout->setContentsMargins(16, 12, 16, 12);
 
-    auto* goldLabel = new QLabel(QString::fromUtf8("💰 你的金币: %1").arg(p.gold), &dlg);
-    goldLabel->setStyleSheet("color: #c8a23b; font-size: 15px; font-weight: bold;");
-    goldLabel->setObjectName("goldLabel");
-    layout->addWidget(goldLabel);
+    auto* infoLabel = new QLabel(
+        QString::fromUtf8("💰 金币: %1  |  已购 %2 次  (+%3 G/次)")
+            .arg(p.gold).arg(p.shopUseCount).arg(surcharge), &dlg);
+    infoLabel->setStyleSheet("color: #c8a23b; font-size: 14px; font-weight: bold;");
+    layout->addWidget(infoLabel);
 
     auto* sep = new QFrame(&dlg);
     sep->setFrameShape(QFrame::HLine);
@@ -279,12 +287,12 @@ void MainWindow::showShopDialog(int x, int y)
         auto* row = new QHBoxLayout();
         row->setSpacing(8);
 
-        QString desc = item.price > 0
-            ? QString::fromUtf8("%1 (%2 G) — %3").arg(item.name).arg(item.price).arg(item.effectDesc)
+        QString desc = item.basePrice > 0
+            ? QString::fromUtf8("%1 (%2 G) — %3").arg(item.name).arg(item.actualPrice).arg(item.effectDesc)
             : QString::fromUtf8("%1 — 不售卖").arg(item.name);
 
         auto* label = new QLabel(desc, &dlg);
-        label->setStyleSheet(item.price > 0 ? "font-size: 13px;" : "color: #666; font-size: 13px;");
+        label->setStyleSheet(item.basePrice > 0 ? "font-size: 13px;" : "color: #666; font-size: 13px;");
         row->addWidget(label, 1);
 
         auto* btn = new QPushButton(QString::fromUtf8("购买"), &dlg);
@@ -295,12 +303,13 @@ void MainWindow::showShopDialog(int x, int y)
             "QPushButton:hover { background: #4a7a4a; }"
             "QPushButton:disabled { background: #333; color: #666; border-color: #444; }"
         );
-        btn->setEnabled(item.price > 0 && p.gold >= item.price);
+        btn->setEnabled(item.basePrice > 0 && p.gold >= item.actualPrice);
 
         connect(btn, &QPushButton::clicked, &dlg, [&dlg, &item]() {
             item.apply();
             QMessageBox::information(&dlg, QString::fromUtf8("购买成功"),
-                QString::fromUtf8("购买了 %1！%2").arg(item.name).arg(item.effectDesc));
+                QString::fromUtf8("购买了 %1！%2（花费 %3 G）")
+                    .arg(item.name).arg(item.effectDesc).arg(item.actualPrice));
             dlg.accept();
         });
         row->addWidget(btn);
@@ -383,14 +392,14 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
     // 检查上楼器/下楼器
     if (m_game->player().stairUpUsed) {
         m_game->player().stairUpUsed = false;
-        m_game->goUpFloor();
+        m_game->goUpFloor(m_game->player().x, m_game->player().y);
         ui.mapWidget->update();
         updateHUD();
         return;
     }
     if (m_game->player().stairDownUsed) {
         m_game->player().stairDownUsed = false;
-        m_game->goDownFloor();
+        m_game->goDownFloor(m_game->player().x, m_game->player().y);
         ui.mapWidget->update();
         updateHUD();
         return;
@@ -472,12 +481,12 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
         showShopDialog(nx, ny);
         break;
     case Game::Move_StairsUp:
-        m_game->goUpFloor();
+        m_game->goUpFloor(nx, ny);
         ui.mapWidget->update();
         updateHUD();
         break;
     case Game::Move_StairsDown:
-        m_game->goDownFloor();
+        m_game->goDownFloor(nx, ny);
         ui.mapWidget->update();
         updateHUD();
         break;

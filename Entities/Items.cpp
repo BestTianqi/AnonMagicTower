@@ -56,7 +56,9 @@ Treasure::Treasure(int gold)
 
 void Treasure::Apply(Player& player) const
 {
-    player.gold += m_gold;
+    int amount = m_gold;
+    if (player.hasLuckyCoin) amount *= 2;
+    player.gold += amount;
 }
 
 // Key
@@ -150,4 +152,11 @@ void MagicKey::Apply(Player& player) const {
     player.AddKey(KeyType::Red, 1);
     player.AddKey(KeyType::Blue, 1);
     player.AddKey(KeyType::Green, 1);
+}
+
+LuckyCoin::LuckyCoin()
+    : Item(QString::fromUtf8("幸运金币").toStdString(), 0) {}
+
+void LuckyCoin::Apply(Player& player) const {
+    player.hasLuckyCoin = true;
 }

@@ -1,4 +1,5 @@
 #include "MapWidget.h"
+#include "Entities/MonsterDB.h"
 #include <QPainter>
 #include <QFont>
 
@@ -65,7 +66,41 @@ void MapWidget::generatePlaceholders()
     m_tilePix[Tile_Shop] = makePixmap(QColor(240, 200, 20), QColor(200, 160, 10),
         QString::fromUtf8("商店"), QColor(80, 40, 0), 10);
 
-    // 默认怪物
+    // 怪物（按名称生成占位图，显示名字+数值）
+    for (auto& m : MonsterDB::all()) {
+        QPixmap px(TILE_SIZE, TILE_SIZE);
+        px.fill(Qt::transparent);
+        {
+            QPainter p(&px);
+            p.setRenderHint(QPainter::Antialiasing);
+            QRect inner(2, 2, TILE_SIZE - 4, TILE_SIZE - 4);
+            p.setBrush(QColor(200, 80, 80));
+            p.setPen(QPen(QColor(160, 50, 50), 2));
+            p.drawRoundedRect(inner, 4, 4);
+
+            QFont f;
+            // 名字
+            f.setPixelSize(12);
+            f.setBold(true);
+            p.setFont(f);
+            p.setPen(Qt::white);
+            p.drawText(QRect(0, 3, TILE_SIZE, 18), Qt::AlignHCenter | Qt::AlignTop,
+                QString::fromStdString(m.GetName()));
+
+            // 数值
+            f.setPixelSize(9);
+            f.setBold(false);
+            p.setFont(f);
+            p.setPen(QColor(240, 240, 200));
+            p.drawText(QRect(2, 24, TILE_SIZE - 4, 16), Qt::AlignHCenter | Qt::AlignTop,
+                QString("HP:%1 ATK:%2").arg(m.GetHP()).arg(m.GetATK()));
+            p.drawText(QRect(2, 38, TILE_SIZE - 4, 16), Qt::AlignHCenter | Qt::AlignTop,
+                QString("DEF:%1 G:%2").arg(m.GetDEF()).arg(m.GetGold()));
+        }
+        px.detach();
+        m_monsterPix[m.GetName()] = px;
+    }
+    // 默认怪物（用于未匹配的怪物）
     m_defaultMonsterPix = makePixmap(QColor(200, 80, 80), QColor(160, 50, 50),
         QString::fromUtf8("怪"), Qt::white, 14);
 
@@ -103,9 +138,9 @@ QSize MapWidget::sizeHint() const
     return QSize(900, 900);
 }
 
-// 根据道具名称返回对应颜色和标签
-static void itemAppearance(const std::string& name, QColor& fill, QColor& border,
-                           QString& label, QColor& textColor)
+// 根据道具名称返回对应颜色、标签和数值描述
+static void itemAppearance(const std::string& name, int value, QColor& fill, QColor& border,
+                           QString& label, QString& desc, QColor& textColor)
 {
     QString qname = QString::fromStdString(name);
 
@@ -126,16 +161,20 @@ static void itemAppearance(const std::string& name, QColor& fill, QColor& border
     // 属性类
     if (qname == QString::fromUtf8("Potion") || qname == QString::fromUtf8("药水"))
         { fill = QColor(200, 60, 60); border = QColor(150, 30, 30);
-          label = QString::fromUtf8("生命药"); textColor = Qt::white; return; }
+          label = QString::fromUtf8("生命药"); textColor = Qt::white;
+          desc = QString("+%1HP").arg(value); return; }
     if (qname == QString::fromUtf8("Weapon") || qname == QString::fromUtf8("武器"))
         { fill = QColor(210, 140, 40); border = QColor(160, 100, 20);
-          label = QString::fromUtf8("武器"); textColor = Qt::white; return; }
+          label = QString::fromUtf8("武器"); textColor = Qt::white;
+          desc = QString("ATK+%1").arg(value); return; }
     if (qname == QString::fromUtf8("Armor") || qname == QString::fromUtf8("防具"))
         { fill = QColor(60, 120, 200); border = QColor(30, 80, 160);
-          label = QString::fromUtf8("防具"); textColor = Qt::white; return; }
+          label = QString::fromUtf8("防具"); textColor = Qt::white;
+          desc = QString("DEF+%1").arg(value); return; }
     if (qname == QString::fromUtf8("Treasure") || qname == QString::fromUtf8("金币"))
         { fill = QColor(220, 180, 40); border = QColor(170, 130, 20);
-          label = QString::fromUtf8("金币"); textColor = QColor(100, 60, 0); return; }
+          label = QString::fromUtf8("金币"); textColor = QColor(100, 60, 0);
+          desc = QString("%1G").arg(value); return; }
 
     // 特殊道具
     if (qname == QString::fromUtf8("匿名眼镜"))
@@ -159,6 +198,9 @@ static void itemAppearance(const std::string& name, QColor& fill, QColor& border
     if (qname == QString::fromUtf8("抹茶芭菲"))
         { fill = QColor(140, 200, 100); border = QColor(90, 150, 50);
           label = QString::fromUtf8("芭菲"); textColor = Qt::white; return; }
+    if (qname == QString::fromUtf8("幸运金币"))
+        { fill = QColor(240, 200, 20); border = QColor(200, 150, 10);
+          label = QString::fromUtf8("幸运币"); textColor = QColor(80, 40, 0); return; }
 
     // fallback
     fill = QColor(60, 170, 60); border = QColor(40, 130, 40);
@@ -195,11 +237,36 @@ void MapWidget::paintEvent(QPaintEvent*)
                 const Item* item = m_game->itemAt(x, y);
                 if (item) {
                     QColor fill, border, textColor;
-                    QString label;
-                    itemAppearance(item->GetName(), fill, border, label, textColor);
-                    int fontSize = label.length() > 2 ? 9 : 11;
-                    QPixmap generated = makePixmap(fill, border, label, textColor, fontSize);
-                    painter.drawPixmap(r, generated);
+                    QString label, desc;
+                    itemAppearance(item->GetName(), item->GetValue(), fill, border, label, desc, textColor);
+
+                    QPixmap px(TILE_SIZE, TILE_SIZE);
+                    px.fill(Qt::transparent);
+                    {
+                        QPainter p(&px);
+                        p.setRenderHint(QPainter::Antialiasing);
+                        QRect inner(2, 2, TILE_SIZE - 4, TILE_SIZE - 4);
+                        p.setBrush(fill);
+                        p.setPen(QPen(border, 2));
+                        p.drawRoundedRect(inner, 4, 4);
+
+                        QFont f;
+                        f.setPixelSize(desc.isEmpty() ? 12 : 11);
+                        f.setBold(true);
+                        p.setFont(f);
+                        p.setPen(textColor);
+                        p.drawText(QRect(0, desc.isEmpty() ? 0 : 2, TILE_SIZE, desc.isEmpty() ? TILE_SIZE : 20),
+                            Qt::AlignHCenter | Qt::AlignVCenter, label);
+
+                        if (!desc.isEmpty()) {
+                            f.setPixelSize(10);
+                            f.setBold(false);
+                            p.setFont(f);
+                            p.drawText(QRect(2, 28, TILE_SIZE - 4, 28), Qt::AlignHCenter | Qt::AlignTop, desc);
+                        }
+                    }
+                    px.detach();
+                    painter.drawPixmap(r, px);
                     continue;
                 }
             }

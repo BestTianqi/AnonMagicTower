@@ -34,6 +34,9 @@ struct EditorTile {
     int shopPotionPrice = 0;
     int shopWeaponPrice = 0;
     int shopArmorPrice  = 0;
+    int shopPotionValue = 200;
+    int shopWeaponValue = 5;
+    int shopArmorValue  = 8;
 };
 
 // 楼层数据
@@ -53,10 +56,14 @@ public:
     void setCurrentMonster(const std::string& name) { m_currentMonster = name; }
     void setCurrentItem(const std::string& name, int value) { m_currentItem = name; m_currentItemValue = value; }
     void setCurrentNPC(const std::string& name) { m_currentNPC = name; }
-    void setCurrentShop(int potionPrice, int weaponPrice, int armorPrice) {
+    void setCurrentShop(int potionPrice, int weaponPrice, int armorPrice,
+                        int potionValue, int weaponValue, int armorValue) {
         m_shopPotionPrice = potionPrice;
         m_shopWeaponPrice = weaponPrice;
         m_shopArmorPrice  = armorPrice;
+        m_shopPotionValue = potionValue;
+        m_shopWeaponValue = weaponValue;
+        m_shopArmorValue  = armorValue;
     }
 
     const std::vector<EditorTile>& tiles() const { return m_floor.tiles; }
@@ -92,6 +99,9 @@ private:
     int m_shopPotionPrice = 0;
     int m_shopWeaponPrice = 0;
     int m_shopArmorPrice  = 0;
+    int m_shopPotionValue = 200;
+    int m_shopWeaponValue = 5;
+    int m_shopArmorValue  = 8;
     int m_hoverX = -1;
     int m_hoverY = -1;
 };
@@ -140,6 +150,9 @@ private:
     QSpinBox*      m_shopPotionPriceSpin;
     QSpinBox*      m_shopWeaponPriceSpin;
     QSpinBox*      m_shopArmorPriceSpin;
+    QSpinBox*      m_shopPotionValueSpin;
+    QSpinBox*      m_shopWeaponValueSpin;
+    QSpinBox*      m_shopArmorValueSpin;
 
     // 多楼层数据
     std::unordered_map<int, EditorFloor> m_floors;
