@@ -30,6 +30,10 @@ struct EditorTile {
     std::vector<std::string> npcDialog;
     std::string npcRewardItem;
     int npcRewardValue = 0;
+    // Shop
+    int shopPotionPrice = 0;
+    int shopWeaponPrice = 0;
+    int shopArmorPrice  = 0;
 };
 
 // 楼层数据
@@ -49,6 +53,11 @@ public:
     void setCurrentMonster(const std::string& name) { m_currentMonster = name; }
     void setCurrentItem(const std::string& name, int value) { m_currentItem = name; m_currentItemValue = value; }
     void setCurrentNPC(const std::string& name) { m_currentNPC = name; }
+    void setCurrentShop(int potionPrice, int weaponPrice, int armorPrice) {
+        m_shopPotionPrice = potionPrice;
+        m_shopWeaponPrice = weaponPrice;
+        m_shopArmorPrice  = armorPrice;
+    }
 
     const std::vector<EditorTile>& tiles() const { return m_floor.tiles; }
     void setTiles(const std::vector<EditorTile>& t) { m_floor.tiles = t; update(); }
@@ -80,6 +89,9 @@ private:
     std::string m_currentItem;
     int m_currentItemValue = 0;
     std::string m_currentNPC;
+    int m_shopPotionPrice = 0;
+    int m_shopWeaponPrice = 0;
+    int m_shopArmorPrice  = 0;
     int m_hoverX = -1;
     int m_hoverY = -1;
 };
@@ -122,6 +134,12 @@ private:
     QLineEdit*     m_npcNameEdit;
     QTextEdit*     m_npcDialogEdit;
     QComboBox*     m_npcRewardCombo;
+
+    // 商店面板
+    QWidget*       m_shopPanel;
+    QSpinBox*      m_shopPotionPriceSpin;
+    QSpinBox*      m_shopWeaponPriceSpin;
+    QSpinBox*      m_shopArmorPriceSpin;
 
     // 多楼层数据
     std::unordered_map<int, EditorFloor> m_floors;

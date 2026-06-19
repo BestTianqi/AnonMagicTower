@@ -17,6 +17,7 @@ private:
     void updateHUD();
     void showInventory();
     void showNPCDialog(int x, int y);
+    void showShopDialog(int x, int y);
     void gameOver();
     QString getItemDescription(const Item* item) const;
 

@@ -6,7 +6,9 @@
       "Bash(./mota.exe)",
       "Bash(qmake6 --version)",
       "Bash(qmake --version)",
-      "Bash(rm -f d:/workspace/mota/build/mota.exe && cd d:/workspace/mota/build && cmake --build . 2>&1)"
+      "Bash(rm -f d:/workspace/mota/build/mota.exe && cd d:/workspace/mota/build && cmake --build . 2>&1)",
+      "Bash(taskkill /f /im mota.exe)",
+      "Bash(powershell -Command \"Stop-Process -Name mota -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 1\")"
     ]
   }
 }

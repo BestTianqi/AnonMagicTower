@@ -20,16 +20,24 @@ enum TileType {
     Tile_DoorRed,
     Tile_DoorBlue,
     Tile_DoorGreen,
-    Tile_NPC
+    Tile_NPC,
+    Tile_Shop
 };
 
 constexpr int MAP_SIZE = 15;
+
+struct ShopData {
+    int potionPrice = 0;
+    int weaponPrice = 0;
+    int armorPrice  = 0;
+};
 
 struct FloorData {
     std::vector<int> map;
     std::unordered_map<int, Monster> monsters;
     std::unordered_map<int, std::unique_ptr<Item>> items;
     std::unordered_map<int, NPC> npcs;
+    std::unordered_map<int, ShopData> shops;
 };
 
 class Game {
@@ -46,7 +54,7 @@ public:
 
     enum MoveResult { Move_Ok, Move_Block, Move_Pickup, Move_Encounter,
                       Move_NPC, Move_StairsUp, Move_StairsDown, Move_PlayerDead,
-                      Move_DoorLocked };
+                      Move_DoorLocked, Move_Shop };
 
     int tileAt(int x, int y) const;
     void setTile(int x, int y, int tile);
@@ -65,6 +73,9 @@ public:
 
     void addNPCAt(int x, int y, NPC npc);
     NPC* npcAt(int x, int y);
+
+    void addShopAt(int x, int y, const ShopData& s);
+    const ShopData* shopAt(int x, int y) const;
 
     bool breakWall(int x, int y);
     void goUpFloor();

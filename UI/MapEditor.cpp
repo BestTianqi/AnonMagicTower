@@ -57,6 +57,9 @@ void MapEditWidget::placeTile(int x, int y)
     t.npcDialog.clear();
     t.npcRewardItem.clear();
     t.npcRewardValue = 0;
+    t.shopPotionPrice = 0;
+    t.shopWeaponPrice = 0;
+    t.shopArmorPrice  = 0;
 
     if (m_currentTile == Tile_Monster)
         t.monsterName = m_currentMonster;
@@ -65,6 +68,10 @@ void MapEditWidget::placeTile(int x, int y)
         t.itemValue = m_currentItemValue;
     } else if (m_currentTile == Tile_NPC) {
         t.npcName = m_currentNPC;
+    } else if (m_currentTile == Tile_Shop) {
+        t.shopPotionPrice = m_shopPotionPrice;
+        t.shopWeaponPrice = m_shopWeaponPrice;
+        t.shopArmorPrice  = m_shopArmorPrice;
     }
 
     update();
@@ -145,6 +152,9 @@ void MapEditWidget::paintEvent(QPaintEvent*)
                 label = t.npcName.empty()
                     ? QString::fromUtf8("NPC")
                     : QString::fromStdString(t.npcName).left(3);
+                break;
+            case Tile_Shop:       fill = QColor(240, 200, 20);
+                label = QString::fromUtf8("商店");
                 break;
             default:              fill = QColor(30, 30, 30);   break;
             }
@@ -320,9 +330,11 @@ MapEditor::MapEditor(QWidget* parent)
         { Tile_DoorBlue,   QString::fromUtf8(" 蓝门 "),    "#44d" },
         { Tile_DoorGreen,  QString::fromUtf8(" 绿门 "),    "#3b3" },
         { Tile_NPC,        QString::fromUtf8(" NPC "),     "#db3" },
+        { Tile_Shop,       QString::fromUtf8(" 商店 "),    "#da0" },
     };
+    const int btnCount = sizeof(btns) / sizeof(btns[0]);
 
-    for (int i = 0; i < 10; ++i) {
+    for (int i = 0; i < btnCount; ++i) {
         auto* btn = new QPushButton(btns[i].text, tileGroup);
         btn->setFixedHeight(34);
         btn->setCursor(Qt::PointingHandCursor);
@@ -359,6 +371,7 @@ MapEditor::MapEditor(QWidget* parent)
     m_tileCombo->addItem(QString::fromUtf8("蓝门"),      Tile_DoorBlue);
     m_tileCombo->addItem(QString::fromUtf8("绿门"),      Tile_DoorGreen);
     m_tileCombo->addItem(QString::fromUtf8("NPC"),        Tile_NPC);
+    m_tileCombo->addItem(QString::fromUtf8("商店"),       Tile_Shop);
     m_tileCombo->setVisible(false);
 
     // ====== 可滚动区域：属性面板 ======
@@ -499,6 +512,35 @@ MapEditor::MapEditor(QWidget* parent)
     nbox->addWidget(m_npcPanel);
     pbox->addWidget(npcGroup);
 
+    // -- 商店编辑面板 --
+    auto* shopGroup = new QGroupBox(QString::fromUtf8("商店属性"), panel);
+    auto* sbox = new QVBoxLayout(shopGroup);
+    m_shopPanel = new QWidget(shopGroup);
+    auto* slay = new QVBoxLayout(m_shopPanel);
+    slay->setContentsMargins(0, 0, 0, 0);
+
+    auto makePriceRow = [&](const QString& label, QSpinBox*& spin) {
+        auto* row = new QHBoxLayout();
+        row->addWidget(new QLabel(label, m_shopPanel));
+        spin = new QSpinBox(m_shopPanel);
+        spin->setRange(0, 9999);
+        spin->setValue(0);
+        spin->setPrefix(QString::fromUtf8("C "));
+        spin->setSuffix(QString::fromUtf8(" G"));
+        spin->setStyleSheet("QSpinBox { background: #222; color: #fff; border: 1px solid #555; padding: 4px; }");
+        spin->setToolTip(QString::fromUtf8("0 表示不售卖"));
+        row->addWidget(spin);
+        slay->addLayout(row);
+    };
+
+    makePriceRow(QString::fromUtf8("生命药 (+50HP) 价格:"), m_shopPotionPriceSpin);
+    makePriceRow(QString::fromUtf8("武器 (+5ATK) 价格:"),   m_shopWeaponPriceSpin);
+    makePriceRow(QString::fromUtf8("防具 (+3DEF) 价格:"),   m_shopArmorPriceSpin);
+
+    sbox->addWidget(m_shopPanel);
+    pbox->addWidget(shopGroup);
+    m_shopPanel->parentWidget()->setVisible(false);
+
     // -- 玩家位置 --
     auto* playerGroup = new QGroupBox(QString::fromUtf8("玩家起始位置"), panel);
     auto* pLay = new QHBoxLayout(playerGroup);
@@ -591,6 +633,18 @@ MapEditor::MapEditor(QWidget* parent)
             m_edit->setCurrentNPC(m_npcNameEdit->text().toStdString());
     };
     connect(m_npcNameEdit, &QLineEdit::textChanged, this, updateNpc);
+
+    // 商店价格变动 → 更新当前编辑状态
+    auto updateShop = [this]() {
+        if (m_tileCombo->currentData().toInt() == Tile_Shop)
+            m_edit->setCurrentShop(
+                m_shopPotionPriceSpin->value(),
+                m_shopWeaponPriceSpin->value(),
+                m_shopArmorPriceSpin->value());
+    };
+    connect(m_shopPotionPriceSpin, QOverload<int>::of(&QSpinBox::valueChanged), this, updateShop);
+    connect(m_shopWeaponPriceSpin, QOverload<int>::of(&QSpinBox::valueChanged), this, updateShop);
+    connect(m_shopArmorPriceSpin,  QOverload<int>::of(&QSpinBox::valueChanged), this, updateShop);
 
     // 编辑区信号
     connect(m_edit, &MapEditWidget::tileChanged, this, [this](int x, int y) {
@@ -688,10 +742,12 @@ void MapEditor::updatePanelForTile(int tileType)
     bool isMonster = (tileType == Tile_Monster);
     bool isItem    = (tileType == Tile_Item);
     bool isNPC     = (tileType == Tile_NPC);
+    bool isShop    = (tileType == Tile_Shop);
 
     m_monsterCombo->parentWidget()->setVisible(isMonster);  // monGroup
     m_itemPanel->parentWidget()->setVisible(isItem);        // itemGroup
     m_npcPanel->parentWidget()->setVisible(isNPC);          // npcGroup
+    m_shopPanel->parentWidget()->setVisible(isShop);        // shopGroup
 
     // 更新道具数值标签可见性
     QString itemName = m_itemCombo->currentText();
@@ -852,6 +908,21 @@ bool MapEditor::saveToPath(const QString& path)
                 }
             }
         }
+
+        // 商店
+        int shopCount = 0;
+        for (auto& t : ef->tiles)
+            if (t.type == Tile_Shop && (t.shopPotionPrice > 0 || t.shopWeaponPrice > 0 || t.shopArmorPrice > 0))
+                ++shopCount;
+        out << shopCount << "\n";
+        for (int y = 0; y < 15; ++y) {
+            for (int x = 0; x < 15; ++x) {
+                auto& t = ef->tiles[y * 15 + x];
+                if (t.type == Tile_Shop && (t.shopPotionPrice > 0 || t.shopWeaponPrice > 0 || t.shopArmorPrice > 0))
+                    out << x << " " << y << " " << t.shopPotionPrice << " "
+                        << t.shopWeaponPrice << " " << t.shopArmorPrice << "\n";
+            }
+        }
     }
 
     // 玩家数据 (取第一层玩家位置)
@@ -966,6 +1037,20 @@ void MapEditor::onExportFloor()
             out << QString::fromStdString(d) << "\n";
     }
 
+    // 商店
+    std::vector<std::pair<int, EditorTile*>> shops;
+    for (int y = 0; y < 15; ++y)
+        for (int x = 0; x < 15; ++x) {
+            auto& t = ef.tiles[y * 15 + x];
+            if (t.type == Tile_Shop && (t.shopPotionPrice > 0 || t.shopWeaponPrice > 0 || t.shopArmorPrice > 0))
+                shops.push_back({y * 15 + x, &t});
+        }
+    out << shops.size() << "\n";
+    for (auto& [key, t] : shops) {
+        out << (key % 15) << " " << (key / 15) << " "
+            << t->shopPotionPrice << " " << t->shopWeaponPrice << " " << t->shopArmorPrice << "\n";
+    }
+
     file.close();
     m_statusLabel->setText(QString::fromUtf8("已导出当前层: %1").arg(path));
 }
@@ -1002,6 +1087,36 @@ void MapEditor::onLoad()
             QString mname;
             in >> mx >> my >> mname >> mhp >> matk >> mdef >> mgold;
             ef.tiles[my * 15 + mx].monsterName = mname.toStdString();
+        }
+        // 物品
+        int icount; in >> icount;
+        for (int i = 0; i < icount; ++i) {
+            int ix, iy, ival; QString iname;
+            in >> ix >> iy >> iname >> ival;
+            ef.tiles[iy * 15 + ix].itemName = iname.toStdString();
+            ef.tiles[iy * 15 + ix].itemValue = ival;
+        }
+        // NPC
+        int ncount; in >> ncount;
+        for (int i = 0; i < ncount; ++i) {
+            int nx, ny, dsize; QString nname;
+            in >> nx >> ny >> nname >> dsize;
+            in.readLine();
+            auto& t = ef.tiles[ny * 15 + nx];
+            t.npcName = nname.toStdString();
+            for (int d = 0; d < dsize; ++d) {
+                QString line = in.readLine();
+                t.npcDialog.push_back(line.toStdString());
+            }
+        }
+        // 商店
+        int scount; in >> scount;
+        for (int i = 0; i < scount; ++i) {
+            int sx, sy, pp, wp, ap;
+            in >> sx >> sy >> pp >> wp >> ap;
+            ef.tiles[sy * 15 + sx].shopPotionPrice = pp;
+            ef.tiles[sy * 15 + sx].shopWeaponPrice = wp;
+            ef.tiles[sy * 15 + sx].shopArmorPrice  = ap;
         }
         m_floors[1] = ef;
         m_floorSpin->setMaximum(1);
@@ -1066,6 +1181,17 @@ void MapEditor::onLoad()
                 QString line = in.readLine();
                 t.npcDialog.push_back(line.toStdString());
             }
+        }
+
+        // 商店
+        int scount; in >> scount;
+        for (int i = 0; i < scount; ++i) {
+            int sx, sy, pp, wp, ap;
+            in >> sx >> sy >> pp >> wp >> ap;
+            auto& t = ef.tiles[sy * 15 + sx];
+            t.shopPotionPrice = pp;
+            t.shopWeaponPrice = wp;
+            t.shopArmorPrice  = ap;
         }
 
         m_floors[fnum] = ef;
@@ -1147,6 +1273,14 @@ void MapEditor::onTestPlay()
                         ? nullptr : createItem(t.npcRewardItem, t.npcRewardValue);
                     game->addNPCAt(x, y, NPC(t.npcName, t.npcDialog, std::move(reward)));
                 }
+            }
+
+        // 商店
+        for (int y = 0; y < 15; ++y)
+            for (int x = 0; x < 15; ++x) {
+                auto& t = ef.tiles[y * 15 + x];
+                if (t.type == Tile_Shop)
+                    game->addShopAt(x, y, {t.shopPotionPrice, t.shopWeaponPrice, t.shopArmorPrice});
             }
     }
 

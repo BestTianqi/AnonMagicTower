@@ -61,6 +61,9 @@ void MapWidget::generatePlaceholders()
     // NPC
     m_tilePix[Tile_NPC] = makePixmap(QColor(200, 160, 60), QColor(160, 120, 30),
         QString::fromUtf8("NPC"), Qt::white, 10);
+    // 商店
+    m_tilePix[Tile_Shop] = makePixmap(QColor(240, 200, 20), QColor(200, 160, 10),
+        QString::fromUtf8("商店"), QColor(80, 40, 0), 10);
 
     // 默认怪物
     m_defaultMonsterPix = makePixmap(QColor(200, 80, 80), QColor(160, 50, 50),

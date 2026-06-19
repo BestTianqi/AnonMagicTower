@@ -127,6 +127,20 @@ NPC* Game::npcAt(int x, int y)
     return &it->second;
 }
 
+void Game::addShopAt(int x, int y, const ShopData& s)
+{
+    int key = posKey(x, y);
+    m_currentFloor->shops.emplace(key, s);
+}
+
+const ShopData* Game::shopAt(int x, int y) const
+{
+    int key = posKey(x, y);
+    auto it = m_currentFloor->shops.find(key);
+    if (it == m_currentFloor->shops.end()) return nullptr;
+    return &it->second;
+}
+
 bool Game::breakWall(int x, int y)
 {
     if (x < 0 || y < 0 || x >= m_width || y >= m_height) return false;
@@ -254,6 +268,9 @@ Game::MoveResult Game::tryMovePlayer(int nx, int ny)
     case Tile_NPC:
         return Move_NPC;
 
+    case Tile_Shop:
+        return Move_Shop;
+
     case Tile_StairsUp:
         m_player.x = nx; m_player.y = ny;
         return Move_StairsUp;
@@ -372,6 +389,26 @@ bool Game::saveToFile(const std::string& path) const
                 << (reward ? reward->GetValue() : 0) << "\n";
             for (auto& d : n.Dialog())
                 ofs << d << "\n";
+        }
+    }
+
+    // 商店 (所有楼层)
+    {
+        // 统计所有楼层商店总数
+        size_t totalShops = 0;
+        for (auto& fp : m_floors)
+            totalShops += fp.second.shops.size();
+        ofs << "SHOP " << totalShops << "\n";
+        for (auto& fp : m_floors) {
+            int fnum = fp.first;
+            for (auto& skv : fp.second.shops) {
+                int x = skv.first % m_width;
+                int y = skv.first / m_width;
+                const ShopData& s = skv.second;
+                ofs << fnum << " " << x << " " << y << " "
+                    << s.potionPrice << " " << s.weaponPrice << " "
+                    << s.armorPrice << "\n";
+            }
         }
     }
 
@@ -501,9 +538,28 @@ bool Game::loadFromFile(const std::string& path)
         m_floors[fnum] = std::move(fd);
     }
 
-    // 玩家 — 先保存已读数据
-    int px, py, php, patk, pdef, pgold;
-    ifs >> px >> py >> php >> patk >> pdef >> pgold;
+    // 玩家
+    int px = 0, py = 0, php = 100, patk = 10, pdef = 5, pgold = 0;
+
+    // 商店 (SHOP 标记)
+    std::string marker;
+    ifs >> marker;
+    if (marker == "SHOP") {
+        size_t totalShops; ifs >> totalShops;
+        for (size_t i = 0; i < totalShops; ++i) {
+            int fnum, sx, sy, pp, wp, ap;
+            ifs >> fnum >> sx >> sy >> pp >> wp >> ap;
+            auto it = m_floors.find(fnum);
+            if (it != m_floors.end())
+                it->second.shops.emplace(sy * m_width + sx, ShopData{pp, wp, ap});
+        }
+        // 读取玩家数据
+        ifs >> px >> py >> php >> patk >> pdef >> pgold;
+    } else {
+        // 旧格式: marker 就是 player x
+        px = std::stoi(marker);
+        ifs >> py >> php >> patk >> pdef >> pgold;
+    }
 
     int r, b, g; ifs >> r >> b >> g;
     bool hasGl, hasPen, hasMat;

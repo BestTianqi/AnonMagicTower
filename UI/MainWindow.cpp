@@ -12,6 +12,9 @@
 #include <QVBoxLayout>
 #include <QListWidget>
 #include <QDialogButtonBox>
+#include <QPushButton>
+#include <QHBoxLayout>
+#include <QFrame>
 
 MainWindow::MainWindow(Game* game, QWidget* parent)
     : QWidget(parent), m_game(game)
@@ -71,6 +74,7 @@ void MainWindow::loadAssets()
     mw->loadTileImage(Tile_DoorBlue,   ":/images/door_blue.png");
     mw->loadTileImage(Tile_DoorGreen,  ":/images/door_green.png");
     mw->loadTileImage(Tile_NPC,        ":/images/npc.png");
+    mw->loadTileImage(Tile_Shop,       ":/images/shop.png");
 
     mw->loadPlayerImage(":/images/player.png");
 
@@ -227,6 +231,99 @@ void MainWindow::showNPCDialog(int x, int y)
     }
 }
 
+void MainWindow::showShopDialog(int x, int y)
+{
+    const ShopData* shop = m_game->shopAt(x, y);
+    if (!shop) return;
+
+    Player& p = m_game->player();
+
+    struct ShopItem {
+        QString name;
+        int price;
+        QString effectDesc;
+        std::function<void()> apply;
+    };
+
+    std::vector<ShopItem> items;
+    items.push_back({QString::fromUtf8("生命药"), shop->potionPrice,
+        QString::fromUtf8("生命 +50"),
+        [&]() { p.hp += 50; p.gold -= shop->potionPrice; }});
+    items.push_back({QString::fromUtf8("武器"), shop->weaponPrice,
+        QString::fromUtf8("攻击 +5"),
+        [&]() { p.atk += 5; p.gold -= shop->weaponPrice; }});
+    items.push_back({QString::fromUtf8("防具"), shop->armorPrice,
+        QString::fromUtf8("防御 +3"),
+        [&]() { p.def += 3; p.gold -= shop->armorPrice; }});
+
+    QDialog dlg(this);
+    dlg.setWindowTitle(QString::fromUtf8("商店"));
+    dlg.setFixedSize(360, 320);
+    dlg.setStyleSheet("QDialog { background-color: #1a1a2e; color: #d0d0d0; }");
+
+    auto* layout = new QVBoxLayout(&dlg);
+    layout->setSpacing(10);
+    layout->setContentsMargins(16, 12, 16, 12);
+
+    auto* goldLabel = new QLabel(QString::fromUtf8("💰 你的金币: %1").arg(p.gold), &dlg);
+    goldLabel->setStyleSheet("color: #c8a23b; font-size: 15px; font-weight: bold;");
+    goldLabel->setObjectName("goldLabel");
+    layout->addWidget(goldLabel);
+
+    auto* sep = new QFrame(&dlg);
+    sep->setFrameShape(QFrame::HLine);
+    sep->setStyleSheet("color: #444;");
+    layout->addWidget(sep);
+
+    for (auto& item : items) {
+        auto* row = new QHBoxLayout();
+        row->setSpacing(8);
+
+        QString desc = item.price > 0
+            ? QString::fromUtf8("%1 (%2 G) — %3").arg(item.name).arg(item.price).arg(item.effectDesc)
+            : QString::fromUtf8("%1 — 不售卖").arg(item.name);
+
+        auto* label = new QLabel(desc, &dlg);
+        label->setStyleSheet(item.price > 0 ? "font-size: 13px;" : "color: #666; font-size: 13px;");
+        row->addWidget(label, 1);
+
+        auto* btn = new QPushButton(QString::fromUtf8("购买"), &dlg);
+        btn->setFixedWidth(60);
+        btn->setStyleSheet(
+            "QPushButton { background: #3a5a3a; color: #d0d0d0; border: 1px solid #6a6; "
+            "border-radius: 4px; padding: 4px 10px; font-size: 13px; }"
+            "QPushButton:hover { background: #4a7a4a; }"
+            "QPushButton:disabled { background: #333; color: #666; border-color: #444; }"
+        );
+        btn->setEnabled(item.price > 0 && p.gold >= item.price);
+
+        connect(btn, &QPushButton::clicked, &dlg, [&dlg, &item]() {
+            item.apply();
+            QMessageBox::information(&dlg, QString::fromUtf8("购买成功"),
+                QString::fromUtf8("购买了 %1！%2").arg(item.name).arg(item.effectDesc));
+            dlg.accept();
+        });
+        row->addWidget(btn);
+
+        layout->addLayout(row);
+    }
+
+    layout->addStretch();
+
+    auto* leaveBtn = new QPushButton(QString::fromUtf8("离开"), &dlg);
+    leaveBtn->setFixedHeight(36);
+    leaveBtn->setStyleSheet(
+        "QPushButton { background: #3a3a5a; color: #d0d0d0; border: 1px solid #66a; "
+        "border-radius: 4px; padding: 6px 16px; font-size: 14px; }"
+        "QPushButton:hover { background: #4a4a7a; }"
+    );
+    connect(leaveBtn, &QPushButton::clicked, &dlg, &QDialog::accept);
+    layout->addWidget(leaveBtn);
+
+    dlg.exec();
+    updateHUD();
+}
+
 void MainWindow::updateHUD()
 {
     int floor = m_game->currentFloor();
@@ -371,6 +468,9 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
         updateHUD();
         break;
     }
+    case Game::Move_Shop:
+        showShopDialog(nx, ny);
+        break;
     case Game::Move_StairsUp:
         m_game->goUpFloor();
         ui.mapWidget->update();
