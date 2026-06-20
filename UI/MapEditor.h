@@ -86,14 +86,19 @@ public:
     }
 
     const std::vector<EditorTile>& tiles() const { return m_floor.tiles; }
-    void setTiles(const std::vector<EditorTile>& t) { m_floor.tiles = t; update(); }
-    void setFloor(const EditorFloor& f) { m_floor = f; update(); }
+    void setTiles(const std::vector<EditorTile>& t) { m_floor.tiles = t; m_selectedX = -1; m_selectedY = -1; update(); }
+    void setFloor(const EditorFloor& f) { m_floor = f; m_selectedX = -1; m_selectedY = -1; update(); }
     EditorFloor floorData() const { return m_floor; }
 
     int playerX() const { return m_floor.playerX; }
     int playerY() const { return m_floor.playerY; }
 
     void clearFloor();
+
+    // 选中图块直接编辑（NPC 等复杂图块）
+    void selectTile(int x, int y);
+    void applyToSelected();
+    void clearSelection() { m_selectedX = -1; m_selectedY = -1; }
 
     // 读取当前编辑状态（用于面板反写）
     const std::string& currentMonster() const { return m_currentMonster; }
@@ -143,6 +148,8 @@ private:
     int m_shopArmorValue  = 8;
     int m_hoverX = -1;
     int m_hoverY = -1;
+    int m_selectedX = -1;
+    int m_selectedY = -1;
 };
 
 class MapEditor : public QWidget {
@@ -203,6 +210,7 @@ private:
     // 多楼层数据
     std::unordered_map<int, EditorFloor> m_floors;
     int m_currentFloor = 1;
+    bool m_populating = false;  // 防止 populatePanels 期间触发 updateNpc 中间态保存
 
     void storeCurrentFloor();
     void switchToFloor(int floor, bool storeCurrent = true);

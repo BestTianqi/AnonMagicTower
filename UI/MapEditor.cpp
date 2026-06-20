@@ -39,6 +39,8 @@ void MapEditWidget::clearFloor()
             m_floor.tiles[indexAt(x, y)].type = Tile_Floor;
     m_floor.playerX = 2;
     m_floor.playerY = 3;
+    m_selectedX = -1;
+    m_selectedY = -1;
     update();
 }
 
@@ -123,6 +125,26 @@ void MapEditWidget::loadFromTile(int x, int y)
         m_shopWeaponValue = t.shopWeaponValue;
         m_shopArmorValue  = t.shopArmorValue;
     }
+}
+
+void MapEditWidget::selectTile(int x, int y)
+{
+    if (x < 0 || y < 0 || x >= 15 || y >= 15) return;
+    // 先把当前编辑状态保存到上次选中的图块
+    applyToSelected();
+    // 加载新图块数据
+    loadFromTile(x, y);
+    m_selectedX = x;
+    m_selectedY = y;
+    emit tileTypePicked(m_currentTile);
+    emit tilePicked(x, y);
+}
+
+void MapEditWidget::applyToSelected()
+{
+    if (m_selectedX < 0 || m_selectedY < 0) return;
+    placeTile(m_selectedX, m_selectedY);
+    emit tileChanged(m_selectedX, m_selectedY);
 }
 
 void MapEditWidget::paintEvent(QPaintEvent*)
@@ -291,20 +313,24 @@ void MapEditWidget::mousePressEvent(QMouseEvent* event)
             emit playerMoved(x, y);
             return;
         }
-        // 左键：用编辑器当前状态放置图块
-        placeTile(x, y);
-        emit tilePicked(x, y);
+        auto& t = m_floor.tiles[indexAt(x, y)];
+        bool hasContent = (t.type != Tile_Empty && t.type != Tile_Floor &&
+                           t.type != Tile_Wall && t.type != Tile_DarkWall);
+        if (hasContent) {
+            // 左键有内容图块：选中编辑
+            selectTile(x, y);
+        } else {
+            // 左键空地：画刷放置
+            placeTile(x, y);
+            emit tilePicked(x, y);
+        }
     } else if (event->button() == Qt::RightButton) {
         auto& t = m_floor.tiles[indexAt(x, y)];
         bool hasContent = (t.type != Tile_Empty && t.type != Tile_Floor &&
                            t.type != Tile_Wall && t.type != Tile_DarkWall);
         if (hasContent) {
-            // 右键点击有内容的图块：加载数据到编辑器（编辑模式）
-            loadFromTile(x, y);
-            emit tileTypePicked(m_currentTile);
-            emit tilePicked(x, y);
+            selectTile(x, y);
         } else {
-            // 右键点击空地/墙：擦除为地板
             t = { Tile_Floor, "" };
             update();
             emit tileChanged(x, y);
@@ -448,6 +474,8 @@ MapEditor::MapEditor(QWidget* parent)
             m_edit->setCurrentTile(tileType);
             int idx = m_tileCombo->findData(tileType);
             if (idx >= 0) m_tileCombo->setCurrentIndex(idx);
+            m_edit->applyToSelected();  // 保存之前选中的图块
+            m_edit->clearSelection();   // 切换到笔刷模式
             updatePanelForTile(tileType);
             setWindowTitle(QString::fromUtf8("地图编辑器 [%1]").arg(tileName.trimmed()));
             m_statusLabel->setText(QString::fromUtf8(">> 当前选中: %1 (type=%2) <<").arg(tileName.trimmed()).arg(tileType));
@@ -803,15 +831,14 @@ MapEditor::MapEditor(QWidget* parent)
 
     // NPC 编辑 → 实时更新
     auto updateNpc = [this]() {
+        if (m_populating) return;  // populatePanels 期间不触发中间态保存
         if (m_tileCombo->currentData().toInt() == Tile_NPC) {
-            // 对话
             std::vector<std::string> dialog;
             QString dtext = m_npcDialogEdit->toPlainText().trimmed();
             if (!dtext.isEmpty()) {
                 for (auto& line : dtext.split('\n'))
                     dialog.push_back(line.toStdString());
             }
-            // 奖励
             std::string rewardItem;
             int rewardValue = m_npcRewardValueSpin->value();
             if (m_npcRewardCombo->currentIndex() > 0)
@@ -823,6 +850,7 @@ MapEditor::MapEditor(QWidget* parent)
                 m_npcTradeGoldSpin->value(),
                 m_npcTradeRewardCombo->currentText().toStdString(),
                 m_npcTradeRewardValueSpin->value());
+            m_edit->applyToSelected();  // 自动保存到选中的图块
         }
     };
     connect(m_npcNameEdit, &QLineEdit::textChanged, this, updateNpc);
@@ -960,6 +988,7 @@ void MapEditor::removeFloor()
 
 void MapEditor::populatePanels(int tileType)
 {
+    m_populating = true;  // 阻止中间态触发 updateNpc 保存
     if (tileType == Tile_Monster) {
         QString name = QString::fromStdString(m_edit->currentMonster());
         int idx = m_monsterCombo->findText(name);
@@ -985,6 +1014,7 @@ void MapEditor::populatePanels(int tileType)
         if (idx >= 0) m_npcTradeRewardCombo->setCurrentIndex(idx);
         m_npcTradeRewardValueSpin->setValue(m_edit->currentNPCTradeRewardValue());
     }
+    m_populating = false;
 }
 
 void MapEditor::updatePanelForTile(int tileType)
@@ -993,6 +1023,9 @@ void MapEditor::updatePanelForTile(int tileType)
     bool isItem    = (tileType == Tile_Item);
     bool isNPC     = (tileType == Tile_NPC);
     bool isShop    = (tileType == Tile_Shop);
+
+    // 离开 NPC 面板时保存选中图块
+    if (!isNPC) m_edit->applyToSelected();
 
     m_monsterCombo->parentWidget()->setVisible(isMonster);  // monGroup
     m_itemPanel->parentWidget()->setVisible(isItem);        // itemGroup
