@@ -164,7 +164,7 @@ void MapEditWidget::paintEvent(QPaintEvent*)
                     else if (iname == QString::fromUtf8("万能钥匙"))
                         { fill = QColor(130, 60, 200); label = QString::fromUtf8("万能钥"); }
                     // 属性
-                    else if (iname == QString::fromUtf8("Potion") || iname == QString::fromUtf8("药水"))
+                    else if (iname == QString::fromUtf8("Potion") || iname == QString::fromUtf8("生命药") || iname == QString::fromUtf8("药水"))
                         { fill = QColor(200, 60, 60); label = QString::fromUtf8("生命药");
                           itemDesc = QString("+%1HP").arg(t.itemValue); }
                     else if (iname == QString::fromUtf8("Weapon") || iname == QString::fromUtf8("武器"))
@@ -329,16 +329,16 @@ void MapEditWidget::leaveEvent(QEvent*)
 // ==================== MapEditor ====================
 
 // 物品列表定义
-struct ItemDef { const char* name; int defaultValue; const char* desc; };
+struct ItemDef { QString name; int defaultValue; const char* desc; };
 static const ItemDef g_itemDefs[] = {
-    {"Potion", 50, "恢复生命"},
-    {"Weapon", 5, "攻击力+"},
-    {"Armor", 3, "防御力+"},
-    {"Treasure", 10, "金币"},
-    {"Red Key", 1, "红钥匙"},
-    {"Blue Key", 2, "蓝钥匙"},
-    {"Green Key", 3, "绿钥匙"},
-    {nullptr, 0, nullptr}  // sentinel = 特殊物品分界线
+    {QString::fromUtf8("生命药"), 50, "恢复生命"},
+    {QString::fromUtf8("武器"), 5, "攻击力+"},
+    {QString::fromUtf8("防具"), 3, "防御力+"},
+    {QString::fromUtf8("金币"), 10, "金币"},
+    {QString::fromUtf8("红钥匙"), 1, "红钥匙"},
+    {QString::fromUtf8("蓝钥匙"), 2, "蓝钥匙"},
+    {QString::fromUtf8("绿钥匙"), 3, "绿钥匙"},
+    {QString(), 0, nullptr}  // sentinel = 特殊物品分界线
 };
 static const char* g_specialItems[] = {
     "万能钥匙", "匿名眼镜", "破墙锤", "上楼器", "下楼器",
@@ -591,8 +591,8 @@ MapEditor::MapEditor(QWidget* parent)
     m_npcRewardCombo = new QComboBox(m_npcPanel);
     m_npcRewardCombo->setStyleSheet("QComboBox { background: #222; border: 1px solid #555; padding: 4px; }");
     m_npcRewardCombo->addItem(QString::fromUtf8("(无奖励)"));
-    for (int i = 0; g_itemDefs[i].name; ++i)
-        m_npcRewardCombo->addItem(QString::fromUtf8(g_itemDefs[i].name));
+    for (int i = 0; !g_itemDefs[i].name.isNull(); ++i)
+        m_npcRewardCombo->addItem(g_itemDefs[i].name);
     m_npcRewardCombo->insertSeparator(m_npcRewardCombo->count());
     for (int i = 0; g_specialItems[i]; ++i)
         m_npcRewardCombo->addItem(QString::fromUtf8(g_specialItems[i]));
@@ -633,8 +633,8 @@ MapEditor::MapEditor(QWidget* parent)
     tradeRewardRow->addWidget(new QLabel(QString::fromUtf8("交易物品:"), m_npcTradePanel));
     m_npcTradeRewardCombo = new QComboBox(m_npcTradePanel);
     m_npcTradeRewardCombo->setStyleSheet("QComboBox { background: #222; border: 1px solid #555; padding: 2px; }");
-    for (int i = 0; g_itemDefs[i].name; ++i)
-        m_npcTradeRewardCombo->addItem(QString::fromUtf8(g_itemDefs[i].name));
+    for (int i = 0; !g_itemDefs[i].name.isNull(); ++i)
+        m_npcTradeRewardCombo->addItem(g_itemDefs[i].name);
     m_npcTradeRewardCombo->insertSeparator(m_npcTradeRewardCombo->count());
     for (int i = 0; g_specialItems[i]; ++i)
         m_npcTradeRewardCombo->addItem(QString::fromUtf8(g_specialItems[i]));

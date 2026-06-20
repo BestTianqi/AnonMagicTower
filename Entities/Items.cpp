@@ -80,9 +80,9 @@ void Key::Apply(Player& player) const
 
 std::string Key::nameForType(KeyType t) {
     switch (t) {
-    case KeyType::Red: return "Red Key";
-    case KeyType::Blue: return "Blue Key";
-    case KeyType::Green: return "Green Key";
+    case KeyType::Red: return QString::fromUtf8("红钥匙").toStdString();
+    case KeyType::Blue: return QString::fromUtf8("蓝钥匙").toStdString();
+    case KeyType::Green: return QString::fromUtf8("绿钥匙").toStdString();
     default: return "Key";
     }
 }

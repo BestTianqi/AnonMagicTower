@@ -277,6 +277,9 @@ Game::MoveResult Game::tryMovePlayer(int nx, int ny)
         if (item) {
             if (item->IsUseItem()) {
                 m_player.AddItem(std::move(item));
+            } else if (item->IsPassiveEffect()) {
+                item->Apply(m_player);
+                m_player.AddItem(std::move(item));
             } else {
                 item->Apply(m_player);
             }
@@ -497,19 +500,19 @@ bool Game::saveToFile(const std::string& path) const
 }
 
 std::unique_ptr<Item> Game::createItemByName(const std::string& iname, int ival) {
-    if (iname == "Red Key")
+    if (iname == "Red Key" || iname == QString::fromUtf8("红钥匙").toStdString())
         return std::make_unique<Key>(KeyType::Red);
-    if (iname == "Blue Key")
+    if (iname == "Blue Key" || iname == QString::fromUtf8("蓝钥匙").toStdString())
         return std::make_unique<Key>(KeyType::Blue);
-    if (iname == "Green Key")
+    if (iname == "Green Key" || iname == QString::fromUtf8("绿钥匙").toStdString())
         return std::make_unique<Key>(KeyType::Green);
-    if (iname == "Potion")
+    if (iname == "Potion" || iname == QString::fromUtf8("生命药").toStdString())
         return std::make_unique<Potion>(ival);
-    if (iname == "Weapon")
+    if (iname == "Weapon" || iname == QString::fromUtf8("武器").toStdString())
         return std::make_unique<Weapon>(ival);
-    if (iname == "Armor")
+    if (iname == "Armor" || iname == QString::fromUtf8("防具").toStdString())
         return std::make_unique<Armor>(ival);
-    if (iname == "Treasure")
+    if (iname == "Treasure" || iname == QString::fromUtf8("金币").toStdString())
         return std::make_unique<Treasure>(ival);
     if (iname == QString::fromUtf8("万能钥匙").toStdString())
         return std::make_unique<MagicKey>();

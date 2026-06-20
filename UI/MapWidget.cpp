@@ -163,7 +163,7 @@ static void itemAppearance(const std::string& name, int value, QColor& fill, QCo
           label = QString::fromUtf8("万能钥"); textColor = QColor(255, 220, 100); return; }
 
     // 属性类
-    if (qname == QString::fromUtf8("Potion") || qname == QString::fromUtf8("药水"))
+    if (qname == QString::fromUtf8("Potion") || qname == QString::fromUtf8("生命药"))
         { fill = QColor(200, 60, 60); border = QColor(150, 30, 30);
           label = QString::fromUtf8("生命药"); textColor = Qt::white;
           desc = QString("+%1HP").arg(value); return; }

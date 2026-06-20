@@ -50,6 +50,8 @@ bool Player::UseItem(int index)
 {
     if (index < 0 || index >= (int)m_items.size())
         return false;
+    if (m_items[index]->IsPassiveEffect())
+        return true;  // 被动效果不消耗，仅查看
     m_items[index]->Apply(*this);
     m_items.erase(m_items.begin() + index);
     return true;

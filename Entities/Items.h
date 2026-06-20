@@ -18,6 +18,9 @@ public:
     // 是否放入背包手动使用（默认 false = 拾取即用）
     virtual bool IsUseItem() const { return false; }
 
+    // 是否被动永久效果（放入背包但不消耗，仅查看描述）
+    virtual bool IsPassiveEffect() const { return false; }
+
 private:
     std::string name;
     int value;
@@ -106,12 +109,14 @@ class PenguinDoll : public Item {
 public:
     PenguinDoll();
     void Apply(Player& player) const override;
+    bool IsPassiveEffect() const override { return true; }
 };
 
 class MatchaParfait : public Item {
 public:
     MatchaParfait();
     void Apply(Player& player) const override;
+    bool IsPassiveEffect() const override { return true; }
 };
 
 class TempShield : public Item {
@@ -152,10 +157,12 @@ class AnonGlasses : public Item {
 public:
     AnonGlasses();
     void Apply(Player& player) const override;
+    bool IsPassiveEffect() const override { return true; }
 };
 
 class LuckyCoin : public Item {
 public:
     LuckyCoin();
     void Apply(Player& player) const override;
+    bool IsPassiveEffect() const override { return true; }
 };

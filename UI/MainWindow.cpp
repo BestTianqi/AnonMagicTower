@@ -95,19 +95,19 @@ QString MainWindow::getItemDescription(const Item* item) const
     QString name = QString::fromStdString(item->GetName());
     int val = item->GetValue();
 
-    if (name == "Potion")
+    if (name == "Potion" || name == QString::fromUtf8("生命药"))
         return QString::fromUtf8("恢复 %1 点生命值").arg(val);
-    if (name == "Weapon")
+    if (name == "Weapon" || name == QString::fromUtf8("武器"))
         return QString::fromUtf8("攻击力 +%1").arg(val);
-    if (name == "Armor")
+    if (name == "Armor" || name == QString::fromUtf8("防具"))
         return QString::fromUtf8("防御力 +%1").arg(val);
-    if (name == "Treasure")
+    if (name == "Treasure" || name == QString::fromUtf8("金币"))
         return QString::fromUtf8("获得 %1 金币").arg(val);
-    if (name == "Red Key")
+    if (name == "Red Key" || name == QString::fromUtf8("红钥匙"))
         return QString::fromUtf8("红钥匙 ×1");
-    if (name == "Blue Key")
+    if (name == "Blue Key" || name == QString::fromUtf8("蓝钥匙"))
         return QString::fromUtf8("蓝钥匙 ×1");
-    if (name == "Green Key")
+    if (name == "Green Key" || name == QString::fromUtf8("绿钥匙"))
         return QString::fromUtf8("绿钥匙 ×1");
     if (name == QString::fromUtf8("万能钥匙"))
         return QString::fromUtf8("可开任何门3次（优先使用普通钥匙）");
@@ -167,7 +167,9 @@ void MainWindow::showInventory()
                 QString text = QString::fromStdString(item->GetName()) + " — " + getItemDescription(item);
                 auto* listItem = new QListWidgetItem(text, list);
                 listItem->setData(Qt::UserRole, i);
-                listItem->setToolTip(QString::fromUtf8("双击使用"));
+                listItem->setToolTip(item->IsPassiveEffect()
+                    ? QString::fromUtf8("被动效果，无需使用")
+                    : QString::fromUtf8("双击使用"));
             }
         }
     }
@@ -190,13 +192,20 @@ void MainWindow::showInventory()
         if (idx >= 0 && idx < count) {
             auto* item = m_game->player().GetItem(idx);
             if (item) {
-                QString msg = QString::fromUtf8("使用了 %1: %2")
-                    .arg(QString::fromStdString(item->GetName()))
-                    .arg(getItemDescription(item));
-                m_game->player().UseItem(idx);
-                updateHUD();
-                QMessageBox::information(&dlg, QString::fromUtf8("使用物品"), msg);
-                dlg.accept();
+                if (item->IsPassiveEffect()) {
+                    QMessageBox::information(&dlg, QString::fromUtf8("查看物品"),
+                        QString::fromUtf8("%1\n%2").arg(
+                            QString::fromStdString(item->GetName()),
+                            getItemDescription(item)));
+                } else {
+                    QString msg = QString::fromUtf8("使用了 %1: %2")
+                        .arg(QString::fromStdString(item->GetName()))
+                        .arg(getItemDescription(item));
+                    m_game->player().UseItem(idx);
+                    updateHUD();
+                    QMessageBox::information(&dlg, QString::fromUtf8("使用物品"), msg);
+                    dlg.accept();
+                }
             }
         }
     });
@@ -409,7 +418,7 @@ void MainWindow::updateHUD()
         keyText += QString::fromUtf8("  🔮×%1").arg(m_game->player().magicKeyUses);
     ui.keysLabel->setText(keyText);
 
-    // 显示背包物品列表（金币和钥匙下方）
+    // 显示背包物品
     int invCount = m_game->player().InventoryCount();
     if (invCount > 0) {
         QString items;
