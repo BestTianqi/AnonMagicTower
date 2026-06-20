@@ -100,6 +100,7 @@ void MapEditWidget::placeTile(int x, int y)
 void MapEditWidget::loadFromTile(int x, int y)
 {
     auto& t = m_floor.tiles[indexAt(x, y)];
+    m_currentTile = t.type;  // 点击时自动切换为图块类型
     if (t.type == Tile_Monster) {
         m_currentMonster = t.monsterName;
     } else if (t.type == Tile_Item) {
@@ -290,16 +291,24 @@ void MapEditWidget::mousePressEvent(QMouseEvent* event)
             emit playerMoved(x, y);
             return;
         }
-        // 点击已有图块时先加载数据，再放置（实现"拾取"效果）
-        loadFromTile(x, y);
+        // 左键：用编辑器当前状态放置图块
         placeTile(x, y);
         emit tilePicked(x, y);
     } else if (event->button() == Qt::RightButton) {
-        // 右键擦除为地板
         auto& t = m_floor.tiles[indexAt(x, y)];
-        t = { Tile_Floor, "" };
-        update();
-        emit tileChanged(x, y);
+        bool hasContent = (t.type != Tile_Empty && t.type != Tile_Floor &&
+                           t.type != Tile_Wall && t.type != Tile_DarkWall);
+        if (hasContent) {
+            // 右键点击有内容的图块：加载数据到编辑器（编辑模式）
+            loadFromTile(x, y);
+            emit tileTypePicked(m_currentTile);
+            emit tilePicked(x, y);
+        } else {
+            // 右键点击空地/墙：擦除为地板
+            t = { Tile_Floor, "" };
+            update();
+            emit tileChanged(x, y);
+        }
     }
 }
 
@@ -437,9 +446,9 @@ MapEditor::MapEditor(QWidget* parent)
         connect(btn, &QPushButton::pressed, this, [this, tileType, tileName]() {
             m_currentTileType = tileType;
             m_edit->setCurrentTile(tileType);
-            updatePanelForTile(tileType);
             int idx = m_tileCombo->findData(tileType);
             if (idx >= 0) m_tileCombo->setCurrentIndex(idx);
+            updatePanelForTile(tileType);
             setWindowTitle(QString::fromUtf8("地图编辑器 [%1]").arg(tileName.trimmed()));
             m_statusLabel->setText(QString::fromUtf8(">> 当前选中: %1 (type=%2) <<").arg(tileName.trimmed()).arg(tileType));
         });
@@ -633,6 +642,7 @@ MapEditor::MapEditor(QWidget* parent)
     tradeRewardRow->addWidget(new QLabel(QString::fromUtf8("交易物品:"), m_npcTradePanel));
     m_npcTradeRewardCombo = new QComboBox(m_npcTradePanel);
     m_npcTradeRewardCombo->setStyleSheet("QComboBox { background: #222; border: 1px solid #555; padding: 2px; }");
+    m_npcTradeRewardCombo->addItem(QString::fromUtf8("(无)"));
     for (int i = 0; !g_itemDefs[i].name.isNull(); ++i)
         m_npcTradeRewardCombo->addItem(g_itemDefs[i].name);
     m_npcTradeRewardCombo->insertSeparator(m_npcTradeRewardCombo->count());
@@ -652,6 +662,7 @@ MapEditor::MapEditor(QWidget* parent)
 
     nbox->addWidget(m_npcPanel);
     pbox->addWidget(npcGroup);
+    m_npcPanel->parentWidget()->setVisible(false);
 
     // -- 商店编辑面板 --
     auto* shopGroup = new QGroupBox(QString::fromUtf8("商店属性"), panel);
@@ -845,6 +856,13 @@ MapEditor::MapEditor(QWidget* parent)
     connect(m_shopArmorValueSpin,  QOverload<int>::of(&QSpinBox::valueChanged), this, updateShop);
 
     // 编辑区信号
+    connect(m_edit, &MapEditWidget::tileTypePicked, this, [this](int tileType) {
+        m_currentTileType = tileType;
+        int idx = m_tileCombo->findData(tileType);
+        if (idx >= 0) m_tileCombo->setCurrentIndex(idx);
+        updatePanelForTile(tileType);
+        populatePanels(tileType);
+    });
     connect(m_edit, &MapEditWidget::tileChanged, this, [this](int x, int y) {
         m_statusLabel->setText(QString::fromUtf8("已放置 %1 于 (%2, %3)")
             .arg(m_tileCombo->currentText())
@@ -866,39 +884,7 @@ MapEditor::MapEditor(QWidget* parent)
 
     // 点击图块时反写面板
     connect(m_edit, &MapEditWidget::tilePicked, this, [this](int, int) {
-        int tileType = m_tileCombo->currentData().toInt();
-        if (tileType == Tile_Monster) {
-            QString name = QString::fromStdString(m_edit->currentMonster());
-            int idx = m_monsterCombo->findText(name);
-            if (idx >= 0) m_monsterCombo->setCurrentIndex(idx);
-        } else if (tileType == Tile_Item) {
-            // handled by item panel already
-        } else if (tileType == Tile_NPC) {
-            m_npcNameEdit->setText(QString::fromStdString(m_edit->currentNPC()));
-            // 对话
-            QString dialogText;
-            for (auto& d : m_edit->currentNPCDialog()) {
-                if (!dialogText.isEmpty()) dialogText += "\n";
-                dialogText += QString::fromStdString(d);
-            }
-            m_npcDialogEdit->setPlainText(dialogText);
-            // 奖励
-            QString rewardName = QString::fromStdString(m_edit->currentNPCRewardItem());
-            int idx = m_npcRewardCombo->findText(rewardName);
-            if (idx >= 0) m_npcRewardCombo->setCurrentIndex(idx);
-            else m_npcRewardCombo->setCurrentIndex(0);
-            m_npcRewardValueSpin->setValue(m_edit->currentNPCRewardValue());
-            // 交易
-            m_npcTradeCheck->setChecked(m_edit->currentNPCIsTrader());
-            m_npcTradePanel->setVisible(m_edit->currentNPCIsTrader());
-            m_npcTradeGoldSpin->setValue(m_edit->currentNPCTradeGoldCost());
-            QString tradeReward = QString::fromStdString(m_edit->currentNPCTradeRewardItem());
-            idx = m_npcTradeRewardCombo->findText(tradeReward);
-            if (idx >= 0) m_npcTradeRewardCombo->setCurrentIndex(idx);
-            m_npcTradeRewardValueSpin->setValue(m_edit->currentNPCTradeRewardValue());
-        } else if (tileType == Tile_Shop) {
-            // 商店数据已在 m_edit 中
-        }
+        populatePanels(m_tileCombo->currentData().toInt());
     });
 
     // 初始状态
@@ -972,6 +958,35 @@ void MapEditor::removeFloor()
     switchToFloor(nearest, false);  // 不保存旧数据，已被删除
 }
 
+void MapEditor::populatePanels(int tileType)
+{
+    if (tileType == Tile_Monster) {
+        QString name = QString::fromStdString(m_edit->currentMonster());
+        int idx = m_monsterCombo->findText(name);
+        if (idx >= 0) m_monsterCombo->setCurrentIndex(idx);
+    } else if (tileType == Tile_NPC) {
+        m_npcNameEdit->setText(QString::fromStdString(m_edit->currentNPC()));
+        QString dialogText;
+        for (auto& d : m_edit->currentNPCDialog()) {
+            if (!dialogText.isEmpty()) dialogText += "\n";
+            dialogText += QString::fromStdString(d);
+        }
+        m_npcDialogEdit->setPlainText(dialogText);
+        QString rewardName = QString::fromStdString(m_edit->currentNPCRewardItem());
+        int idx = m_npcRewardCombo->findText(rewardName);
+        if (idx >= 0) m_npcRewardCombo->setCurrentIndex(idx);
+        else m_npcRewardCombo->setCurrentIndex(0);
+        m_npcRewardValueSpin->setValue(m_edit->currentNPCRewardValue());
+        m_npcTradeCheck->setChecked(m_edit->currentNPCIsTrader());
+        m_npcTradePanel->setVisible(m_edit->currentNPCIsTrader());
+        m_npcTradeGoldSpin->setValue(m_edit->currentNPCTradeGoldCost());
+        QString tradeReward = QString::fromStdString(m_edit->currentNPCTradeRewardItem());
+        idx = m_npcTradeRewardCombo->findText(tradeReward);
+        if (idx >= 0) m_npcTradeRewardCombo->setCurrentIndex(idx);
+        m_npcTradeRewardValueSpin->setValue(m_edit->currentNPCTradeRewardValue());
+    }
+}
+
 void MapEditor::updatePanelForTile(int tileType)
 {
     bool isMonster = (tileType == Tile_Monster);
@@ -983,7 +998,8 @@ void MapEditor::updatePanelForTile(int tileType)
     m_itemPanel->parentWidget()->setVisible(isItem);        // itemGroup
     m_npcPanel->parentWidget()->setVisible(isNPC);          // npcGroup
     m_shopPanel->parentWidget()->setVisible(isShop);        // shopGroup
-    if (!isNPC) m_npcTradePanel->parentWidget()->setVisible(false);
+    if (isNPC) m_npcPanel->setVisible(true);                // 确保内容重新显示
+    else       m_npcTradePanel->setVisible(false);          // 离开NPC时收起交易子面板
 
     // 更新道具数值标签可见性
     QString itemName = m_itemCombo->currentText();

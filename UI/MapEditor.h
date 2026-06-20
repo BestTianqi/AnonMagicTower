@@ -110,6 +110,7 @@ signals:
     void tileChanged(int x, int y);
     void playerMoved(int x, int y);
     void tilePicked(int x, int y);
+    void tileTypePicked(int tileType);
 
 protected:
     void paintEvent(QPaintEvent* event) override;
@@ -161,6 +162,7 @@ private:
     void addFloor();
     void removeFloor();
     void updatePanelForTile(int tileType);
+    void populatePanels(int tileType);
 
     MapEditWidget* m_edit;
     QComboBox*     m_tileCombo;
