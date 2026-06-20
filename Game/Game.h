@@ -64,7 +64,7 @@ public:
     void setTile(int x, int y, int tile);
     MoveResult tryMovePlayer(int nx, int ny);
 
-    enum FightResult { Fight_PlayerWin, Fight_PlayerDead };
+    enum FightResult { Fight_PlayerWin, Fight_PlayerDead, Fight_GameWin };
     FightResult fightAt(int x, int y, std::vector<std::string>& outLog);
 
     void spawnMonster(int x, int y, const Monster& m);
@@ -90,6 +90,8 @@ public:
 
     bool saveToFile(const std::string& path) const;
     bool loadFromFile(const std::string& path);
+
+    static std::unique_ptr<Item> createItemByName(const std::string& iname, int ival);
 
 private:
     int m_width;

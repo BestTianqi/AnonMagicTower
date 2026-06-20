@@ -30,6 +30,11 @@ struct EditorTile {
     std::vector<std::string> npcDialog;
     std::string npcRewardItem;
     int npcRewardValue = 0;
+    // NPC 交易
+    bool npcIsTrader = false;
+    int  npcTradeGoldCost = 0;
+    std::string npcTradeRewardItem;
+    int  npcTradeRewardValue = 50;
     // Shop
     int shopPotionPrice = 0;
     int shopWeaponPrice = 0;
@@ -55,7 +60,21 @@ public:
     int  currentTile() const { return m_currentTile; }
     void setCurrentMonster(const std::string& name) { m_currentMonster = name; }
     void setCurrentItem(const std::string& name, int value) { m_currentItem = name; m_currentItemValue = value; }
-    void setCurrentNPC(const std::string& name) { m_currentNPC = name; }
+    void setCurrentNPC(const std::string& name, const std::vector<std::string>& dialog,
+                       const std::string& rewardItem, int rewardValue) {
+        m_currentNPC = name;
+        m_currentNPCDialog = dialog;
+        m_currentNPCRewardItem = rewardItem;
+        m_currentNPCRewardValue = rewardValue;
+    }
+    void setCurrentNPCTrade(bool isTrader, int goldCost, const std::string& tradeItem, int tradeValue) {
+        m_npcIsTrader = isTrader;
+        m_npcTradeGoldCost = goldCost;
+        m_npcTradeRewardItem = tradeItem;
+        m_npcTradeRewardValue = tradeValue;
+    }
+    // 从已放置的图块加载数据到当前编辑状态
+    void loadFromTile(int x, int y);
     void setCurrentShop(int potionPrice, int weaponPrice, int armorPrice,
                         int potionValue, int weaponValue, int armorValue) {
         m_shopPotionPrice = potionPrice;
@@ -76,9 +95,21 @@ public:
 
     void clearFloor();
 
+    // 读取当前编辑状态（用于面板反写）
+    const std::string& currentMonster() const { return m_currentMonster; }
+    const std::string& currentNPC() const { return m_currentNPC; }
+    const std::vector<std::string>& currentNPCDialog() const { return m_currentNPCDialog; }
+    const std::string& currentNPCRewardItem() const { return m_currentNPCRewardItem; }
+    int currentNPCRewardValue() const { return m_currentNPCRewardValue; }
+    bool currentNPCIsTrader() const { return m_npcIsTrader; }
+    int  currentNPCTradeGoldCost() const { return m_npcTradeGoldCost; }
+    const std::string& currentNPCTradeRewardItem() const { return m_npcTradeRewardItem; }
+    int  currentNPCTradeRewardValue() const { return m_npcTradeRewardValue; }
+
 signals:
     void tileChanged(int x, int y);
     void playerMoved(int x, int y);
+    void tilePicked(int x, int y);
 
 protected:
     void paintEvent(QPaintEvent* event) override;
@@ -96,6 +127,13 @@ private:
     std::string m_currentItem;
     int m_currentItemValue = 0;
     std::string m_currentNPC;
+    std::vector<std::string> m_currentNPCDialog;
+    std::string m_currentNPCRewardItem;
+    int m_currentNPCRewardValue = 0;
+    bool m_npcIsTrader = false;
+    int  m_npcTradeGoldCost = 0;
+    std::string m_npcTradeRewardItem;
+    int  m_npcTradeRewardValue = 50;
     int m_shopPotionPrice = 0;
     int m_shopWeaponPrice = 0;
     int m_shopArmorPrice  = 0;
@@ -144,6 +182,12 @@ private:
     QLineEdit*     m_npcNameEdit;
     QTextEdit*     m_npcDialogEdit;
     QComboBox*     m_npcRewardCombo;
+    QSpinBox*      m_npcRewardValueSpin;
+    QCheckBox*     m_npcTradeCheck;
+    QWidget*       m_npcTradePanel;
+    QSpinBox*      m_npcTradeGoldSpin;
+    QComboBox*     m_npcTradeRewardCombo;
+    QSpinBox*      m_npcTradeRewardValueSpin;
 
     // 商店面板
     QWidget*       m_shopPanel;

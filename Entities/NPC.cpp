@@ -1,8 +1,13 @@
 #include "NPC.h"
 #include "Player.h"
 
-NPC::NPC(const std::string& name, const std::vector<std::string>& dialog, std::unique_ptr<Item> reward)
-    : m_name(name), m_dialog(dialog), m_reward(std::move(reward)), m_given(false)
+NPC::NPC(const std::string& name, const std::vector<std::string>& dialog,
+         std::unique_ptr<Item> reward,
+         bool isTrader, int tradeGoldCost,
+         std::unique_ptr<Item> tradeReward)
+    : m_name(name), m_dialog(dialog), m_reward(std::move(reward)), m_given(false),
+      m_isTrader(isTrader), m_tradeGoldCost(tradeGoldCost),
+      m_tradeReward(std::move(tradeReward)), m_tradeDone(false)
 {
 }
 

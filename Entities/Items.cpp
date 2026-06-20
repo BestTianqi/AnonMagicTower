@@ -121,7 +121,7 @@ TempShield::TempShield()
     : Item(QString::fromUtf8("临时护盾").toStdString(), 0) {}
 
 void TempShield::Apply(Player& player) const {
-    player.def += 10;
+    player.tempShieldCharges = 1;
 }
 
 StairUpper::StairUpper()
@@ -149,9 +149,7 @@ MagicKey::MagicKey()
     : Item(QString::fromUtf8("万能钥匙").toStdString(), 0) {}
 
 void MagicKey::Apply(Player& player) const {
-    player.AddKey(KeyType::Red, 1);
-    player.AddKey(KeyType::Blue, 1);
-    player.AddKey(KeyType::Green, 1);
+    player.magicKeyUses += 3;
 }
 
 LuckyCoin::LuckyCoin()

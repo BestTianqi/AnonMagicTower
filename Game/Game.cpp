@@ -226,38 +226,43 @@ Game::MoveResult Game::tryMovePlayer(int nx, int ny)
 
     case Tile_Floor:
         m_player.x = nx; m_player.y = ny;
-        // 消耗移动类道具标记
-        m_player.wallBreakerUsed = false;
-        m_player.stairUpUsed = false;
-        m_player.stairDownUsed = false;
         return Move_Ok;
 
     case Tile_DoorRed:
         if (m_player.HasKey(KeyType::Red)) {
             m_player.UseKey(KeyType::Red);
-            setTile(nx, ny, Tile_Floor);
-            m_player.x = nx; m_player.y = ny;
-            return Move_Ok;
+        } else if (m_player.magicKeyUses > 0) {
+            m_player.magicKeyUses--;
+        } else {
+            return Move_DoorLocked;
         }
-        return Move_DoorLocked;
+        setTile(nx, ny, Tile_Floor);
+        m_player.x = nx; m_player.y = ny;
+        return Move_Ok;
 
     case Tile_DoorBlue:
         if (m_player.HasKey(KeyType::Blue)) {
             m_player.UseKey(KeyType::Blue);
-            setTile(nx, ny, Tile_Floor);
-            m_player.x = nx; m_player.y = ny;
-            return Move_Ok;
+        } else if (m_player.magicKeyUses > 0) {
+            m_player.magicKeyUses--;
+        } else {
+            return Move_DoorLocked;
         }
-        return Move_DoorLocked;
+        setTile(nx, ny, Tile_Floor);
+        m_player.x = nx; m_player.y = ny;
+        return Move_Ok;
 
     case Tile_DoorGreen:
         if (m_player.HasKey(KeyType::Green)) {
             m_player.UseKey(KeyType::Green);
-            setTile(nx, ny, Tile_Floor);
-            m_player.x = nx; m_player.y = ny;
-            return Move_Ok;
+        } else if (m_player.magicKeyUses > 0) {
+            m_player.magicKeyUses--;
+        } else {
+            return Move_DoorLocked;
         }
-        return Move_DoorLocked;
+        setTile(nx, ny, Tile_Floor);
+        m_player.x = nx; m_player.y = ny;
+        return Move_Ok;
 
     case Tile_Monster:
         if (hasMonsterAt(nx, ny))
@@ -270,7 +275,11 @@ Game::MoveResult Game::tryMovePlayer(int nx, int ny)
     case Tile_Item: {
         auto item = takeItemAt(nx, ny);
         if (item) {
-            item->Apply(m_player);
+            if (item->IsUseItem()) {
+                m_player.AddItem(std::move(item));
+            } else {
+                item->Apply(m_player);
+            }
             setTile(nx, ny, Tile_Floor);
             m_player.x = nx; m_player.y = ny;
             return Move_Pickup;
@@ -308,14 +317,26 @@ Game::FightResult Game::fightAt(int x, int y, std::vector<std::string>& outLog)
         return Fight_PlayerWin;
     }
 
+    std::string bossName = m->GetName();
+    bool hasShield = (m_player.tempShieldCharges > 0);
+    int  shieldBonus = hasShield ? 50 : 0;
+
     while (true) {
         // 玩家攻击：atk - 怪物def (至少为0)
         int dmgToMonster = m_player.atk - m->GetDEF();
         if (dmgToMonster < 0) dmgToMonster = 0;
+
+        // 不能破防则无法战斗
+        if (dmgToMonster <= 0) {
+            outLog.push_back(std::string("攻击力不足，无法对 ") + bossName + " 造成伤害！");
+            if (hasShield) m_player.tempShieldCharges--;
+            return Fight_PlayerDead;
+        }
+
         m->TakeDamageRaw(dmgToMonster);
         {
             std::ostringstream ss;
-            ss << "你对 " << m->GetName() << " 造成 " << dmgToMonster << " 点伤害。 剩余HP=" << m->GetHP();
+            ss << "你对 " << bossName << " 造成 " << dmgToMonster << " 点伤害。 剩余HP=" << m->GetHP();
             outLog.push_back(ss.str());
         }
         if (m->IsDead()) {
@@ -328,22 +349,32 @@ Game::FightResult Game::fightAt(int x, int y, std::vector<std::string>& outLog)
             setTile(x, y, Tile_Floor);
 
             std::ostringstream ss;
-            ss << "你击败了 " << m->GetName() << " 并获得 " << gold << " 金币。";
+            ss << "你击败了 " << bossName << " 并获得 " << gold << " 金币。";
             outLog.push_back(ss.str());
+            if (hasShield) m_player.tempShieldCharges--;
+            if (bossName == "长崎素世")
+                return Fight_GameWin;
             return Fight_PlayerWin;
         }
 
-        // 怪物攻击：atk - 玩家def (至少为0)
-        int dmgToPlayer = m->Attack() - m_player.def;
+        // 怪物攻击：atk - 玩家def - 护盾 (至少为0)
+        int dmgToPlayer = m->Attack() - m_player.def - shieldBonus;
         if (dmgToPlayer < 0) dmgToPlayer = 0;
+        // 特殊道具减伤
+        if (m_player.hasPenguinDoll && (bossName == "高松灯" || bossName == "企鹅"))
+            dmgToPlayer /= 2;
+        if (m_player.hasMatchaParfait && (bossName == "要乐奈" || bossName == "小猫"))
+            dmgToPlayer /= 2;
         m_player.hp -= dmgToPlayer;
         {
             std::ostringstream ss;
-            ss << m->GetName() << " 对你造成 " << dmgToPlayer << " 点伤害。 你的剩余HP=" << m_player.hp;
+            ss << bossName << " 对你造成 " << dmgToPlayer << " 点伤害。 你的剩余HP=" << m_player.hp;
+            if (hasShield) ss << " [护盾]";
             outLog.push_back(ss.str());
         }
         if (m_player.hp <= 0) {
             outLog.push_back(std::string("你被击败了。\n"));
+            if (hasShield) m_player.tempShieldCharges--;
             return Fight_PlayerDead;
         }
     }
@@ -399,11 +430,16 @@ bool Game::saveToFile(const std::string& path) const
             int x = key % m_width;
             int y = key / m_width;
             const Item* reward = n.GetReward();
+            const Item* tradeReward = n.GetTradeReward();
             ofs << x << " " << y << " " << n.GetName() << " "
                 << n.HasGivenReward() << " "
                 << n.Dialog().size() << " "
                 << (reward ? reward->GetName() : "-") << " "
-                << (reward ? reward->GetValue() : 0) << "\n";
+                << (reward ? reward->GetValue() : 0) << " "
+                << n.IsTrader() << " " << n.GetTradeGoldCost() << " "
+                << (tradeReward ? tradeReward->GetName() : "-") << " "
+                << (tradeReward ? tradeReward->GetValue() : 0) << " "
+                << n.IsTradeDone() << "\n";
             for (auto& d : n.Dialog())
                 ofs << d << "\n";
         }
@@ -445,7 +481,8 @@ bool Game::saveToFile(const std::string& path) const
     // 扩展标记 (v2)
     ofs << "EXTRA " << m_player.hasLuckyCoin << " " << m_player.shopUseCount << " "
         << m_player.wallBreakerUsed << " " << m_player.stairUpUsed << " "
-        << m_player.stairDownUsed << "\n";
+        << m_player.stairDownUsed << " "
+        << m_player.magicKeyUses << " " << m_player.tempShieldCharges << "\n";
 
     // 背包物品
     ofs << m_player.InventoryCount() << "\n";
@@ -459,7 +496,7 @@ bool Game::saveToFile(const std::string& path) const
     return true;
 }
 
-static std::unique_ptr<Item> createItemByName(const std::string& iname, int ival) {
+std::unique_ptr<Item> Game::createItemByName(const std::string& iname, int ival) {
     if (iname == "Red Key")
         return std::make_unique<Key>(KeyType::Red);
     if (iname == "Blue Key")
@@ -554,6 +591,13 @@ bool Game::loadFromFile(const std::string& path)
             int nx, ny; std::string nname; bool given; size_t dsize;
             std::string rewardName; int rewardValue;
             ifs >> nx >> ny >> nname >> given >> dsize >> rewardName >> rewardValue;
+            // 交易字段 (v2 扩展, 可选)
+            bool isTrader = false; int tradeGoldCost = 0;
+            std::string tradeRewardName = "-"; int tradeRewardValue = 0;
+            bool tradeDone = false;
+            if (ifs.peek() != '\n' && ifs.peek() != '\r' && ifs.peek() != EOF) {
+                ifs >> isTrader >> tradeGoldCost >> tradeRewardName >> tradeRewardValue >> tradeDone;
+            }
             ifs.ignore();
             std::vector<std::string> dialog;
             for (size_t d = 0; d < dsize; ++d) {
@@ -564,8 +608,10 @@ bool Game::loadFromFile(const std::string& path)
             }
             int key = ny * m_width + nx;
             auto reward = (rewardName == "-") ? nullptr : createItemByName(rewardName, rewardValue);
-            auto npc = NPC(nname, dialog, std::move(reward));
+            auto tradeReward = (tradeRewardName == "-") ? nullptr : createItemByName(tradeRewardName, tradeRewardValue);
+            auto npc = NPC(nname, dialog, std::move(reward), isTrader, tradeGoldCost, std::move(tradeReward));
             npc.SetGiven(given);
+            npc.SetTradeDone(tradeDone);
             fd.npcs.emplace(key, std::move(npc));
         }
 
@@ -615,12 +661,16 @@ bool Game::loadFromFile(const std::string& path)
     ifs >> hasGl >> hasPen >> hasMat;
 
     // 扩展标记 (v2, 可选)
-    bool hasLc = false; int shopUse = 0;
+    bool hasLc = false; int mkUses = 0, shopUse = 0, tsc = 0;
     bool wbUsed = false, suUsed = false, sdUsed = false;
     std::string invToken;
     ifs >> invToken;
     if (invToken == "EXTRA") {
         ifs >> hasLc >> shopUse >> wbUsed >> suUsed >> sdUsed;
+        // v3 扩展: 万能钥匙 + 临时护盾次数
+        if (ifs.peek() != '\n' && ifs.peek() != '\r' && ifs.peek() != EOF) {
+            ifs >> mkUses >> tsc;
+        }
         ifs >> invToken; // 下一个是背包数量
     }
     // invToken 现在是背包数量（或旧格式直接读取的数字）
@@ -642,6 +692,8 @@ bool Game::loadFromFile(const std::string& path)
     m_player.wallBreakerUsed = wbUsed;
     m_player.stairUpUsed = suUsed;
     m_player.stairDownUsed = sdUsed;
+    m_player.magicKeyUses = mkUses;
+    m_player.tempShieldCharges = tsc;
 
     for (int i = 0; i < invCount; ++i) {
         std::string iname; int ival;

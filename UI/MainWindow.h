@@ -19,6 +19,7 @@ private:
     void showNPCDialog(int x, int y);
     void showShopDialog(int x, int y);
     void gameOver();
+    void gameWin();
     QString getItemDescription(const Item* item) const;
 
     Game* m_game;

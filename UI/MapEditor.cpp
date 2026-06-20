@@ -57,6 +57,10 @@ void MapEditWidget::placeTile(int x, int y)
     t.npcDialog.clear();
     t.npcRewardItem.clear();
     t.npcRewardValue = 0;
+    t.npcIsTrader = false;
+    t.npcTradeGoldCost = 0;
+    t.npcTradeRewardItem.clear();
+    t.npcTradeRewardValue = 50;
     t.shopPotionPrice = 0;
     t.shopWeaponPrice = 0;
     t.shopArmorPrice  = 0;
@@ -71,6 +75,15 @@ void MapEditWidget::placeTile(int x, int y)
         t.itemValue = m_currentItemValue;
     } else if (m_currentTile == Tile_NPC) {
         t.npcName = m_currentNPC;
+        t.npcDialog = m_currentNPCDialog;
+        t.npcRewardItem = m_currentNPCRewardItem;
+        t.npcRewardValue = m_currentNPCRewardValue;
+        if (m_npcIsTrader) {
+            t.npcIsTrader = true;
+            t.npcTradeGoldCost = m_npcTradeGoldCost;
+            t.npcTradeRewardItem = m_npcTradeRewardItem;
+            t.npcTradeRewardValue = m_npcTradeRewardValue;
+        }
     } else if (m_currentTile == Tile_Shop) {
         t.shopPotionPrice = m_shopPotionPrice;
         t.shopWeaponPrice = m_shopWeaponPrice;
@@ -82,6 +95,33 @@ void MapEditWidget::placeTile(int x, int y)
 
     update();
     emit tileChanged(x, y);
+}
+
+void MapEditWidget::loadFromTile(int x, int y)
+{
+    auto& t = m_floor.tiles[indexAt(x, y)];
+    if (t.type == Tile_Monster) {
+        m_currentMonster = t.monsterName;
+    } else if (t.type == Tile_Item) {
+        m_currentItem = t.itemName;
+        m_currentItemValue = t.itemValue;
+    } else if (t.type == Tile_NPC) {
+        m_currentNPC = t.npcName;
+        m_currentNPCDialog = t.npcDialog;
+        m_currentNPCRewardItem = t.npcRewardItem;
+        m_currentNPCRewardValue = t.npcRewardValue;
+        m_npcIsTrader = t.npcIsTrader;
+        m_npcTradeGoldCost = t.npcTradeGoldCost;
+        m_npcTradeRewardItem = t.npcTradeRewardItem;
+        m_npcTradeRewardValue = t.npcTradeRewardValue;
+    } else if (t.type == Tile_Shop) {
+        m_shopPotionPrice = t.shopPotionPrice;
+        m_shopWeaponPrice = t.shopWeaponPrice;
+        m_shopArmorPrice  = t.shopArmorPrice;
+        m_shopPotionValue = t.shopPotionValue;
+        m_shopWeaponValue = t.shopWeaponValue;
+        m_shopArmorValue  = t.shopArmorValue;
+    }
 }
 
 void MapEditWidget::paintEvent(QPaintEvent*)
@@ -101,6 +141,7 @@ void MapEditWidget::paintEvent(QPaintEvent*)
 
             switch (t.type) {
             case Tile_Wall:       fill = QColor(55, 55, 60);   break;
+            case Tile_DarkWall:   fill = QColor(30, 30, 35);   label = QString::fromUtf8("暗墙"); break;
             case Tile_Floor:      fill = QColor(180, 170, 150); break;
             case Tile_StairsUp:   fill = QColor(180, 160, 50);  label = QString::fromUtf8("↑上"); break;
             case Tile_StairsDown: fill = QColor(160, 100, 180); label = QString::fromUtf8("↓下"); break;
@@ -249,7 +290,10 @@ void MapEditWidget::mousePressEvent(QMouseEvent* event)
             emit playerMoved(x, y);
             return;
         }
+        // 点击已有图块时先加载数据，再放置（实现"拾取"效果）
+        loadFromTile(x, y);
         placeTile(x, y);
+        emit tilePicked(x, y);
     } else if (event->button() == Qt::RightButton) {
         // 右键擦除为地板
         auto& t = m_floor.tiles[indexAt(x, y)];
@@ -373,6 +417,7 @@ MapEditor::MapEditor(QWidget* parent)
         { Tile_DoorGreen,  QString::fromUtf8(" 绿门 "),    "#3b3" },
         { Tile_NPC,        QString::fromUtf8(" NPC "),     "#db3" },
         { Tile_Shop,       QString::fromUtf8(" 商店 "),    "#da0" },
+        { Tile_DarkWall,   QString::fromUtf8(" 暗墙 "),    "#333" },
     };
     const int btnCount = sizeof(btns) / sizeof(btns[0]);
 
@@ -414,6 +459,7 @@ MapEditor::MapEditor(QWidget* parent)
     m_tileCombo->addItem(QString::fromUtf8("绿门"),      Tile_DoorGreen);
     m_tileCombo->addItem(QString::fromUtf8("NPC"),        Tile_NPC);
     m_tileCombo->addItem(QString::fromUtf8("商店"),       Tile_Shop);
+    m_tileCombo->addItem(QString::fromUtf8("暗墙"),       Tile_DarkWall);
     m_tileCombo->setVisible(false);
 
     // ====== 可滚动区域：属性面板 ======
@@ -551,6 +597,58 @@ MapEditor::MapEditor(QWidget* parent)
     for (int i = 0; g_specialItems[i]; ++i)
         m_npcRewardCombo->addItem(QString::fromUtf8(g_specialItems[i]));
     nlay->addWidget(m_npcRewardCombo);
+
+    // 奖励数值
+    auto* rewardValRow = new QHBoxLayout();
+    rewardValRow->addWidget(new QLabel(QString::fromUtf8("奖励数值:"), m_npcPanel));
+    m_npcRewardValueSpin = new QSpinBox(m_npcPanel);
+    m_npcRewardValueSpin->setRange(0, 9999);
+    m_npcRewardValueSpin->setValue(50);
+    m_npcRewardValueSpin->setStyleSheet("QSpinBox { background: #222; border: 1px solid #555; padding: 2px; }");
+    rewardValRow->addWidget(m_npcRewardValueSpin);
+    rewardValRow->addStretch();
+    nlay->addLayout(rewardValRow);
+
+    // -- NPC 交易设置 --
+    m_npcTradeCheck = new QCheckBox(QString::fromUtf8("启用交易"), m_npcPanel);
+    m_npcTradeCheck->setStyleSheet("QCheckBox { color: #ccaa88; }");
+    nlay->addWidget(m_npcTradeCheck);
+
+    m_npcTradePanel = new QWidget(m_npcPanel);
+    m_npcTradePanel->setVisible(false);
+    auto* tradeLay = new QVBoxLayout(m_npcTradePanel);
+    tradeLay->setContentsMargins(8, 0, 0, 0);
+
+    auto* goldRow = new QHBoxLayout();
+    goldRow->addWidget(new QLabel(QString::fromUtf8("金币价格:"), m_npcTradePanel));
+    m_npcTradeGoldSpin = new QSpinBox(m_npcTradePanel);
+    m_npcTradeGoldSpin->setRange(0, 9999);
+    m_npcTradeGoldSpin->setStyleSheet("QSpinBox { background: #222; border: 1px solid #555; padding: 2px; }");
+    m_npcTradeGoldSpin->setToolTip(QString::fromUtf8("玩家需支付的金币数，0=免费"));
+    goldRow->addWidget(m_npcTradeGoldSpin);
+    goldRow->addStretch();
+    tradeLay->addLayout(goldRow);
+
+    auto* tradeRewardRow = new QHBoxLayout();
+    tradeRewardRow->addWidget(new QLabel(QString::fromUtf8("交易物品:"), m_npcTradePanel));
+    m_npcTradeRewardCombo = new QComboBox(m_npcTradePanel);
+    m_npcTradeRewardCombo->setStyleSheet("QComboBox { background: #222; border: 1px solid #555; padding: 2px; }");
+    for (int i = 0; g_itemDefs[i].name; ++i)
+        m_npcTradeRewardCombo->addItem(QString::fromUtf8(g_itemDefs[i].name));
+    m_npcTradeRewardCombo->insertSeparator(m_npcTradeRewardCombo->count());
+    for (int i = 0; g_specialItems[i]; ++i)
+        m_npcTradeRewardCombo->addItem(QString::fromUtf8(g_specialItems[i]));
+    tradeRewardRow->addWidget(m_npcTradeRewardCombo);
+    m_npcTradeRewardValueSpin = new QSpinBox(m_npcTradePanel);
+    m_npcTradeRewardValueSpin->setRange(0, 9999);
+    m_npcTradeRewardValueSpin->setValue(50);
+    m_npcTradeRewardValueSpin->setStyleSheet("QSpinBox { background: #222; border: 1px solid #555; padding: 2px; }");
+    tradeRewardRow->addWidget(new QLabel(QString::fromUtf8("数值:"), m_npcTradePanel));
+    tradeRewardRow->addWidget(m_npcTradeRewardValueSpin);
+    tradeRewardRow->addStretch();
+    tradeLay->addLayout(tradeRewardRow);
+
+    nlay->addWidget(m_npcTradePanel);
 
     nbox->addWidget(m_npcPanel);
     pbox->addWidget(npcGroup);
@@ -694,10 +792,39 @@ MapEditor::MapEditor(QWidget* parent)
 
     // NPC 编辑 → 实时更新
     auto updateNpc = [this]() {
-        if (m_tileCombo->currentData().toInt() == Tile_NPC)
-            m_edit->setCurrentNPC(m_npcNameEdit->text().toStdString());
+        if (m_tileCombo->currentData().toInt() == Tile_NPC) {
+            // 对话
+            std::vector<std::string> dialog;
+            QString dtext = m_npcDialogEdit->toPlainText().trimmed();
+            if (!dtext.isEmpty()) {
+                for (auto& line : dtext.split('\n'))
+                    dialog.push_back(line.toStdString());
+            }
+            // 奖励
+            std::string rewardItem;
+            int rewardValue = m_npcRewardValueSpin->value();
+            if (m_npcRewardCombo->currentIndex() > 0)
+                rewardItem = m_npcRewardCombo->currentText().toStdString();
+            m_edit->setCurrentNPC(m_npcNameEdit->text().toStdString(),
+                dialog, rewardItem, rewardValue);
+            m_edit->setCurrentNPCTrade(
+                m_npcTradeCheck->isChecked(),
+                m_npcTradeGoldSpin->value(),
+                m_npcTradeRewardCombo->currentText().toStdString(),
+                m_npcTradeRewardValueSpin->value());
+        }
     };
     connect(m_npcNameEdit, &QLineEdit::textChanged, this, updateNpc);
+    connect(m_npcDialogEdit, &QTextEdit::textChanged, this, updateNpc);
+    connect(m_npcRewardCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, updateNpc);
+    connect(m_npcRewardValueSpin, QOverload<int>::of(&QSpinBox::valueChanged), this, updateNpc);
+    connect(m_npcTradeCheck, &QCheckBox::toggled, this, [this, updateNpc](bool checked) {
+        m_npcTradePanel->setVisible(checked);
+        updateNpc();
+    });
+    connect(m_npcTradeGoldSpin, QOverload<int>::of(&QSpinBox::valueChanged), this, updateNpc);
+    connect(m_npcTradeRewardCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, updateNpc);
+    connect(m_npcTradeRewardValueSpin, QOverload<int>::of(&QSpinBox::valueChanged), this, updateNpc);
 
     // 商店价格变动 → 更新当前编辑状态
     auto updateShop = [this]() {
@@ -737,13 +864,50 @@ MapEditor::MapEditor(QWidget* parent)
     connect(testBtn,    &QPushButton::clicked, this, &MapEditor::onTestPlay);
     connect(clearBtn,   &QPushButton::clicked, m_edit, &MapEditWidget::clearFloor);
 
+    // 点击图块时反写面板
+    connect(m_edit, &MapEditWidget::tilePicked, this, [this](int, int) {
+        int tileType = m_tileCombo->currentData().toInt();
+        if (tileType == Tile_Monster) {
+            QString name = QString::fromStdString(m_edit->currentMonster());
+            int idx = m_monsterCombo->findText(name);
+            if (idx >= 0) m_monsterCombo->setCurrentIndex(idx);
+        } else if (tileType == Tile_Item) {
+            // handled by item panel already
+        } else if (tileType == Tile_NPC) {
+            m_npcNameEdit->setText(QString::fromStdString(m_edit->currentNPC()));
+            // 对话
+            QString dialogText;
+            for (auto& d : m_edit->currentNPCDialog()) {
+                if (!dialogText.isEmpty()) dialogText += "\n";
+                dialogText += QString::fromStdString(d);
+            }
+            m_npcDialogEdit->setPlainText(dialogText);
+            // 奖励
+            QString rewardName = QString::fromStdString(m_edit->currentNPCRewardItem());
+            int idx = m_npcRewardCombo->findText(rewardName);
+            if (idx >= 0) m_npcRewardCombo->setCurrentIndex(idx);
+            else m_npcRewardCombo->setCurrentIndex(0);
+            m_npcRewardValueSpin->setValue(m_edit->currentNPCRewardValue());
+            // 交易
+            m_npcTradeCheck->setChecked(m_edit->currentNPCIsTrader());
+            m_npcTradePanel->setVisible(m_edit->currentNPCIsTrader());
+            m_npcTradeGoldSpin->setValue(m_edit->currentNPCTradeGoldCost());
+            QString tradeReward = QString::fromStdString(m_edit->currentNPCTradeRewardItem());
+            idx = m_npcTradeRewardCombo->findText(tradeReward);
+            if (idx >= 0) m_npcTradeRewardCombo->setCurrentIndex(idx);
+            m_npcTradeRewardValueSpin->setValue(m_edit->currentNPCTradeRewardValue());
+        } else if (tileType == Tile_Shop) {
+            // 商店数据已在 m_edit 中
+        }
+    });
+
     // 初始状态
     m_edit->setCurrentTile(Tile_Wall);
     m_edit->setCurrentMonster(m_monsterCombo->currentText().toStdString());
     m_selectedItemName = QString::fromUtf8("生命药");
     m_selectedItemValue = 50;
     m_edit->setCurrentItem(m_selectedItemName.toStdString(), m_selectedItemValue);
-    m_edit->setCurrentNPC(m_npcNameEdit->text().toStdString());
+    m_edit->setCurrentNPC("", {}, "", 0);
     m_floors[1] = m_edit->floorData();
     updatePanelForTile(Tile_Wall);
 }
@@ -819,6 +983,7 @@ void MapEditor::updatePanelForTile(int tileType)
     m_itemPanel->parentWidget()->setVisible(isItem);        // itemGroup
     m_npcPanel->parentWidget()->setVisible(isNPC);          // npcGroup
     m_shopPanel->parentWidget()->setVisible(isShop);        // shopGroup
+    if (!isNPC) m_npcTradePanel->parentWidget()->setVisible(false);
 
     // 更新道具数值标签可见性
     QString itemName = m_itemCombo->currentText();
@@ -975,7 +1140,10 @@ bool MapEditor::saveToPath(const QString& path)
                     out << x << " " << y << " " << QString::fromStdString(t.npcName) << " "
                         << "0 " << t.npcDialog.size() << " "
                         << (t.npcRewardItem.empty() ? "-" : QString::fromStdString(t.npcRewardItem)) << " "
-                        << t.npcRewardValue << "\n";
+                        << t.npcRewardValue << " "
+                        << t.npcIsTrader << " " << t.npcTradeGoldCost << " "
+                        << (t.npcTradeRewardItem.empty() ? "-" : QString::fromStdString(t.npcTradeRewardItem)) << " "
+                        << t.npcTradeRewardValue << "\n";
                     for (auto& d : t.npcDialog)
                         out << QString::fromStdString(d) << "\n";
                 }
@@ -1115,7 +1283,12 @@ void MapEditor::onExportFloor()
     for (auto& [key, t] : npcs) {
         out << (key % 15) << " " << (key / 15) << " "
             << QString::fromStdString(t->npcName) << " 0 "
-            << t->npcDialog.size() << "\n";
+            << t->npcDialog.size() << " "
+            << (t->npcRewardItem.empty() ? "-" : QString::fromStdString(t->npcRewardItem)) << " "
+            << t->npcRewardValue << " "
+            << t->npcIsTrader << " " << t->npcTradeGoldCost << " "
+            << (t->npcTradeRewardItem.empty() ? "-" : QString::fromStdString(t->npcTradeRewardItem)) << " "
+            << t->npcTradeRewardValue << "\n";
         for (auto& d : t->npcDialog)
             out << QString::fromStdString(d) << "\n";
     }
@@ -1183,11 +1356,26 @@ void MapEditor::onLoad()
         // NPC
         int ncount; in >> ncount;
         for (int i = 0; i < ncount; ++i) {
-            int nx, ny, dsize; QString nname;
-            in >> nx >> ny >> nname >> dsize;
-            in.readLine();
+            int nx, ny, given, dsize, rewardValue, isTrader = 0, tradeGoldCost = 0, tradeRewardValue = 50;
+            QString nname, rewardName, tradeRewardName = "-";
+            in >> nx >> ny >> nname >> given >> dsize >> rewardName >> rewardValue;
+            QString rest = in.readLine();
+            if (!rest.trimmed().isEmpty()) {
+                QTextStream rs(&rest);
+                rs >> isTrader >> tradeGoldCost >> tradeRewardName >> tradeRewardValue;
+            }
             auto& t = ef.tiles[ny * 15 + nx];
             t.npcName = nname.toStdString();
+            if (rewardName != "-") {
+                t.npcRewardItem = rewardName.toStdString();
+                t.npcRewardValue = rewardValue;
+            }
+            t.npcIsTrader = (isTrader != 0);
+            t.npcTradeGoldCost = tradeGoldCost;
+            if (tradeRewardName != "-") {
+                t.npcTradeRewardItem = tradeRewardName.toStdString();
+                t.npcTradeRewardValue = tradeRewardValue;
+            }
             for (int d = 0; d < dsize; ++d) {
                 QString line = in.readLine();
                 t.npcDialog.push_back(line.toStdString());
@@ -1276,12 +1464,25 @@ void MapEditor::onLoad()
         for (int i = 0; i < ncount; ++i) {
             int nx, ny, given, dsize, rewardValue; QString nname, rewardName;
             in >> nx >> ny >> nname >> given >> dsize >> rewardName >> rewardValue;
-            in.readLine(); // skip rest of line
+            // 交易字段 (v2 扩展, 可选)
+            QString rest = in.readLine();
+            int isTrader = 0, tradeGoldCost = 0, tradeRewardValue = 50;
+            QString tradeRewardName = "-";
+            if (!rest.trimmed().isEmpty()) {
+                QTextStream rs(&rest);
+                rs >> isTrader >> tradeGoldCost >> tradeRewardName >> tradeRewardValue;
+            }
             auto& t = ef.tiles[ny * 15 + nx];
             t.npcName = nname.toStdString();
             if (rewardName != "-") {
                 t.npcRewardItem = rewardName.toStdString();
                 t.npcRewardValue = rewardValue;
+            }
+            t.npcIsTrader = (isTrader != 0);
+            t.npcTradeGoldCost = tradeGoldCost;
+            if (tradeRewardName != "-") {
+                t.npcTradeRewardItem = tradeRewardName.toStdString();
+                t.npcTradeRewardValue = tradeRewardValue;
             }
             for (int d = 0; d < dsize; ++d) {
                 QString line = in.readLine();
@@ -1420,7 +1621,10 @@ void MapEditor::onTestPlay()
                 if (t.type == Tile_NPC && !t.npcName.empty()) {
                     auto reward = t.npcRewardItem.empty()
                         ? nullptr : createItem(t.npcRewardItem, t.npcRewardValue);
-                    game->addNPCAt(x, y, NPC(t.npcName, t.npcDialog, std::move(reward)));
+                    auto tradeReward = t.npcTradeRewardItem.empty()
+                        ? nullptr : createItem(t.npcTradeRewardItem, t.npcTradeRewardValue);
+                    game->addNPCAt(x, y, NPC(t.npcName, t.npcDialog, std::move(reward),
+                        t.npcIsTrader, t.npcTradeGoldCost, std::move(tradeReward)));
                 }
             }
 

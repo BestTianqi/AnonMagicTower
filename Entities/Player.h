@@ -21,8 +21,10 @@ public:
     bool hasPenguinDoll = false;
     bool hasMatchaParfait = false;
     bool hasLuckyCoin = false;
-    int shopUseCount = 0;
-    bool wallBreakerUsed = false;  // 破墙锤已激活，下次移动撞墙时破墙
+    int  magicKeyUses = 0;         // 万能钥匙剩余使用次数
+    int  tempShieldCharges = 0;    // 剩余战斗次数，每场+50防
+    int  shopUseCount = 0;
+    bool wallBreakerUsed = false;  // 破墙锤已激活
     bool stairUpUsed = false;      // 上楼器已激活
     bool stairDownUsed = false;    // 下楼器已激活
 

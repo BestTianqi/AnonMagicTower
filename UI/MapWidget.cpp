@@ -248,21 +248,26 @@ void MapWidget::paintEvent(QPaintEvent*)
                     px.fill(Qt::transparent);
                     {
                         QPainter p(&px);
-                        p.setRenderHint(QPainter::Antialiasing);
-                        QRect inner(2, 2, TILE_SIZE - 4, TILE_SIZE - 4);
-                        p.setBrush(fill);
-                        p.setPen(QPen(border, 2));
-                        p.drawRoundedRect(inner, 4, 4);
+                        QRect inner(1, 1, TILE_SIZE - 2, TILE_SIZE - 2);
+                        p.fillRect(inner, fill);
+                        p.setPen(QPen(QColor(50, 50, 50), 1));
+                        p.drawRect(0, 0, TILE_SIZE - 1, TILE_SIZE - 1);
 
                         QFont f;
-                        f.setPixelSize(desc.isEmpty() ? 12 : 11);
-                        f.setBold(true);
-                        p.setFont(f);
-                        p.setPen(textColor);
-                        p.drawText(QRect(0, desc.isEmpty() ? 0 : 2, TILE_SIZE, desc.isEmpty() ? TILE_SIZE : 20),
-                            Qt::AlignHCenter | Qt::AlignVCenter, label);
-
-                        if (!desc.isEmpty()) {
+                        if (desc.isEmpty()) {
+                            f.setPixelSize(label.length() > 2 ? 11 : 14);
+                            f.setBold(true);
+                            p.setFont(f);
+                            p.setPen(Qt::white);
+                            p.drawText(QRect(0, 0, TILE_SIZE, TILE_SIZE),
+                                Qt::AlignCenter, label);
+                        } else {
+                            f.setPixelSize(11);
+                            f.setBold(true);
+                            p.setFont(f);
+                            p.setPen(Qt::white);
+                            p.drawText(QRect(0, 2, TILE_SIZE, 20),
+                                Qt::AlignHCenter | Qt::AlignTop, label);
                             f.setPixelSize(10);
                             f.setBold(false);
                             p.setFont(f);

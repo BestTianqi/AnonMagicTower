@@ -110,21 +110,21 @@ QString MainWindow::getItemDescription(const Item* item) const
     if (name == "Green Key")
         return QString::fromUtf8("绿钥匙 ×1");
     if (name == QString::fromUtf8("万能钥匙"))
-        return QString::fromUtf8("红蓝绿钥匙各 +1");
+        return QString::fromUtf8("可开任何门3次（优先使用普通钥匙）");
     if (name == QString::fromUtf8("匿名眼镜"))
         return QString::fromUtf8("可以查看怪物属性");
     if (name == QString::fromUtf8("破墙锤"))
-        return QString::fromUtf8("下一次移动可以摧毁墙壁");
+        return QString::fromUtf8("点击使用，下一次移动可摧毁墙壁");
     if (name == QString::fromUtf8("上楼器"))
-        return QString::fromUtf8("可以从当前位置上楼");
+        return QString::fromUtf8("点击使用，从当前位置上楼");
     if (name == QString::fromUtf8("下楼器"))
-        return QString::fromUtf8("可以从当前位置下楼");
+        return QString::fromUtf8("点击使用，从当前位置下楼");
     if (name == QString::fromUtf8("临时护盾"))
-        return QString::fromUtf8("防御力 +10");
+        return QString::fromUtf8("点击使用，下次战斗防御 +50");
     if (name == QString::fromUtf8("企鹅玩偶"))
-        return QString::fromUtf8("神秘的企鹅玩偶");
+        return QString::fromUtf8("面对高松灯和企鹅时伤害减半");
     if (name == QString::fromUtf8("抹茶芭菲"))
-        return QString::fromUtf8("美味的抹茶芭菲");
+        return QString::fromUtf8("面对要乐奈和小猫时伤害减半");
     if (name == QString::fromUtf8("幸运金币"))
         return QString::fromUtf8("打怪和拾取金币翻倍");
 
@@ -211,17 +211,76 @@ void MainWindow::showNPCDialog(int x, int y)
     NPC* npc = m_game->npcAt(x, y);
     if (!npc) return;
 
-    bool hadReward = !npc->HasGivenReward();
+    Player& p = m_game->player();
 
-    std::string reply = npc->Interact(m_game->player());
+    // 交易NPC
+    if (npc->IsTrader() && !npc->IsTradeDone()) {
+        const Item* tradeReward = npc->GetTradeReward();
+        QString rewardDesc;
+        if (tradeReward)
+            rewardDesc = getItemDescription(tradeReward);
+        else
+            rewardDesc = QString::fromUtf8("(无)");
+
+        QString info = QString::fromUtf8(
+            "【%1】\n\n"
+            "交易物品: %2\n"
+            "所需金币: %3\n"
+            "你的金币: %4\n\n"
+            "是否交易？")
+            .arg(QString::fromStdString(npc->GetName()))
+            .arg(rewardDesc)
+            .arg(npc->GetTradeGoldCost())
+            .arg(p.gold);
+
+        bool canAfford = (npc->GetTradeGoldCost() <= p.gold);
+
+        auto reply = QMessageBox::question(this, QString::fromUtf8("交易"),
+            info,
+            canAfford ? (QMessageBox::Yes | QMessageBox::No) : QMessageBox::No,
+            QMessageBox::Yes);
+
+        if (reply == QMessageBox::Yes && canAfford) {
+            p.gold -= npc->GetTradeGoldCost();
+            if (tradeReward) {
+                // 创建可应用的物品副本
+                auto item = Game::createItemByName(tradeReward->GetName(), tradeReward->GetValue());
+                if (item) item->Apply(p);
+            }
+            npc->SetTradeDone(true);
+
+            QMessageBox::information(this,
+                QString::fromStdString(npc->GetName()),
+                QString::fromUtf8("交易成功！获得了 %1。").arg(rewardDesc));
+        } else {
+            // 显示NPC对话
+            const auto& dialog = npc->Dialog();
+            if (!dialog.empty()) {
+                QString fullDialog;
+                for (size_t i = 0; i < dialog.size(); ++i) {
+                    fullDialog += QString::fromStdString(npc->GetName()) + ": " + QString::fromStdString(dialog[i]);
+                    if (i + 1 < dialog.size()) fullDialog += "\n";
+                }
+                QMessageBox::information(this,
+                    QString::fromStdString(npc->GetName()),
+                    fullDialog);
+            }
+        }
+
+        ui.mapWidget->update();
+        updateHUD();
+        return;
+    }
+
+    // 普通NPC（非交易或交易已完成）
+    bool hadReward = !npc->HasGivenReward();
+    std::string reply = npc->Interact(p);
 
     if (hadReward && npc->HasGivenReward()) {
-        // NPC 给了奖励
         QMessageBox::information(this,
             QString::fromStdString(npc->GetName()),
             QString::fromStdString(reply));
     } else {
-        // 显示对话
         const auto& dialog = npc->Dialog();
         QString fullDialog;
         for (size_t i = 0; i < dialog.size(); ++i) {
@@ -342,10 +401,13 @@ void MainWindow::updateHUD()
     ui.atkLabel->setText(QString::fromUtf8("⚔ 攻击: %1").arg(m_game->player().atk));
     ui.defLabel->setText(QString::fromUtf8("🛡 防御: %1").arg(m_game->player().def));
     ui.goldLabel->setText(QString::fromUtf8("💰 金币: %1").arg(m_game->player().gold));
-    ui.keysLabel->setText(QString::fromUtf8("🔑 钥匙: 红%1 蓝%2 绿%3")
+    QString keyText = QString::fromUtf8("🔑 钥匙: 红%1 蓝%2 绿%3")
         .arg(m_game->player().KeyCount(KeyType::Red))
         .arg(m_game->player().KeyCount(KeyType::Blue))
-        .arg(m_game->player().KeyCount(KeyType::Green)));
+        .arg(m_game->player().KeyCount(KeyType::Green));
+    if (m_game->player().magicKeyUses > 0)
+        keyText += QString::fromUtf8("  🔮×%1").arg(m_game->player().magicKeyUses);
+    ui.keysLabel->setText(keyText);
 
     // 显示背包物品列表（金币和钥匙下方）
     int invCount = m_game->player().InventoryCount();
@@ -364,10 +426,6 @@ void MainWindow::updateHUD()
         ui.invItemsLabel->setVisible(false);
     }
 
-    // 显示特殊状态
-    QString status;
-    if (m_game->player().hasGlasses) status += QString::fromUtf8("👁 ");
-    if (m_game->player().wallBreakerUsed) status += QString::fromUtf8("🔨 ");
     ui.invButton->setText(QString::fromUtf8("🎒 背包 (%1)").arg(invCount));
 }
 
@@ -433,24 +491,54 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
         break;
     case Game::Move_Encounter: {
         Monster* m = m_game->monsterAt(nx, ny);
-        // 如果有眼镜，显示怪物属性
-        if (m && m_game->player().hasGlasses) {
-            QString info = QString::fromUtf8(
-                "【怪物信息】\n名称: %1\n生命: %2  攻击: %3  防御: %4  金币: %5\n\n"
-                "你的攻击: %6  你的防御: %7\n"
-                "预计造成伤害: %8/回合\n预计受到伤害: %9/回合\n\n是否战斗？")
-                .arg(QString::fromStdString(m->GetName()))
-                .arg(m->GetHP()).arg(m->GetATK()).arg(m->GetDEF()).arg(m->GetGold())
-                .arg(m_game->player().atk).arg(m_game->player().def)
-                .arg(std::max(0, m_game->player().atk - m->GetDEF()))
-                .arg(std::max(0, m->GetATK() - m_game->player().def));
+        if (!m) break;
 
-            auto reply = QMessageBox::question(this, QString::fromUtf8("遭遇怪物"), info,
-                QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
-            if (reply != QMessageBox::Yes) {
-                // 取消战斗
-                break;
+        // 预判战斗结果
+        int dmgToMonster = std::max(0, m_game->player().atk - m->GetDEF());
+        int shieldBonus = (m_game->player().tempShieldCharges > 0) ? 50 : 0;
+        int dmgToPlayer = std::max(0, m->GetATK() - m_game->player().def - shieldBonus);
+        // 特殊道具减伤
+        std::string mn = m->GetName();
+        if (m_game->player().hasPenguinDoll && (mn == "高松灯" || mn == "企鹅"))
+            dmgToPlayer /= 2;
+        if (m_game->player().hasMatchaParfait && (mn == "要乐奈" || mn == "小猫"))
+            dmgToPlayer /= 2;
+        int roundsToKill = (dmgToMonster > 0) ? (m->GetHP() + dmgToMonster - 1) / dmgToMonster : -1;
+        int totalDamage = (roundsToKill > 0 && dmgToPlayer > 0) ? (roundsToKill - 1) * dmgToPlayer : 0;
+        bool canWin = (dmgToMonster > 0) && (totalDamage < m_game->player().hp);
+
+        // 需要确认的情况：无法取胜 或 有眼镜查看信息
+        bool needConfirm = !canWin || m_game->player().hasGlasses;
+
+        if (needConfirm) {
+            QString info;
+            if (m_game->player().hasGlasses) {
+                info = QString::fromUtf8(
+                    "【怪物信息】\n名称: %1\n生命: %2  攻击: %3  防御: %4  金币: %5\n\n"
+                    "你的攻击: %6  你的防御: %7\n"
+                    "预计造成伤害: %8/回合\n预计受到伤害: %9/回合\n"
+                    "预计需要: %10 回合\n预计损失: %11 HP")
+                    .arg(QString::fromStdString(m->GetName()))
+                    .arg(m->GetHP()).arg(m->GetATK()).arg(m->GetDEF()).arg(m->GetGold())
+                    .arg(m_game->player().atk).arg(m_game->player().def)
+                    .arg(dmgToMonster).arg(dmgToPlayer)
+                    .arg(roundsToKill > 0 ? QString::number(roundsToKill) : QString::fromUtf8("∞"))
+                    .arg(totalDamage);
             }
+            if (!canWin) {
+                if (!info.isEmpty()) info += "\n\n";
+                if (dmgToMonster <= 0)
+                    info += QString::fromUtf8("⚠ 攻击力不足以穿透怪物防御！");
+                else
+                    info += QString::fromUtf8("⚠ 你很可能被击败（预计损失 %1 HP，当前只有 %2 HP）！")
+                        .arg(totalDamage).arg(m_game->player().hp);
+            }
+
+            info += QString::fromUtf8("\n\n是否战斗？");
+            auto reply = QMessageBox::question(this, QString::fromUtf8("遭遇怪物"), info,
+                QMessageBox::Yes | QMessageBox::No, canWin ? QMessageBox::Yes : QMessageBox::No);
+            if (reply != QMessageBox::Yes)
+                break;
         }
 
         ui.mapWidget->update();
@@ -461,7 +549,13 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
         for (const auto& s : log)
             dlg += QString::fromStdString(s) + "\n";
 
-        if (fightRes == Game::Fight_PlayerWin) {
+        if (fightRes == Game::Fight_GameWin) {
+            ui.mapWidget->update();
+            updateHUD();
+            QMessageBox::information(this, QString::fromUtf8("战斗"), dlg);
+            gameWin();
+            return;
+        } else if (fightRes == Game::Fight_PlayerWin) {
             ui.mapWidget->update();
             updateHUD();
             QMessageBox::information(this, QString::fromUtf8("战斗"), dlg);
@@ -530,6 +624,40 @@ void MainWindow::gameOver()
         setFocus();
     } else {
         // 返回主菜单：关闭当前窗口，MenuWindow 会自动显示
+        close();
+    }
+}
+
+void MainWindow::gameWin()
+{
+    QMessageBox msgBox(this);
+    msgBox.setWindowTitle(QString::fromUtf8("游戏通关"));
+    msgBox.setText(QString::fromUtf8("恭喜！你击败了长崎素世！\n\n游戏通关！"));
+    msgBox.setIcon(QMessageBox::Information);
+    msgBox.setStyleSheet(
+        "QMessageBox { background-color: #1a1a2e; color: #d0d0d0; }"
+        "QLabel { color: #d0d0d0; font-size: 14px; }"
+        "QPushButton { background: #3a3a5a; color: #d0d0d0; border: 1px solid #66a;"
+        " border-radius: 4px; padding: 6px 16px; min-width: 80px; }"
+        "QPushButton:hover { background: #4a4a7a; }"
+    );
+
+    QPushButton* restartBtn = msgBox.addButton(QString::fromUtf8("重新开始"), QMessageBox::ActionRole);
+    QPushButton* menuBtn    = msgBox.addButton(QString::fromUtf8("返回主菜单"), QMessageBox::RejectRole);
+    msgBox.setDefaultButton(menuBtn);
+
+    msgBox.exec();
+
+    if (msgBox.clickedButton() == restartBtn) {
+        delete m_game;
+        auto* newGame = new Game();
+        newGame->loadDefaultMap();
+        m_game = newGame;
+        ui.mapWidget->setGame(m_game);
+        ui.mapWidget->update();
+        updateHUD();
+        setFocus();
+    } else {
         close();
     }
 }

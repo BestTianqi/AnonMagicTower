@@ -15,6 +15,9 @@ public:
     // 应用道具效果到玩家（默认不做任何事）
     virtual void Apply(Player& player) const;
 
+    // 是否放入背包手动使用（默认 false = 拾取即用）
+    virtual bool IsUseItem() const { return false; }
+
 private:
     std::string name;
     int value;
@@ -115,25 +118,28 @@ class TempShield : public Item {
 public:
     TempShield();
     void Apply(Player& player) const override;
-private:
+    bool IsUseItem() const override { return true; }
 };
 
 class StairUpper : public Item {
 public:
     StairUpper();
     void Apply(Player& player) const override;
+    bool IsUseItem() const override { return true; }
 };
 
 class StairLower : public Item {
 public:
     StairLower();
     void Apply(Player& player) const override;
+    bool IsUseItem() const override { return true; }
 };
 
 class WallBreaker : public Item {
 public:
     WallBreaker();
     void Apply(Player& player) const override;
+    bool IsUseItem() const override { return true; }
 };
 
 class MagicKey : public Item {
