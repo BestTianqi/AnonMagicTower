@@ -13,7 +13,6 @@ find_package(Qt6 COMPONENTS Widgets REQUIRED)
 set(SRC
     main.cpp
     Game/Game.cpp
-    Game/MapData.cpp
     Entities/Player.cpp
     Entities/Items.cpp
     Entities/Monster.cpp

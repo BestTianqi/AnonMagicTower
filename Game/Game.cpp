@@ -1,6 +1,7 @@
 #include "Game.h"
-#include "MapData.h"
 #include <QString>
+#include <QFile>
+#include <QDir>
 #include <algorithm>
 #include <fstream>
 #include <sstream>
@@ -36,20 +37,23 @@ void Game::initFloor(int floor)
 
 bool Game::loadDefaultMap()
 {
-    // 优先加载用户设计的默认地图
-    {
-        std::ifstream check("default_map.txt");
-        if (check.good()) {
-            check.close();
-            if (loadFromFile("default_map.txt"))
-                return true;
+    // 从嵌入资源加载默认地图
+    QFile res(":/map.txt");
+    if (res.open(QIODevice::ReadOnly)) {
+        QString tmpPath = QDir::tempPath() + "/mota_default_map.txt";
+        QFile tmp(tmpPath);
+        if (tmp.open(QIODevice::WriteOnly)) {
+            tmp.write(res.readAll());
+            tmp.close();
         }
+        res.close();
+        if (loadFromFile(tmpPath.toStdString()))
+            return true;
     }
 
+    // 后备：空地图
     m_floor = 1;
-    MapData::loadAllFloors(*this);
-    m_currentFloor = &m_floors[1];
-
+    initFloor(1);
     m_player.x   = 2;
     m_player.y   = 3;
     m_player.hp  = 100;
