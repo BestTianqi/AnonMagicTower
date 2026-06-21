@@ -74,6 +74,9 @@ void MainWindow::loadAssets()
     // 加载玩家图片
     mw->loadPlayerImage(":/images/player.png");
 
+    // 加载NPC图片
+    mw->loadTileImage(Tile_NPC, ":/images/npc.png");
+
     // 加载怪物图片
     auto monsters = MonsterDB::all();
     for (size_t i = 0; i < monsters.size(); ++i) {
@@ -620,6 +623,96 @@ void MainWindow::showModifier()
     updateHUD();
 }
 
+void MainWindow::updateMonsterPanel()
+{
+    // 清除现有怪物条目（保留标题和分隔线）
+    QLayoutItem* child;
+    while ((child = ui.monsterLayout->takeAt(ui.monsterLayout->count() - 1)) != nullptr) {
+        if (child->widget()) {
+            child->widget()->deleteLater();
+        }
+        delete child;
+        // 只删到底部的 stretch 和分隔线之上的条目
+        if (ui.monsterLayout->count() <= 2) break;
+    }
+    // 删除 stretch、分隔线、标题之外的所有
+    while (ui.monsterLayout->count() > 3) {
+        QLayoutItem* item = ui.monsterLayout->takeAt(2);
+        if (item->widget()) {
+            item->widget()->deleteLater();
+        }
+        delete item;
+    }
+
+    // 添加 stretch（如果被删了）
+    if (ui.monsterLayout->count() <= 3) {
+        // 确保底部有 stretch
+    }
+    // 重新添加 stretch
+    auto* existingStretch = ui.monsterLayout->itemAt(ui.monsterLayout->count() - 1);
+    if (!existingStretch || existingStretch->spacerItem() == nullptr) {
+        ui.monsterLayout->addStretch();
+    }
+
+    // 收集当前楼层所有怪物
+    const auto& monsters = m_game->currentFloorData().monsters;
+    if (monsters.empty()) {
+        auto* emptyLabel = new QLabel(QString::fromUtf8("本层无怪物"), ui.monsterPanel);
+        emptyLabel->setStyleSheet("color: #666; font-size: 13px; padding: 12px;");
+        emptyLabel->setAlignment(Qt::AlignCenter);
+        // 插入到 stretch 之前
+        ui.monsterLayout->insertWidget(ui.monsterLayout->count() - 1, emptyLabel);
+        return;
+    }
+
+    // 按位置排序（从上到下，从左到右）
+    int mapW = m_game->width();
+    std::vector<std::pair<int, Monster>> sorted(monsters.begin(), monsters.end());
+    std::sort(sorted.begin(), sorted.end(), [](const auto& a, const auto& b) {
+        return a.first < b.first;  // key = y*width + x
+    });
+
+    for (const auto& [key, mon] : sorted) {
+        int x = key % mapW;
+        int y = key / mapW;
+
+        auto* row = new QWidget(ui.monsterPanel);
+        row->setStyleSheet("background-color: #1e1e36; border-radius: 4px;");
+        auto* rowLayout = new QHBoxLayout(row);
+        rowLayout->setContentsMargins(4, 4, 4, 4);
+        rowLayout->setSpacing(8);
+
+        // 怪物小图
+        auto* imgLabel = new QLabel(row);
+        imgLabel->setFixedSize(40, 40);
+        imgLabel->setStyleSheet("border: 1px solid #444; border-radius: 3px; background: #2a2a3e;");
+
+        QString imgPath = QString(":/images/monster_%1.png")
+            .arg(MonsterDB::indexOf(mon.GetName()) + 1, 2, 10, QChar('0'));
+        QPixmap px(imgPath);
+        if (!px.isNull()) {
+            imgLabel->setPixmap(px.scaled(40, 40, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+        }
+        rowLayout->addWidget(imgLabel);
+
+        // 怪物信息
+        QString info = QString::fromUtf8(
+            "<b style='color:#e05555;'>%1</b><br>"
+            "<span style='color:#aaa; font-size:11px;'>"
+            "HP:%2 ATK:%3 DEF:%4 G:%5</span>")
+            .arg(QString::fromStdString(mon.GetName()))
+            .arg(mon.GetHP()).arg(mon.GetATK()).arg(mon.GetDEF()).arg(mon.GetGold());
+
+        auto* infoLabel = new QLabel(info, row);
+        infoLabel->setStyleSheet("color: #d0d0d0; font-size: 12px;");
+        infoLabel->setTextFormat(Qt::RichText);
+        rowLayout->addWidget(infoLabel, 1);
+
+        // 插入到 stretch 之前
+        ui.monsterLayout->insertWidget(ui.monsterLayout->count() - 1, row);
+    }
+}
+
 void MainWindow::updateHUD()
 {
     int floor = m_game->currentFloor();
@@ -654,6 +747,8 @@ void MainWindow::updateHUD()
     }
 
     ui.invButton->setText(QString::fromUtf8("🎒 背包 (%1)").arg(invCount));
+
+    updateMonsterPanel();
 }
 
 void MainWindow::keyPressEvent(QKeyEvent* event)

@@ -46,4 +46,13 @@ inline Monster getByIndex(int index) {
     return Monster();
 }
 
+// 按名称获取索引 (0-17)，未找到返回 -1
+inline int indexOf(const std::string& name) {
+    auto v = all();
+    for (size_t i = 0; i < v.size(); ++i)
+        if (v[i].GetName() == name)
+            return (int)i;
+    return -1;
+}
+
 } // namespace MonsterDB

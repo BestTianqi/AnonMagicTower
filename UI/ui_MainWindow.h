@@ -8,15 +8,19 @@
 #include <QSpacerItem>
 #include <QFrame>
 #include <QFont>
+#include <QScrollArea>
 #include "MapWidget.h"
 
 QT_BEGIN_NAMESPACE
 
 class Ui_MainWindow {
 public:
-    MapWidget*   mapWidget    = nullptr;
-    QWidget*     sidePanel    = nullptr;
-    QLabel*      floorLabel   = nullptr;
+    MapWidget*   mapWidget     = nullptr;
+    QWidget*     sidePanel     = nullptr;
+    QScrollArea* monsterScroll = nullptr;
+    QWidget*     monsterPanel  = nullptr;
+    QVBoxLayout* monsterLayout = nullptr;
+    QLabel*      floorLabel    = nullptr;
     QLabel*      hpLabel      = nullptr;
     QLabel*      atkLabel     = nullptr;
     QLabel*      defLabel     = nullptr;
@@ -175,6 +179,40 @@ public:
         );
         vbox->addWidget(modButton);
 
+        // === 左侧怪物面板 ===
+        monsterScroll = new QScrollArea(parent);
+        monsterScroll->setObjectName("monsterScroll");
+        monsterScroll->setFixedWidth(240);
+        monsterScroll->setWidgetResizable(true);
+        monsterScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        monsterScroll->setStyleSheet(
+            "QScrollArea { background-color: #141428; border: 1px solid #333; border-radius: 6px; }"
+            "QScrollBar:vertical { background: #1a1a2e; width: 8px; }"
+            "QScrollBar::handle:vertical { background: #444; border-radius: 4px; min-height: 20px; }"
+            "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
+        );
+
+        monsterPanel = new QWidget();
+        monsterPanel->setObjectName("monsterPanel");
+        monsterPanel->setStyleSheet("background-color: #141428;");
+        monsterLayout = new QVBoxLayout(monsterPanel);
+        monsterLayout->setContentsMargins(8, 8, 8, 8);
+        monsterLayout->setSpacing(6);
+
+        auto* monsterTitle = new QLabel(QString::fromUtf8("本层怪物"));
+        monsterTitle->setFont(titleFont);
+        monsterTitle->setAlignment(Qt::AlignCenter);
+        monsterTitle->setStyleSheet("color: #c8a23b; padding: 4px;");
+        monsterLayout->addWidget(monsterTitle);
+
+        auto* monSep = new QFrame(monsterPanel);
+        monSep->setFrameShape(QFrame::HLine);
+        monSep->setStyleSheet("color: #444;");
+        monsterLayout->addWidget(monSep);
+
+        monsterLayout->addStretch();
+        monsterScroll->setWidget(monsterPanel);
+
         // === 地图控件 900x900 ===
         mapWidget = new MapWidget(nullptr, parent);
         mapWidget->setObjectName("mapWidget");
@@ -186,9 +224,10 @@ public:
         hbox->setSpacing(0);
 
         hbox->addStretch();               // 左侧弹性空间
-        hbox->addWidget(mapWidget);       // 地图 900x900
-        hbox->addWidget(sidePanel);       // 侧边栏 280
-        hbox->addStretch();               // 右侧弹性空间
+        hbox->addWidget(monsterScroll);  // 怪物面板 240
+        hbox->addWidget(mapWidget);      // 地图 900x900
+        hbox->addWidget(sidePanel);      // 侧边栏 280
+        hbox->addStretch();              // 右侧弹性空间
 
         parent->setStyleSheet("QWidget#MainWindow { background-color: #1a1a2e; }");
 

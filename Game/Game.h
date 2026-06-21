@@ -93,6 +93,9 @@ public:
 
     static std::unique_ptr<Item> createItemByName(const std::string& iname, int ival);
 
+    FloorData& currentFloorData() { return *m_currentFloor; }
+    const FloorData& currentFloorData() const { return *m_currentFloor; }
+
 private:
     int m_width;
     int m_height;
@@ -101,7 +104,4 @@ private:
 
     std::unordered_map<int, FloorData> m_floors;
     FloorData* m_currentFloor = nullptr;
-
-    FloorData& currentFloorData() { return *m_currentFloor; }
-    const FloorData& currentFloorData() const { return *m_currentFloor; }
 };

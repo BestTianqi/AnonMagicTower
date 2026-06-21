@@ -17,7 +17,8 @@
       "Bash(git -C \"d:\\\\workspace\\\\mota\" stash list)",
       "Bash(powershell -Command \"if \\(Get-Process -Name mota -ErrorAction SilentlyContinue\\) { echo 'RUNNING' } else { echo 'CRASHED' }\")",
       "Bash(cmake --build build)",
-      "Bash(./build/mota.exe)"
+      "Bash(./build/mota.exe)",
+      "Bash(python3 -c ' *)"
     ]
   }
 }
