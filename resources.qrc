@@ -6,6 +6,14 @@
         <file>images/stairs_up.png</file>
         <file>images/stairs_down.png</file>
         <file>images/item.png</file>
+        <file>images/dark_wall.png</file>
+        <!-- 门 -->
+        <file>images/door_red.png</file>
+        <file>images/door_blue.png</file>
+        <file>images/door_green.png</file>
+        <!-- NPC / 商店 -->
+        <file>images/npc.png</file>
+        <file>images/shop.png</file>
         <!-- 玩家 -->
         <file>images/player.png</file>
         <!-- 18种怪物 -->

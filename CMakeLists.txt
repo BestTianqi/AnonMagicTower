@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 17)
 # Enable Qt automoc/autouic/autorcc
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC OFF)
-set(CMAKE_AUTORCC OFF)
+set(CMAKE_AUTORCC ON)
 
 find_package(Qt6 COMPONENTS Widgets REQUIRED)
 
@@ -22,6 +22,7 @@ set(SRC
     UI/MapEditor.cpp
     UI/MenuWindow.cpp
     UI/MainWindow.cpp
+    resources.qrc
 )
 
 add_executable(mota ${SRC})
