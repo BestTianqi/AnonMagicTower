@@ -64,7 +64,7 @@ public:
     void setTile(int x, int y, int tile);
     MoveResult tryMovePlayer(int nx, int ny);
 
-    enum FightResult { Fight_PlayerWin, Fight_PlayerDead, Fight_GameWin };
+    enum FightResult { Fight_PlayerWin, Fight_PlayerDead, Fight_GameWin, Fight_Stalemate };
     FightResult fightAt(int x, int y, std::vector<std::string>& outLog);
 
     void spawnMonster(int x, int y, const Monster& m);
@@ -82,8 +82,8 @@ public:
     const ShopData* shopAt(int x, int y) const;
 
     bool breakWall(int x, int y);
-    void goUpFloor(int srcX, int srcY);
-    void goDownFloor(int srcX, int srcY);
+    void goUpFloor(int srcX, int srcY, bool findStairs = true);
+    void goDownFloor(int srcX, int srcY, bool findStairs = true);
     void initFloor(int floor);
 
     int posKey(int x, int y) const { return y * m_width + x; }

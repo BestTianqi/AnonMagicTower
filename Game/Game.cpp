@@ -1,12 +1,14 @@
 #include "Game.h"
 #include "MapData.h"
 #include <QString>
+#include <algorithm>
 #include <fstream>
 #include <sstream>
 
 Game::Game()
     : m_width(MAP_SIZE), m_height(MAP_SIZE)
 {
+    initFloor(1);
 }
 
 void Game::initFloor(int floor)
@@ -152,13 +154,20 @@ bool Game::breakWall(int x, int y)
     return false;
 }
 
-void Game::goUpFloor(int srcX, int srcY)
+void Game::goUpFloor(int srcX, int srcY, bool findStairs)
 {
     m_floor++;
     if (m_floors.find(m_floor) == m_floors.end()) {
         initFloor(m_floor);
     }
     m_currentFloor = &m_floors[m_floor];
+
+    if (!findStairs) {
+        // 上楼器：传送到当前位置
+        m_player.x = std::clamp(srcX, 2, m_width - 3);
+        m_player.y = std::clamp(srcY, 2, m_height - 3);
+        return;
+    }
 
     // 在新楼层找到距离源位置最近的对应楼梯
     int bestDist = 9999, bestX = -1, bestY = -1;
@@ -173,16 +182,22 @@ void Game::goUpFloor(int srcX, int srcY)
         m_player.y = bestY;
         return;
     }
-    // fallback
     m_player.x = m_width / 2;
     m_player.y = m_height / 2;
 }
 
-void Game::goDownFloor(int srcX, int srcY)
+void Game::goDownFloor(int srcX, int srcY, bool findStairs)
 {
     if (m_floor <= 1) return;
     m_floor--;
     m_currentFloor = &m_floors[m_floor];
+
+    if (!findStairs) {
+        // 下楼器：传送到当前位置
+        m_player.x = std::clamp(srcX, 2, m_width - 3);
+        m_player.y = std::clamp(srcY, 2, m_height - 3);
+        return;
+    }
 
     // 在前楼层找到距离源位置最近的对应楼梯
     int bestDist = 9999, bestX = -1, bestY = -1;
@@ -197,7 +212,6 @@ void Game::goDownFloor(int srcX, int srcY)
         m_player.y = bestY;
         return;
     }
-    // fallback
     m_player.x = m_width / 2;
     m_player.y = m_height / 2;
 }
@@ -329,6 +343,21 @@ Game::FightResult Game::fightAt(int x, int y, std::vector<std::string>& outLog)
         int dmgToMonster = m_player.atk - m->GetDEF();
         if (dmgToMonster < 0) dmgToMonster = 0;
 
+        // 怪物攻击：atk - 玩家def - 护盾 (至少为0)
+        int dmgToPlayer = m->Attack() - m_player.def - shieldBonus;
+        if (dmgToPlayer < 0) dmgToPlayer = 0;
+        if (m_player.hasPenguinDoll && (bossName == "高松灯" || bossName == "企鹅"))
+            dmgToPlayer /= 2;
+        if (m_player.hasMatchaParfait && (bossName == "要乐奈" || bossName == "小猫"))
+            dmgToPlayer /= 2;
+
+        // 双方都无法造成伤害 → 僵局
+        if (dmgToMonster <= 0 && dmgToPlayer <= 0) {
+            outLog.push_back(std::string("双方防御均高于对方攻击，无法互相造成伤害，战斗结束。"));
+            if (hasShield) m_player.tempShieldCharges--;
+            return Fight_Stalemate;
+        }
+
         // 不能破防则无法战斗
         if (dmgToMonster <= 0) {
             outLog.push_back(std::string("攻击力不足，无法对 ") + bossName + " 造成伤害！");
@@ -360,14 +389,6 @@ Game::FightResult Game::fightAt(int x, int y, std::vector<std::string>& outLog)
             return Fight_PlayerWin;
         }
 
-        // 怪物攻击：atk - 玩家def - 护盾 (至少为0)
-        int dmgToPlayer = m->Attack() - m_player.def - shieldBonus;
-        if (dmgToPlayer < 0) dmgToPlayer = 0;
-        // 特殊道具减伤
-        if (m_player.hasPenguinDoll && (bossName == "高松灯" || bossName == "企鹅"))
-            dmgToPlayer /= 2;
-        if (m_player.hasMatchaParfait && (bossName == "要乐奈" || bossName == "小猫"))
-            dmgToPlayer /= 2;
         m_player.hp -= dmgToPlayer;
         {
             std::ostringstream ss;
@@ -571,7 +592,7 @@ bool Game::loadFromFile(const std::string& path)
         }
 
         // 物品
-        size_t icount; ifs >> icount;
+        size_t icount = 0; ifs >> icount;
         for (size_t i = 0; i < icount; ++i) {
             int ix, iy; std::string iname; int ival;
             ifs >> ix >> iy >> iname >> ival;
@@ -581,7 +602,7 @@ bool Game::loadFromFile(const std::string& path)
         }
 
         // 怪物
-        size_t mcount; ifs >> mcount;
+        size_t mcount = 0; ifs >> mcount;
         for (size_t i = 0; i < mcount; ++i) {
             int key; std::string name; int hp, atk, def, gold;
             ifs >> key >> name >> hp >> atk >> def >> gold;
@@ -589,7 +610,7 @@ bool Game::loadFromFile(const std::string& path)
         }
 
         // NPC
-        size_t ncount; ifs >> ncount;
+        size_t ncount = 0; ifs >> ncount;
         for (size_t i = 0; i < ncount; ++i) {
             int nx, ny; std::string nname; bool given; size_t dsize;
             std::string rewardName; int rewardValue;
@@ -599,7 +620,10 @@ bool Game::loadFromFile(const std::string& path)
             std::string tradeRewardName = "-"; int tradeRewardValue = 0;
             bool tradeDone = false;
             if (ifs.peek() != '\n' && ifs.peek() != '\r' && ifs.peek() != EOF) {
-                ifs >> isTrader >> tradeGoldCost >> tradeRewardName >> tradeRewardValue >> tradeDone;
+                ifs >> isTrader >> tradeGoldCost >> tradeRewardName >> tradeRewardValue;
+                // tradeDone 是可选的第五个字段（旧格式没有）
+                if (ifs.peek() != '\n' && ifs.peek() != '\r' && ifs.peek() != EOF)
+                    ifs >> tradeDone;
             }
             ifs.ignore();
             std::vector<std::string> dialog;
@@ -620,7 +644,7 @@ bool Game::loadFromFile(const std::string& path)
 
         // 商店 (仅旧格式 per-floor)
         if (!isV2) {
-            size_t scount; ifs >> scount;
+            size_t scount = 0; ifs >> scount;
             for (size_t i = 0; i < scount; ++i) {
                 int sx, sy, pp, wp, ap, pv = 200, wv = 5, av = 8;
                 ifs >> sx >> sy >> pp >> wp >> ap;
@@ -641,7 +665,7 @@ bool Game::loadFromFile(const std::string& path)
     std::string marker;
     ifs >> marker;
     if (marker == "SHOP") {
-        size_t totalShops; ifs >> totalShops;
+        size_t totalShops = 0; ifs >> totalShops;
         for (size_t i = 0; i < totalShops; ++i) {
             int fnum, sx, sy, pp, wp, ap, pv = 200, wv = 5, av = 8;
             ifs >> fnum >> sx >> sy >> pp >> wp >> ap;

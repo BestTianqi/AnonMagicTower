@@ -27,6 +27,7 @@ public:
     QPushButton* saveButton   = nullptr;
     QPushButton* loadButton   = nullptr;
     QPushButton* editorButton = nullptr;
+    QPushButton* modButton    = nullptr;
 
     void setupUi(QWidget* parent) {
         if (parent->objectName().isEmpty())
@@ -162,6 +163,17 @@ public:
             "QPushButton:hover { background: #7a6a4a; }"
         );
         vbox->addWidget(editorButton);
+
+        modButton = new QPushButton(sidePanel);
+        modButton->setObjectName("modButton");
+        modButton->setText(QString::fromUtf8("⚙ 修改器"));
+        modButton->setMinimumHeight(40);
+        modButton->setStyleSheet(
+            "QPushButton { background: #6a3a3a; color: #ffd; border: 1px solid #d55; "
+            "border-radius: 4px; padding: 8px; font-size: 14px; }"
+            "QPushButton:hover { background: #8a4a4a; }"
+        );
+        vbox->addWidget(modButton);
 
         // === 地图控件 900x900 ===
         mapWidget = new MapWidget(nullptr, parent);

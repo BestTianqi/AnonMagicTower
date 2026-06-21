@@ -1192,7 +1192,7 @@ bool MapEditor::saveToPath(const QString& path)
                         << t.npcRewardValue << " "
                         << t.npcIsTrader << " " << t.npcTradeGoldCost << " "
                         << (t.npcTradeRewardItem.empty() ? "-" : QString::fromStdString(t.npcTradeRewardItem)) << " "
-                        << t.npcTradeRewardValue << "\n";
+                        << t.npcTradeRewardValue << " 0\n";
                     for (auto& d : t.npcDialog)
                         out << QString::fromStdString(d) << "\n";
                 }
@@ -1337,7 +1337,7 @@ void MapEditor::onExportFloor()
             << t->npcRewardValue << " "
             << t->npcIsTrader << " " << t->npcTradeGoldCost << " "
             << (t->npcTradeRewardItem.empty() ? "-" : QString::fromStdString(t->npcTradeRewardItem)) << " "
-            << t->npcTradeRewardValue << "\n";
+            << t->npcTradeRewardValue << " 0\n";
         for (auto& d : t->npcDialog)
             out << QString::fromStdString(d) << "\n";
     }

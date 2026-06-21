@@ -15,6 +15,11 @@
 #include <QPushButton>
 #include <QHBoxLayout>
 #include <QFrame>
+#include <QSpinBox>
+#include <QGroupBox>
+#include <QComboBox>
+#include <QLabel>
+#include <QTabWidget>
 
 MainWindow::MainWindow(Game* game, QWidget* parent)
     : QWidget(parent), m_game(game)
@@ -58,6 +63,8 @@ MainWindow::MainWindow(Game* game, QWidget* parent)
     });
 
     connect(ui.invButton, &QPushButton::clicked, this, &MainWindow::showInventory);
+
+    connect(ui.modButton, &QPushButton::clicked, this, &MainWindow::showModifier);
 }
 
 void MainWindow::loadAssets()
@@ -402,6 +409,228 @@ void MainWindow::showShopDialog(int x, int y)
     updateHUD();
 }
 
+void MainWindow::showModifier()
+{
+    Player& p = m_game->player();
+
+    QDialog dlg(this);
+    dlg.setWindowTitle(QString::fromUtf8("修改器"));
+    dlg.setFixedSize(380, 480);
+    dlg.setStyleSheet("QDialog { background-color: #1a1a2e; color: #d0d0d0; }");
+
+    auto* layout = new QVBoxLayout(&dlg);
+    layout->setSpacing(8);
+    layout->setContentsMargins(12, 12, 12, 12);
+
+    auto* tab = new QTabWidget(&dlg);
+    tab->setStyleSheet(
+        "QTabWidget::pane { border: 1px solid #444; background: #1e1e32; }"
+        "QTabBar::tab { background: #2a2a3e; color: #aaa; padding: 6px 16px; "
+        "border: 1px solid #444; border-bottom: none; }"
+        "QTabBar::tab:selected { background: #1e1e32; color: #fff; }"
+    );
+
+    // === Tab 1: 属性修改 ===
+    auto* statTab = new QWidget();
+    auto* statLayout = new QVBoxLayout(statTab);
+    statLayout->setSpacing(6);
+    statLayout->setContentsMargins(8, 8, 8, 8);
+
+    struct StatRow {
+        QString label;
+        int* ptr;
+        int min, max;
+    };
+    StatRow stats[] = {
+        {QString::fromUtf8("生命 (HP)"), &p.hp, 1, 99999},
+        {QString::fromUtf8("攻击 (ATK)"), &p.atk, 0, 99999},
+        {QString::fromUtf8("防御 (DEF)"), &p.def, 0, 99999},
+        {QString::fromUtf8("金币 (Gold)"), &p.gold, 0, 999999},
+        {QString::fromUtf8("红钥匙"), (int*)&p, -1, 0},   // special
+        {QString::fromUtf8("蓝钥匙"), (int*)&p, -2, 0},   // special
+        {QString::fromUtf8("绿钥匙"), (int*)&p, -3, 0},   // special
+    };
+
+    // Key spinboxes need special handling since they use AddKey/HasKey
+    auto* redKeySpin = new QSpinBox(statTab);
+    redKeySpin->setRange(0, 999);
+    redKeySpin->setValue(p.KeyCount(KeyType::Red));
+    auto* blueKeySpin = new QSpinBox(statTab);
+    blueKeySpin->setRange(0, 999);
+    blueKeySpin->setValue(p.KeyCount(KeyType::Blue));
+    auto* greenKeySpin = new QSpinBox(statTab);
+    greenKeySpin->setRange(0, 999);
+    greenKeySpin->setValue(p.KeyCount(KeyType::Green));
+
+    auto makeStatRow = [&](const QString& label, QSpinBox* spin) {
+        auto* row = new QHBoxLayout();
+        auto* lbl = new QLabel(label, statTab);
+        lbl->setFixedWidth(120);
+        lbl->setStyleSheet("color: #aaa; font-size: 13px;");
+        row->addWidget(lbl);
+        spin->setStyleSheet(
+            "QSpinBox { background: #222; color: #fff; border: 1px solid #555; "
+            "padding: 4px; font-size: 13px; }");
+        spin->setFixedWidth(140);
+        row->addWidget(spin);
+        row->addStretch();
+        statLayout->addLayout(row);
+        return spin;
+    };
+
+    auto* hpSpin = makeStatRow(QString::fromUtf8("生命 (HP)"), new QSpinBox(statTab));
+    hpSpin->setRange(1, 99999);
+    hpSpin->setValue(p.hp);
+    auto* atkSpin = makeStatRow(QString::fromUtf8("攻击 (ATK)"), new QSpinBox(statTab));
+    atkSpin->setRange(0, 99999);
+    atkSpin->setValue(p.atk);
+    auto* defSpin = makeStatRow(QString::fromUtf8("防御 (DEF)"), new QSpinBox(statTab));
+    defSpin->setRange(0, 99999);
+    defSpin->setValue(p.def);
+    auto* goldSpin = makeStatRow(QString::fromUtf8("金币 (Gold)"), new QSpinBox(statTab));
+    goldSpin->setRange(0, 999999);
+    goldSpin->setValue(p.gold);
+
+    statLayout->addSpacing(6);
+    auto* keyLabel = new QLabel(QString::fromUtf8("钥匙数量:"), statTab);
+    keyLabel->setStyleSheet("color: #aaccaa; font-size: 13px; font-weight: bold;");
+    statLayout->addWidget(keyLabel);
+
+    makeStatRow(QString::fromUtf8("红钥匙"), redKeySpin);
+    makeStatRow(QString::fromUtf8("蓝钥匙"), blueKeySpin);
+    makeStatRow(QString::fromUtf8("绿钥匙"), greenKeySpin);
+
+    statLayout->addStretch();
+    tab->addTab(statTab, QString::fromUtf8("属性"));
+
+    // === Tab 2: 道具添加 ===
+    auto* itemTab = new QWidget();
+    auto* itemLayout = new QVBoxLayout(itemTab);
+    itemLayout->setSpacing(4);
+    itemLayout->setContentsMargins(8, 8, 8, 8);
+
+    auto* itemHint = new QLabel(QString::fromUtf8("点击按钮直接添加到背包:"), itemTab);
+    itemHint->setStyleSheet("color: #aaa; font-size: 12px; margin-bottom: 4px;");
+    itemLayout->addWidget(itemHint);
+
+    struct TestItem {
+        QString name;
+        int val;
+        QString color;
+    };
+    TestItem testItems[] = {
+        {QString::fromUtf8("生命药"), 200, "#d44"},
+        {QString::fromUtf8("武器"), 10, "#d82"},
+        {QString::fromUtf8("防具"), 5, "#48d"},
+        {QString::fromUtf8("金币"), 100, "#da0"},
+        {QString::fromUtf8("红钥匙"), 1, "#d33"},
+        {QString::fromUtf8("蓝钥匙"), 1, "#33d"},
+        {QString::fromUtf8("绿钥匙"), 1, "#3a3"},
+        {QString::fromUtf8("万能钥匙"), 3, "#84d"},
+        {QString::fromUtf8("上楼器"), 0, "#aa0"},
+        {QString::fromUtf8("下楼器"), 0, "#a6a"},
+        {QString::fromUtf8("破墙锤"), 0, "#864"},
+        {QString::fromUtf8("临时护盾"), 3, "#68d"},
+        {QString::fromUtf8("匿名眼镜"), 0, "#4aa"},
+        {QString::fromUtf8("幸运金币"), 0, "#da0"},
+    };
+
+    auto* itemGrid = new QGridLayout();
+    itemGrid->setSpacing(3);
+    for (int i = 0; i < (int)(sizeof(testItems) / sizeof(testItems[0])); ++i) {
+        auto* btn = new QPushButton(testItems[i].name, itemTab);
+        btn->setFixedHeight(32);
+        btn->setCursor(Qt::PointingHandCursor);
+        btn->setStyleSheet(QString(
+            "QPushButton { background-color: %1; color: #fff; border: 1px solid #666; "
+            "border-radius: 3px; font-size: 12px; font-weight: bold; }"
+            "QPushButton:hover { border-color: #fff; }"
+        ).arg(testItems[i].color));
+        itemGrid->addWidget(btn, i / 4, i % 4);
+
+        QString iname = testItems[i].name;
+        int ival = testItems[i].val;
+        connect(btn, &QPushButton::clicked, this, [this, iname, ival]() {
+            auto item = Game::createItemByName(iname.toStdString(), ival);
+            if (item) {
+                m_game->player().AddItem(std::move(item));
+            }
+            updateHUD();
+        });
+    }
+    itemLayout->addLayout(itemGrid);
+
+    // 特殊道具效果（直接切换）
+    itemLayout->addSpacing(6);
+    auto* effectLabel = new QLabel(QString::fromUtf8("直接切换效果:"), itemTab);
+    effectLabel->setStyleSheet("color: #aaa; font-size: 12px;");
+    itemLayout->addWidget(effectLabel);
+
+    auto addEffectBtn = [&](const QString& name, bool* flag) {
+        auto updateText = [name, flag]() {
+            return QString::fromUtf8("%1: %2").arg(name)
+                .arg(*flag ? QString::fromUtf8("开") : QString::fromUtf8("关"));
+        };
+        auto* btn = new QPushButton(updateText(), itemTab);
+        btn->setFixedHeight(30);
+        btn->setStyleSheet(
+            "QPushButton { background: #3a4a3a; color: #d0d0d0; border: 1px solid #5a5; "
+            "border-radius: 3px; font-size: 12px; }"
+            "QPushButton:hover { background: #4a6a4a; }"
+        );
+        connect(btn, &QPushButton::clicked, this, [this, flag, btn, updateText]() {
+            *flag = !(*flag);
+            btn->setText(updateText());
+            updateHUD();
+        });
+        itemLayout->addWidget(btn);
+        return btn;
+    };
+    addEffectBtn(QString::fromUtf8("匿名眼镜"), &p.hasGlasses);
+    addEffectBtn(QString::fromUtf8("幸运金币"), &p.hasLuckyCoin);
+
+    itemLayout->addStretch();
+    tab->addTab(itemTab, QString::fromUtf8("道具"));
+
+    layout->addWidget(tab);
+
+    // 底部按钮
+    auto* btnRow = new QHBoxLayout();
+    btnRow->addStretch();
+    auto* applyBtn = new QPushButton(QString::fromUtf8("应用"), &dlg);
+    applyBtn->setFixedHeight(36);
+    applyBtn->setStyleSheet(
+        "QPushButton { background: #3a5a3a; color: #d0d0d0; border: 1px solid #5a5; "
+        "border-radius: 4px; padding: 6px 20px; font-size: 14px; }"
+        "QPushButton:hover { background: #4a7a4a; }"
+    );
+    btnRow->addWidget(applyBtn);
+    layout->addLayout(btnRow);
+
+    connect(applyBtn, &QPushButton::clicked, this, [&]() {
+        p.hp = hpSpin->value();
+        p.atk = atkSpin->value();
+        p.def = defSpin->value();
+        p.gold = goldSpin->value();
+        // Sync keys: set the difference
+        int diff;
+        diff = redKeySpin->value() - p.KeyCount(KeyType::Red);
+        if (diff > 0) p.AddKey(KeyType::Red, diff);
+        else if (diff < 0) { while (diff++ < 0 && p.HasKey(KeyType::Red)) p.UseKey(KeyType::Red); }
+        diff = blueKeySpin->value() - p.KeyCount(KeyType::Blue);
+        if (diff > 0) p.AddKey(KeyType::Blue, diff);
+        else if (diff < 0) { while (diff++ < 0 && p.HasKey(KeyType::Blue)) p.UseKey(KeyType::Blue); }
+        diff = greenKeySpin->value() - p.KeyCount(KeyType::Green);
+        if (diff > 0) p.AddKey(KeyType::Green, diff);
+        else if (diff < 0) { while (diff++ < 0 && p.HasKey(KeyType::Green)) p.UseKey(KeyType::Green); }
+        updateHUD();
+        dlg.accept();
+    });
+
+    dlg.exec();
+    updateHUD();
+}
+
 void MainWindow::updateHUD()
 {
     int floor = m_game->currentFloor();
@@ -457,17 +686,17 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
         return;
     }
 
-    // 检查上楼器/下楼器
+    // 检查上楼器/下楼器（传送到当前坐标，不找楼梯）
     if (m_game->player().stairUpUsed) {
         m_game->player().stairUpUsed = false;
-        m_game->goUpFloor(m_game->player().x, m_game->player().y);
+        m_game->goUpFloor(m_game->player().x, m_game->player().y, false);
         ui.mapWidget->update();
         updateHUD();
         return;
     }
     if (m_game->player().stairDownUsed) {
         m_game->player().stairDownUsed = false;
-        m_game->goDownFloor(m_game->player().x, m_game->player().y);
+        m_game->goDownFloor(m_game->player().x, m_game->player().y, false);
         ui.mapWidget->update();
         updateHUD();
         return;
@@ -515,6 +744,7 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
         int roundsToKill = (dmgToMonster > 0) ? (m->GetHP() + dmgToMonster - 1) / dmgToMonster : -1;
         int totalDamage = (roundsToKill > 0 && dmgToPlayer > 0) ? (roundsToKill - 1) * dmgToPlayer : 0;
         bool canWin = (dmgToMonster > 0) && (totalDamage < m_game->player().hp);
+        bool isStalemate = (dmgToMonster <= 0 && dmgToPlayer <= 0);
 
         // 需要确认的情况：无法取胜 或 有眼镜查看信息
         bool needConfirm = !canWin || m_game->player().hasGlasses;
@@ -534,7 +764,12 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
                     .arg(roundsToKill > 0 ? QString::number(roundsToKill) : QString::fromUtf8("∞"))
                     .arg(totalDamage);
             }
-            if (!canWin) {
+            if (isStalemate) {
+                if (!info.isEmpty()) info += "\n\n";
+                info += QString::fromUtf8("双方防御均高于对方攻击，无法互相造成伤害。\n战斗无法继续。");
+                QMessageBox::information(this, QString::fromUtf8("遭遇怪物"), info);
+                break;
+            } else if (!canWin) {
                 if (!info.isEmpty()) info += "\n\n";
                 if (dmgToMonster <= 0)
                     info += QString::fromUtf8("⚠ 攻击力不足以穿透怪物防御！");
@@ -565,6 +800,10 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
             gameWin();
             return;
         } else if (fightRes == Game::Fight_PlayerWin) {
+            ui.mapWidget->update();
+            updateHUD();
+            QMessageBox::information(this, QString::fromUtf8("战斗"), dlg);
+        } else if (fightRes == Game::Fight_Stalemate) {
             ui.mapWidget->update();
             updateHUD();
             QMessageBox::information(this, QString::fromUtf8("战斗"), dlg);
