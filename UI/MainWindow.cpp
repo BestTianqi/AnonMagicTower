@@ -71,21 +71,10 @@ void MainWindow::loadAssets()
 {
     auto* mw = ui.mapWidget;
 
-    // 尝试加载真实图片（如果不存在则使用占位图）
-    mw->loadTileImage(Tile_Wall,       ":/images/wall.png");
-    mw->loadTileImage(Tile_Floor,      ":/images/floor.png");
-    mw->loadTileImage(Tile_StairsUp,   ":/images/stairs_up.png");
-    mw->loadTileImage(Tile_StairsDown, ":/images/stairs_down.png");
-    mw->loadTileImage(Tile_Item,       ":/images/item.png");
-    mw->loadTileImage(Tile_DoorRed,    ":/images/door_red.png");
-    mw->loadTileImage(Tile_DoorBlue,   ":/images/door_blue.png");
-    mw->loadTileImage(Tile_DoorGreen,  ":/images/door_green.png");
-    mw->loadTileImage(Tile_NPC,        ":/images/npc.png");
-    mw->loadTileImage(Tile_Shop,       ":/images/shop.png");
-    mw->loadTileImage(Tile_DarkWall,   ":/images/dark_wall.png");
-
+    // 加载玩家图片
     mw->loadPlayerImage(":/images/player.png");
 
+    // 加载怪物图片
     auto monsters = MonsterDB::all();
     for (size_t i = 0; i < monsters.size(); ++i) {
         QString path = QString(":/images/monster_%1.png").arg(i + 1, 2, 10, QChar('0'));

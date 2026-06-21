@@ -381,7 +381,5 @@ void MapWidget::paintEvent(QPaintEvent*)
 
     if (!m_playerPix.isNull()) {
         painter.drawPixmap(pr, m_playerPix);
-        if (m_hasPlayerImage)
-            drawOverlayText(painter, pr, QString::fromUtf8("勇"), 14, true);
     }
 }

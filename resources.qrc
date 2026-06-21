@@ -1,5 +1,5 @@
 <RCC>
-    <qresource prefix="/images">
+    <qresource prefix="/">
         <!-- 地砖 -->
         <file>images/wall.png</file>
         <file>images/floor.png</file>
