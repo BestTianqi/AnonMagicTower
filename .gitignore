@@ -167,3 +167,13 @@ deps/
 # Local development configuration
 local.properties
 
+# Claude Code local settings
+.claude/settings.local.json
+
+# Release packages
+mota-release/
+mota-release.zip
+
+# Temporary / scrap folders
+新建文件夹/
+

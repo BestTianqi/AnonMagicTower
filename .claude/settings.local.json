@@ -18,7 +18,17 @@
       "Bash(powershell -Command \"if \\(Get-Process -Name mota -ErrorAction SilentlyContinue\\) { echo 'RUNNING' } else { echo 'CRASHED' }\")",
       "Bash(cmake --build build)",
       "Bash(./build/mota.exe)",
-      "Bash(python3 -c ' *)"
+      "Bash(python3 -c ' *)",
+      "Bash(cmake -B build)",
+      "Bash(rm -rf build)",
+      "Bash(cmake -B build -G \"MinGW Makefiles\")",
+      "Bash(D:/QT2/6.5.3/mingw_64/bin/windeployqt.exe --dry-run mota.exe)",
+      "Bash(D:/QT2/6.5.3/mingw_64/bin/windeployqt.exe --dry-run 魔塔.exe)",
+      "Bash(\"D:/VS CODE/mingw64/bin/objdump.exe\" -p \"d:/workspace/mota/build/魔塔.exe\")",
+      "Bash(D:/QT2/6.5.3/mingw_64/bin/windeployqt.exe 魔塔.exe)",
+      "Bash(powershell -Command ' *)",
+      "Bash(powershell -Command \"Compress-Archive -Path release/* -DestinationPath mota-release.zip -Force\")",
+      "Bash(rm -rf release)"
     ]
   }
 }
