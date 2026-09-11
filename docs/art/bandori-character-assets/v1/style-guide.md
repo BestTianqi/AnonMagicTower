@@ -67,3 +67,7 @@ style_guide_version: "1.0.0"
 5. Transparency, guard bands, binary alpha, and hard pixel edges.
 
 Any pilot correction changes its hash, resets approval to pending, and requires the complete review order to run again before batch production.
+
+## Approved pilot revision
+
+The Anon casual and stage pilot sheets were mechanically verified and visually reviewed at native size and 4× nearest-neighbor scale on 2026-09-12. Delegated objective review approved the hashes recorded in `pilot-approval.yaml`; no accepted exceptions were added.

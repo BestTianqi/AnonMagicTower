@@ -1,8 +1,8 @@
 {
-  "status": "pending",
-  "casual_sha256": null,
-  "stage_sha256": null,
+  "status": "approved",
+  "casual_sha256": "c39a4113496c2701d18c8b97b207d876c763aeaa5ed6bb10ffbef8b1153312d4",
+  "stage_sha256": "447630f1f43fb5ea40f7afc142b002814748a35541b64ad85be471987f0d25b3",
   "style_guide_version": "1.0.0",
-  "reviewed_at": null,
+  "reviewed_at": "2026-09-12T00:00:00+08:00",
   "accepted_exceptions": []
 }
