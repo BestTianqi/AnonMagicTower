@@ -177,3 +177,6 @@ mota-release.zip
 # Temporary / scrap folders
 新建文件夹/
 
+# Local git worktrees
+.worktrees/
+
