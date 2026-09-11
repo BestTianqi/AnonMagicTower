@@ -1,0 +1,186 @@
+{
+  "manifest_version": "1.0.0",
+  "style_guide_version": "1.0.0",
+  "forms": {
+    "anon_casual": {
+      "character": "Chihaya Anon",
+      "form": "canonical casual school outfit",
+      "canonical_page_url": "https://anime.bang-dream.com/avemujica/character/anon/",
+      "costume_asset_url_or_id": "https://anime.bang-dream.com/avemujica/character/anon/#asset=img_anon_1.png",
+      "campaign_or_title": "TV Anime BanG Dream! Ave Mujica - Character: Chihaya Anon",
+      "retrieved_at": "2026-09-11",
+      "inferred_details": [
+        "The official asset supplies the visible front costume and hair silhouette.",
+        "Side and rear garment construction must follow the visible seams and color blocks without new decoration."
+      ],
+      "style_guide_version": "1.0.0",
+      "relative_path": "images/characters/pilot/anon_casual.png",
+      "allowed_translucency": []
+    },
+    "anon_stage": {
+      "character": "Chihaya Anon",
+      "form": "canonical MyGO!!!!! stage outfit",
+      "canonical_page_url": "https://bang-dream.com/artist/mygo/chihaya-anon/",
+      "costume_asset_url_or_id": "https://bang-dream.com/artist/mygo/chihaya-anon/#asset=img_full_chihaya-anon_01.webp",
+      "campaign_or_title": "BanG Dream! Official Artist - MyGO!!!!! Member Visual",
+      "retrieved_at": "2026-09-11",
+      "inferred_details": [
+        "Use the official MyGO!!!!! member visual as the stage-costume authority.",
+        "Concealed side and rear details must be continued conservatively from the shared MyGO!!!!! visual campaign."
+      ],
+      "style_guide_version": "1.0.0",
+      "relative_path": "images/characters/pilot/anon_stage.png",
+      "allowed_translucency": []
+    },
+    "soyo_casual": {
+      "character": "Nagasaki Soyo",
+      "form": "canonical casual school outfit",
+      "canonical_page_url": "https://anime.bang-dream.com/avemujica/character/soyo/",
+      "costume_asset_url_or_id": "https://anime.bang-dream.com/avemujica/character/soyo/#asset=img_soyo_1.png",
+      "campaign_or_title": "TV Anime BanG Dream! Ave Mujica - Character: Nagasaki Soyo",
+      "retrieved_at": "2026-09-11",
+      "inferred_details": [
+        "The official asset supplies the visible front costume, long-hair silhouette, and canonical colors.",
+        "Mid-boss presence comes from gaze and posture only; side and rear views add no costume ornament."
+      ],
+      "style_guide_version": "1.0.0",
+      "relative_path": "images/characters/mygo/soyo_casual.png",
+      "allowed_translucency": []
+    },
+    "soyo_stage": {
+      "character": "Nagasaki Soyo",
+      "form": "canonical MyGO!!!!! stage outfit",
+      "canonical_page_url": "https://bang-dream.com/artist/mygo/nagasaki-soyo/",
+      "costume_asset_url_or_id": "https://bang-dream.com/artist/mygo/nagasaki-soyo/#asset=img_full_nagasaki-soyo_01.webp",
+      "campaign_or_title": "BanG Dream! Official Artist - MyGO!!!!! Member Visual",
+      "retrieved_at": "2026-09-11",
+      "inferred_details": [
+        "Use the same official MyGO!!!!! member-visual campaign selected for Anon and Tomori stage forms.",
+        "Final-boss strength is conveyed by stance and expression while hidden costume details remain conservative."
+      ],
+      "style_guide_version": "1.0.0",
+      "relative_path": "images/characters/mygo/soyo_stage.png",
+      "allowed_translucency": []
+    },
+    "tomori_casual": {
+      "character": "Takamatsu Tomori",
+      "form": "canonical casual school outfit",
+      "canonical_page_url": "https://anime.bang-dream.com/avemujica/character/tomori/",
+      "costume_asset_url_or_id": "https://anime.bang-dream.com/avemujica/character/tomori/#asset=img_tomori_1.png",
+      "campaign_or_title": "TV Anime BanG Dream! Ave Mujica - Character: Takamatsu Tomori",
+      "retrieved_at": "2026-09-11",
+      "inferred_details": [
+        "Preserve the official hair silhouette, subdued expression, and visible school-outfit color blocks.",
+        "Infer side and rear views from the front silhouette without prominent additions."
+      ],
+      "style_guide_version": "1.0.0",
+      "relative_path": "images/characters/mygo/tomori_casual.png",
+      "allowed_translucency": []
+    },
+    "tomori_stage": {
+      "character": "Takamatsu Tomori",
+      "form": "canonical MyGO!!!!! stage outfit",
+      "canonical_page_url": "https://bang-dream.com/artist/mygo/takamatsu-tomori/",
+      "costume_asset_url_or_id": "https://bang-dream.com/artist/mygo/takamatsu-tomori/#asset=img_full_takamatsu-tomori_01.webp",
+      "campaign_or_title": "BanG Dream! Official Artist - MyGO!!!!! Member Visual",
+      "retrieved_at": "2026-09-11",
+      "inferred_details": [
+        "Use the same official MyGO!!!!! member-visual campaign selected for Anon and Soyo stage forms.",
+        "Elite strength is communicated by performance posture and expression, not costume changes."
+      ],
+      "style_guide_version": "1.0.0",
+      "relative_path": "images/characters/mygo/tomori_stage.png",
+      "allowed_translucency": []
+    },
+    "uika_casual": {
+      "character": "Misumi Uika",
+      "form": "canonical casual outfit",
+      "canonical_page_url": "https://anime.bang-dream.com/avemujica/character/uika/",
+      "costume_asset_url_or_id": "https://anime.bang-dream.com/avemujica/character/uika/#asset=img_uika_1.png",
+      "campaign_or_title": "TV Anime BanG Dream! Ave Mujica - Character: Misumi Uika / Doloris",
+      "retrieved_at": "2026-09-11",
+      "inferred_details": [
+        "The first image in the official paired character asset is the unmasked Uika identity reference.",
+        "Side and rear views retain the same hair mass and visible garment construction without new accessories."
+      ],
+      "style_guide_version": "1.0.0",
+      "relative_path": "images/characters/ave_mujica/uika_casual.png",
+      "allowed_translucency": []
+    },
+    "doloris_stage": {
+      "character": "Misumi Uika / Doloris",
+      "form": "canonical Ave Mujica masked stage outfit",
+      "canonical_page_url": "https://anime.bang-dream.com/avemujica/character/uika/",
+      "costume_asset_url_or_id": "https://anime.bang-dream.com/avemujica/character/uika/#asset=img_uika_2.png",
+      "campaign_or_title": "TV Anime BanG Dream! Ave Mujica - Character: Misumi Uika / Doloris",
+      "retrieved_at": "2026-09-11",
+      "inferred_details": [
+        "The second image in the official paired character asset is the masked Doloris stage reference.",
+        "Preserve Uika's underlying proportions and hair identity; infer concealed costume surfaces from the visible Ave Mujica design only."
+      ],
+      "style_guide_version": "1.0.0",
+      "relative_path": "images/characters/ave_mujica/doloris_stage.png",
+      "allowed_translucency": []
+    },
+    "arale_casual": {
+      "character": "Nakamachi Arale",
+      "form": "canonical anime casual appearance",
+      "canonical_page_url": "https://anime.bang-dream.com/yumemita/character/arale/",
+      "costume_asset_url_or_id": "https://anime.bang-dream.com/yumemita/character/arale/#asset=img_character-main-arale.png",
+      "campaign_or_title": "TV Anime BanG Dream! Yume Mita - Character: Nakamachi Arale",
+      "retrieved_at": "2026-09-11",
+      "inferred_details": [
+        "Use the first official paired Arale character asset as the lower-strength casual appearance.",
+        "Side and rear views conserve the visible silhouette and color blocking without invented decoration."
+      ],
+      "style_guide_version": "1.0.0",
+      "relative_path": "images/characters/mugendai_mewtype/arale_casual.png",
+      "allowed_translucency": []
+    },
+    "arale_stage": {
+      "character": "Nakamachi Arale",
+      "form": "canonical MUGENDAI MEWTYPE stage appearance",
+      "canonical_page_url": "https://anime.bang-dream.com/yumemita/character/arale/",
+      "costume_asset_url_or_id": "https://anime.bang-dream.com/yumemita/character/arale/#asset=img_character-main-arale2.png",
+      "campaign_or_title": "TV Anime BanG Dream! Yume Mita - Character: Nakamachi Arale",
+      "retrieved_at": "2026-09-11",
+      "inferred_details": [
+        "Use the second official paired Arale character asset as the upgraded performance appearance.",
+        "Maintain the casual form's proportions and identity; derive hidden costume surfaces conservatively."
+      ],
+      "style_guide_version": "1.0.0",
+      "relative_path": "images/characters/mugendai_mewtype/arale_stage.png",
+      "allowed_translucency": []
+    },
+    "viola_normal": {
+      "character": "Viola",
+      "form": "canonical anime outfit",
+      "canonical_page_url": "https://anime.bang-dream.com/yumemita/character/viola/",
+      "costume_asset_url_or_id": "https://anime.bang-dream.com/yumemita/character/viola/#asset=img_character-main-viola.png",
+      "campaign_or_title": "TV Anime BanG Dream! Yume Mita - Character: Viola",
+      "retrieved_at": "2026-09-11",
+      "inferred_details": [
+        "Preserve the official composed stance, soft smile, violet-flower identity, hair, and clothes.",
+        "Infer unseen views conservatively from the official front silhouette without corruption effects."
+      ],
+      "style_guide_version": "1.0.0",
+      "relative_path": "images/characters/mugendai_mewtype/viola_normal.png",
+      "allowed_translucency": []
+    },
+    "viola_corrupted": {
+      "character": "Viola",
+      "form": "canonical anime outfit with bounded corruption overlays",
+      "canonical_page_url": "https://anime.bang-dream.com/yumemita/character/viola/",
+      "costume_asset_url_or_id": "https://anime.bang-dream.com/yumemita/character/viola/#asset=img_character-main-viola.png",
+      "campaign_or_title": "TV Anime BanG Dream! Yume Mita - Character: Viola",
+      "retrieved_at": "2026-09-11",
+      "inferred_details": [
+        "The official Viola asset remains the base costume and identity authority for the transformed form.",
+        "Violet vines, phone-screen rectangles, splice marks, and editing fragments are bounded binary-alpha overlays, never replacement clothing."
+      ],
+      "style_guide_version": "1.0.0",
+      "relative_path": "images/characters/mugendai_mewtype/viola_corrupted.png",
+      "allowed_translucency": []
+    }
+  }
+}
