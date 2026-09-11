@@ -1,0 +1,78 @@
+﻿{
+    "manifest_version":  "1.0.0",
+    "style_guide_version":  "1.0.0",
+    "forms":  {
+                  "anon_casual":  {
+                                      "relative_path":  "images/characters/pilot/anon_casual.png",
+                                      "allowed_translucency":  [
+
+                                                               ]
+                                  },
+                  "anon_stage":  {
+                                     "relative_path":  "images/characters/pilot/anon_stage.png",
+                                     "allowed_translucency":  [
+
+                                                              ]
+                                 },
+                  "soyo_casual":  {
+                                      "relative_path":  "images/characters/mygo/soyo_casual.png",
+                                      "allowed_translucency":  [
+
+                                                               ]
+                                  },
+                  "soyo_stage":  {
+                                     "relative_path":  "images/characters/mygo/soyo_stage.png",
+                                     "allowed_translucency":  [
+
+                                                              ]
+                                 },
+                  "tomori_casual":  {
+                                        "relative_path":  "images/characters/mygo/tomori_casual.png",
+                                        "allowed_translucency":  [
+
+                                                                 ]
+                                    },
+                  "tomori_stage":  {
+                                       "relative_path":  "images/characters/mygo/tomori_stage.png",
+                                       "allowed_translucency":  [
+
+                                                                ]
+                                   },
+                  "uika_casual":  {
+                                      "relative_path":  "images/characters/ave_mujica/uika_casual.png",
+                                      "allowed_translucency":  [
+
+                                                               ]
+                                  },
+                  "doloris_stage":  {
+                                        "relative_path":  "images/characters/ave_mujica/doloris_stage.png",
+                                        "allowed_translucency":  [
+
+                                                                 ]
+                                    },
+                  "arale_casual":  {
+                                       "relative_path":  "images/characters/mugendai_mewtype/arale_casual.png",
+                                       "allowed_translucency":  [
+
+                                                                ]
+                                   },
+                  "arale_stage":  {
+                                      "relative_path":  "images/characters/mugendai_mewtype/arale_stage.png",
+                                      "allowed_translucency":  [
+
+                                                               ]
+                                  },
+                  "viola_normal":  {
+                                       "relative_path":  "images/characters/mugendai_mewtype/viola_normal.png",
+                                       "allowed_translucency":  [
+
+                                                                ]
+                                   },
+                  "viola_corrupted":  {
+                                          "relative_path":  "images/characters/mugendai_mewtype/viola_corrupted.png",
+                                          "allowed_translucency":  [
+
+                                                                   ]
+                                      }
+              }
+}

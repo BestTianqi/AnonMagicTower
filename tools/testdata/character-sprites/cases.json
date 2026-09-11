@@ -1,0 +1,39 @@
+{
+  "fixture_policy": "Rule cases are generated into isolated temporary directories; explicit-pilot and explicit-full are tiny generated smoke fixtures for direct CLI verification.",
+  "single": [
+    "valid",
+    "corrupt_truncated_png",
+    "wrong_dimensions",
+    "wrong_pixel_format",
+    "guard_band_opaque",
+    "undeclared_partial_alpha",
+    "translucency_rectangle_outside_interior",
+    "alpha_below_minimum",
+    "alpha_at_minimum",
+    "alpha_at_maximum",
+    "alpha_above_maximum",
+    "misplaced_valid_file"
+  ],
+  "roster": [
+    "valid_pilot",
+    "unexpected_pilot_file",
+    "missing_full_file",
+    "valid_full"
+  ],
+  "gate": [
+    "approved",
+    "pending",
+    "pilot_hash_mismatch",
+    "manifest_version_mismatch",
+    "approval_version_mismatch",
+    "style_front_matter_version_mismatch",
+    "interrupted_invalidation_recovery",
+    "repeated_invalidation_is_idempotent"
+  ],
+  "normalizer": [
+    "arbitrary_source_dimensions",
+    "alpha_127_and_128_boundary",
+    "byte_idempotence",
+    "fully_opaque_source_rejected"
+  ]
+}

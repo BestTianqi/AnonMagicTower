@@ -1,0 +1,10 @@
+﻿{
+    "status":  "approved",
+    "casual_sha256":  "19b239e3d5b72638f634190733cdef0b6a3559af7875e0431937abe4d8698bfa",
+    "stage_sha256":  "19b239e3d5b72638f634190733cdef0b6a3559af7875e0431937abe4d8698bfa",
+    "style_guide_version":  "1.0.0",
+    "reviewed_at":  null,
+    "accepted_exceptions":  [
+
+                            ]
+}
