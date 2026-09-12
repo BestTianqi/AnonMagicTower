@@ -53,6 +53,12 @@ private:
     int m_heal;
 };
 
+class HolyWater : public Item {
+public:
+    HolyWater();
+    void Apply(Player& player) const override;
+};
+
 class Weapon : public Item {
 public:
     Weapon(int atkBonus);

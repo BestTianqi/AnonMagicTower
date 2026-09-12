@@ -99,20 +99,28 @@ void MainWindow::loadAssets()
         mw->loadMonsterImage(monsters[i].GetName(), path);
     }
 
-    // 将主题角色首帧用于对应怪物，保留数据库中的数值和战斗顺序。
-    const std::vector<std::pair<const char*, const char*>> themedMonsters = {
-        {"要乐奈", ":/images/characters/portraits/rana.png"},
-        {"高松灯", ":/images/characters/portraits/tomori.png"},
-        {"椎名立希", ":/images/characters/portraits/taki.png"},
-        {"八幡海铃", ":/images/characters/portraits/umiri.png"},
-        {"祐天寺若麦", ":/images/characters/portraits/nyamu.png"},
-        {"若叶睦", ":/images/characters/portraits/mutsumi.png"},
-        {"三角初华", ":/images/characters/portraits/uika.png"},
-        {"丰川祥子", ":/images/characters/portraits/sakiko.png"},
-        {"长崎素世", ":/images/characters/portraits/soyo.png"}
+    // 34 个主题形态按原版怪物 ID 顺序映射，外观变化不影响原版数值。
+    const std::vector<const char*> themedPortraits = {
+        ":/images/characters/portraits/rana.png",    ":/images/characters/portraits/uika.png",
+        ":/images/characters/portraits/viola.png",  ":/images/characters/portraits/tomori.png",
+        ":/images/characters/portraits/nyamu.png",  ":/images/characters/portraits/rana.png",
+        ":/images/characters/portraits/taki.png",   ":/images/characters/portraits/mutsumi.png",
+        ":/images/characters/portraits/uika.png",   ":/images/characters/portraits/rana.png",
+        ":/images/characters/portraits/tomori.png", ":/images/characters/portraits/taki.png",
+        ":/images/characters/portraits/umiri.png",  ":/images/characters/portraits/nyamu.png",
+        ":/images/characters/portraits/mutsumi.png",":/images/characters/portraits/uika.png",
+        ":/images/characters/portraits/sakiko.png", ":/images/characters/portraits/viola.png",
+        ":/images/characters/portraits/arale.png",  ":/images/characters/portraits/arale.png",
+        ":/images/characters/portraits/viola.png",  ":/images/characters/portraits/umiri.png",
+        ":/images/characters/portraits/nyamu.png",  ":/images/characters/portraits/rana.png",
+        ":/images/characters/portraits/taki.png",   ":/images/characters/portraits/tomori.png",
+        ":/images/characters/portraits/umiri.png",  ":/images/characters/portraits/nyamu.png",
+        ":/images/characters/portraits/mutsumi.png",":/images/characters/portraits/uika.png",
+        ":/images/characters/portraits/sakiko.png", ":/images/characters/portraits/viola.png",
+        ":/images/characters/portraits/soyo.png",   ":/images/characters/portraits/soyo.png"
     };
-    for (const auto& [name, path] : themedMonsters)
-        mw->loadMonsterImage(name, QString::fromUtf8(path));
+    for (size_t i = 0; i < monsters.size() && i < themedPortraits.size(); ++i)
+        mw->loadMonsterImage(monsters[i].GetName(), QString::fromUtf8(themedPortraits[i]));
 
     mw->update();
 }
@@ -136,8 +144,11 @@ QString MainWindow::getItemDescription(const Item* item) const
         return QString::fromUtf8("红钥匙 ×1");
     if (name == "Blue Key" || name == QString::fromUtf8("蓝钥匙"))
         return QString::fromUtf8("蓝钥匙 ×1");
-    if (name == "Green Key" || name == QString::fromUtf8("绿钥匙"))
-        return QString::fromUtf8("绿钥匙 ×1");
+    if (name == "Green Key" || name == QString::fromUtf8("绿钥匙") ||
+        name == "Yellow Key" || name == QString::fromUtf8("黄钥匙"))
+        return QString::fromUtf8("黄钥匙 ×1");
+    if (name == QString::fromUtf8("圣水"))
+        return QString::fromUtf8("生命值增加当前攻击力与防御力之和");
     if (name == QString::fromUtf8("万能钥匙"))
         return QString::fromUtf8("可开任何门3次（优先使用普通钥匙）");
     if (name == QString::fromUtf8("匿名眼镜"))
@@ -470,7 +481,7 @@ void MainWindow::showModifier()
         {QString::fromUtf8("金币 (Gold)"), &p.gold, 0, 999999},
         {QString::fromUtf8("红钥匙"), (int*)&p, -1, 0},   // special
         {QString::fromUtf8("蓝钥匙"), (int*)&p, -2, 0},   // special
-        {QString::fromUtf8("绿钥匙"), (int*)&p, -3, 0},   // special
+        {QString::fromUtf8("黄钥匙"), (int*)&p, -3, 0},   // special
     };
 
     // Key spinboxes need special handling since they use AddKey/HasKey
@@ -520,7 +531,7 @@ void MainWindow::showModifier()
 
     makeStatRow(QString::fromUtf8("红钥匙"), redKeySpin);
     makeStatRow(QString::fromUtf8("蓝钥匙"), blueKeySpin);
-    makeStatRow(QString::fromUtf8("绿钥匙"), greenKeySpin);
+    makeStatRow(QString::fromUtf8("黄钥匙"), greenKeySpin);
 
     statLayout->addStretch();
     tab->addTab(statTab, QString::fromUtf8("属性"));
@@ -547,7 +558,7 @@ void MainWindow::showModifier()
         {QString::fromUtf8("金币"), 100, "#da0"},
         {QString::fromUtf8("红钥匙"), 1, "#d33"},
         {QString::fromUtf8("蓝钥匙"), 1, "#33d"},
-        {QString::fromUtf8("绿钥匙"), 1, "#3a3"},
+        {QString::fromUtf8("黄钥匙"), 1, "#db3"},
         {QString::fromUtf8("万能钥匙"), 3, "#84d"},
         {QString::fromUtf8("上楼器"), 0, "#aa0"},
         {QString::fromUtf8("下楼器"), 0, "#a6a"},
@@ -828,7 +839,7 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
         QString keyName;
         if (tile == Tile_DoorRed) keyName = QString::fromUtf8("红钥匙");
         else if (tile == Tile_DoorBlue) keyName = QString::fromUtf8("蓝钥匙");
-        else if (tile == Tile_DoorGreen) keyName = QString::fromUtf8("绿钥匙");
+        else if (tile == Tile_DoorGreen) keyName = QString::fromUtf8("黄钥匙");
         QMessageBox::information(this, QString::fromUtf8("门已锁"),
             QString::fromUtf8("需要 %1 才能打开这扇门。").arg(keyName));
         break;

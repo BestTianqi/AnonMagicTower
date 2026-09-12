@@ -61,9 +61,17 @@ void MapWidget::generatePlaceholders()
     // 蓝门
     m_tilePix[Tile_DoorBlue] = makePixmap(QColor(50, 70, 180), QColor(30, 40, 140),
         QString::fromUtf8("蓝门"), Qt::white, 10);
-    // 绿门
-    m_tilePix[Tile_DoorGreen] = makePixmap(QColor(50, 160, 70), QColor(30, 120, 40),
-        QString::fromUtf8("绿门"), Qt::white, 10);
+    // 原版黄门（沿用 Tile_DoorGreen 的存档数值以兼容旧存档）
+    m_tilePix[Tile_DoorGreen] = makePixmap(QColor(220, 180, 40), QColor(150, 105, 20),
+        QString::fromUtf8("黄门"), QColor(60, 35, 0), 10);
+    m_tilePix[Tile_DoorMagic] = makePixmap(QColor(130, 60, 175), QColor(75, 30, 120),
+        QString::fromUtf8("魔法门"), Qt::white, 9);
+    m_tilePix[Tile_DoorIron] = makePixmap(QColor(100, 105, 115), QColor(45, 50, 60),
+        QString::fromUtf8("铁门"), Qt::white, 10);
+    m_tilePix[Tile_Lava] = makePixmap(QColor(220, 70, 20), QColor(130, 25, 10),
+        QString::fromUtf8("岩浆"), QColor(255, 230, 80), 9);
+    m_tilePix[Tile_StarRiver] = makePixmap(QColor(35, 40, 110), QColor(90, 100, 210),
+        QString::fromUtf8("星河"), Qt::white, 9);
     // NPC
     m_tilePix[Tile_NPC] = makePixmap(QColor(200, 160, 60), QColor(160, 120, 30),
         QString::fromUtf8("NPC"), Qt::white, 10);
@@ -164,6 +172,7 @@ static bool isKeyItem(const std::string& name)
     return name == "Red Key" || name == "红钥匙" ||
            name == "Blue Key" || name == "蓝钥匙" ||
            name == "Green Key" || name == "绿钥匙" ||
+           name == "Yellow Key" || name == "黄钥匙" ||
            name == "万能钥匙";
 }
 
@@ -539,9 +548,10 @@ static void itemAppearance(const std::string& name, int value, QColor& fill, QCo
     if (qname == QString::fromUtf8("Blue Key") || qname == QString::fromUtf8("蓝钥匙"))
         { fill = QColor(45, 60, 200); border = QColor(20, 30, 160);
           label = QString::fromUtf8("蓝钥"); textColor = QColor(255, 220, 100); return; }
-    if (qname == QString::fromUtf8("Green Key") || qname == QString::fromUtf8("绿钥匙"))
-        { fill = QColor(45, 180, 60); border = QColor(20, 140, 30);
-          label = QString::fromUtf8("绿钥"); textColor = QColor(255, 220, 100); return; }
+    if (qname == QString::fromUtf8("Green Key") || qname == QString::fromUtf8("绿钥匙") ||
+        qname == QString::fromUtf8("Yellow Key") || qname == QString::fromUtf8("黄钥匙"))
+        { fill = QColor(225, 185, 40); border = QColor(155, 110, 20);
+          label = QString::fromUtf8("黄钥"); textColor = QColor(70, 35, 0); return; }
     if (qname == QString::fromUtf8("万能钥匙"))
         { fill = QColor(130, 60, 200); border = QColor(90, 30, 160);
           label = QString::fromUtf8("万能钥"); textColor = QColor(255, 220, 100); return; }
@@ -603,7 +613,11 @@ static QString tileLabel(int tileType)
     case Tile_StairsDown: return QString::fromUtf8("↓"); // ↓
     case Tile_DoorRed:    return QString::fromUtf8("红门");
     case Tile_DoorBlue:   return QString::fromUtf8("蓝门");
-    case Tile_DoorGreen:  return QString::fromUtf8("绿门");
+    case Tile_DoorGreen:  return QString::fromUtf8("黄门");
+    case Tile_DoorMagic:  return QString::fromUtf8("魔法门");
+    case Tile_DoorIron:   return QString::fromUtf8("铁门");
+    case Tile_Lava:       return QString::fromUtf8("岩浆");
+    case Tile_StarRiver:  return QString::fromUtf8("星河");
     case Tile_NPC:        return QString::fromUtf8("NPC");
     case Tile_Shop:       return QString::fromUtf8("商店");
     default:              return {};

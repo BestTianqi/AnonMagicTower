@@ -3,6 +3,7 @@
 #include <QString>
 #include <QFile>
 #include <QDir>
+#include <QTextStream>
 #include <algorithm>
 #include <fstream>
 #include <sstream>
@@ -19,80 +20,138 @@ void Game::generateClassicTower()
     m_floor = 1;
     for (int floor = 1; floor <= 50; ++floor) {
         FloorData fd;
-        fd.map.assign(m_width * m_height, Tile_Floor);
-        auto set = [&](int x, int y, int tile) { fd.map[y * m_width + x] = tile; };
-
-        // 原版 50 层魔塔常见的双层外墙与十字分区结构。
-        for (int i = 0; i < m_width; ++i) {
-            set(i, 0, Tile_Wall); set(i, 1, Tile_Wall);
-            set(i, m_height - 2, Tile_Wall); set(i, m_height - 1, Tile_Wall);
-            set(0, i, Tile_Wall); set(1, i, Tile_Wall);
-            set(m_width - 2, i, Tile_Wall); set(m_width - 1, i, Tile_Wall);
-        }
-        for (int y = 2; y < 13; ++y) {
-            if (y != 3 + (floor % 5)) set(7, y, Tile_Wall);
-        }
-        for (int x = 2; x < 13; ++x) {
-            if (x != 4 + (floor % 6)) set(x, 7, Tile_Wall);
-        }
-
-        set(2, 2, floor == 1 ? Tile_Floor : Tile_StairsUp);
-        set(12, 12, floor == 50 ? Tile_Floor : Tile_StairsDown);
-        if (floor % 3 == 0) set(7, 3 + (floor % 5), Tile_DoorRed);
-        if (floor % 3 == 1) set(4 + (floor % 6), 7, Tile_DoorBlue);
-        if (floor % 3 == 2) set(7, 3 + (floor % 5), Tile_DoorGreen);
-        if (floor >= 10 && floor % 5 == 0) set(10, 10, Tile_DarkWall);
-
-        const int tier = std::min(17, (floor - 1) / 3);
-        const int spots[][2] = {{3, 5}, {10, 5}, {5, 10}, {10, 10}};
-        const int count = 2 + (floor % 3);
-        for (int i = 0; i < count; ++i) {
-            int x = spots[i][0], y = spots[i][1];
-            if (x == 10 && y == 10 && floor >= 10 && floor % 5 == 0) { x = 11; y = 10; }
-            set(x, y, Tile_Monster);
-            fd.monsters.emplace(y * m_width + x,
-                MonsterDB::getByIndex(std::min(17, tier + (i > 1 ? 1 : 0))));
-        }
-        if (floor % 2 == 1) {
-            set(3, 3, Tile_Item); fd.items.emplace(3 * m_width + 3, createItemByName("生命药", 50 + floor * 4));
-        }
-        if (floor % 4 == 0) {
-            set(11, 3, Tile_Item); fd.items.emplace(3 * m_width + 11, createItemByName("红钥匙", 0));
-        }
-        if (floor % 7 == 0) {
-            set(3, 11, Tile_Item); fd.items.emplace(11 * m_width + 3, createItemByName("武器", 3 + floor / 10));
-        }
-        // 五个十层区域的经典补给节点与关键装备房。
-        if (floor == 11 || floor == 21 || floor == 31 || floor == 41) {
-            set(6, 3, Tile_Shop);
-            fd.shops.emplace(3 * m_width + 6,
-                ShopData{120 + floor * 8, 180 + floor * 10, 160 + floor * 9,
-                         100 + floor * 5, 5 + floor / 10, 5 + floor / 12});
-        }
-        if (floor == 20) {
-            set(5, 11, Tile_Item);
-            fd.items.emplace(11 * m_width + 5, createItemByName("蓝钥匙", 0));
-        }
-        if (floor == 35) {
-            set(5, 5, Tile_Item);
-            fd.items.emplace(5 * m_width + 5, createItemByName("武器", 40));
-        }
-        if (floor == 37) {
-            set(9, 5, Tile_Item);
-            fd.items.emplace(5 * m_width + 9, createItemByName("防具", 40));
-        }
-        if (floor == 41) {
-            set(9, 9, Tile_Item);
-            fd.items.emplace(9 * m_width + 9, createItemByName("幸运金币", 0));
-        }
-        if (floor == 50) {
-            set(7, 6, Tile_Monster);
-            fd.monsters.emplace(6 * m_width + 7, MonsterDB::get("长崎素世"));
-        }
+        fd.map.assign(m_width * m_height, Tile_Wall);
+        for (int y = 2; y <= 12; ++y)
+            for (int x = 2; x <= 12; ++x)
+                fd.map[y * m_width + x] = Tile_Floor;
         m_floors.emplace(floor, std::move(fd));
     }
+
+    QFile source(":/data/classic50_map.txt");
+    if (!source.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        m_currentFloor = &m_floors[m_floor];
+        return;
+    }
+
+    auto makeClassicItem = [](int id) -> std::unique_ptr<Item> {
+        switch (id) {
+        case 1:  return std::make_unique<Key>(KeyType::Green); // 内部第三钥匙槽即黄钥匙
+        case 2:  return std::make_unique<Key>(KeyType::Blue);
+        case 3:  return std::make_unique<Key>(KeyType::Red);
+        case 4:  return std::make_unique<MagicKey>();
+        case 5:  return std::make_unique<Potion>(200);
+        case 6:  return std::make_unique<Potion>(500);
+        case 7:  return std::make_unique<Weapon>(3);
+        case 8:  return std::make_unique<Armor>(3);
+        case 10: return std::make_unique<AnonGlasses>();
+        case 13: return std::make_unique<WallBreaker>();
+        case 17: return std::make_unique<HolyWater>();
+        case 18: return std::make_unique<LuckyCoin>();
+        case 21: return std::make_unique<StairUpper>();
+        case 22: return std::make_unique<StairLower>();
+        case 24: return std::make_unique<Weapon>(10);
+        case 25: return std::make_unique<Armor>(10);
+        case 26: return std::make_unique<Weapon>(20);
+        case 27: return std::make_unique<Armor>(20);
+        case 28: return std::make_unique<Weapon>(40);
+        case 29: return std::make_unique<Armor>(40);
+        case 30: return std::make_unique<Weapon>(50);
+        case 31: return std::make_unique<Armor>(50);
+        case 32: return std::make_unique<Weapon>(100);
+        case 33: return std::make_unique<Armor>(100);
+        default: return std::make_unique<Item>("ClassicArtifact", id);
+        }
+    };
+
+    QTextStream stream(&source);
+    const QString header = stream.readLine().trimmed();
+    if (header != "CLASSIC50_MAP_V1") {
+        m_currentFloor = &m_floors[m_floor];
+        return;
+    }
+    while (!stream.atEnd()) {
+        const QString line = stream.readLine().trimmed();
+        if (line.isEmpty() || line.startsWith('#')) continue;
+        QTextStream fields(const_cast<QString*>(&line), QIODevice::ReadOnly);
+        int level = 0, type = 0, id = 0, sourceX = 0, sourceY = 0;
+        fields >> level >> type >> id >> sourceX >> sourceY;
+        if (fields.status() != QTextStream::Ok || level < 1 || level > 50) continue;
+
+        const int x = sourceX + 7;
+        const int y = 7 - sourceY;
+        if (x < 2 || x > 12 || y < 2 || y > 12) continue;
+        FloorData& fd = m_floors[level];
+        const int key = y * m_width + x;
+
+        if (type == 0) {
+            int tile = Tile_Floor;
+            if (id == 1) tile = Tile_DoorGreen;       // 黄门（沿用旧存档枚举值）
+            else if (id == 2) tile = Tile_DoorBlue;
+            else if (id == 3) tile = Tile_DoorRed;
+            else if (id == 6) tile = Tile_Wall;
+            else if (id == 15) tile = Tile_Lava;
+            else if (id == 38) tile = Tile_StarRiver;
+            else if (id == 7) tile = Tile_StairsUp;
+            else if (id == 8) tile = Tile_StairsDown;
+            else if (id == 12 || id == 16 || id == 19 || id == 25 ||
+                     id == 27 || id == 29 || id == 32) tile = Tile_DarkWall;
+            else if (id == 4 || id == 5 || id == 18 || id == 20 ||
+                     id == 22 || id == 26 || id == 34) tile = Tile_DoorMagic;
+            else if (id == 9 || id == 11) tile = Tile_DoorIron;
+            fd.map[key] = tile;
+        } else if (type == 1) {
+            fd.items[key] = makeClassicItem(id);
+            fd.map[key] = Tile_Item;
+        } else if (type == 2) {
+            if (id == 1) continue; // 原版玩家出生标记
+            if (id == 46) { // 50 层小偷剧情位置会显现魔王本体
+                fd.monsters[key] = MonsterDB::getByIndex(33);
+                fd.map[key] = Tile_Monster;
+                continue;
+            }
+            const bool merchant = id == 6 || id == 7 || id == 8 || id == 9 || id == 10 ||
+                                  id == 11 || id == 15 || id == 16 || id == 24 || id == 27 ||
+                                  id == 28 || id == 36 || id == 38 || id == 41 || id == 43 || id == 44;
+            if (merchant) {
+                fd.map[key] = Tile_Shop;
+                fd.shops[key] = ShopData{20 + level * 10, 20 + level * 10, 20 + level * 10,
+                                         100 + level * 5, 2 + level / 10, 2 + level / 10};
+            } else {
+                fd.map[key] = Tile_NPC;
+                fd.npcs.emplace(key, NPC("剧情角色", {"这里保持原版 NPC 的地图位置。"}));
+            }
+        } else if (type == 3 && id >= 1 && id <= 34) {
+            fd.monsters[key] = MonsterDB::getByIndex(id - 1);
+            fd.map[key] = Tile_Monster;
+        }
+    }
+
+    auto spawnEventMonster = [this](int level, int sourceX, int sourceY, int monsterId) {
+        FloorData& fd = m_floors[level];
+        const int x = sourceX + 7;
+        const int y = 7 - sourceY;
+        const int key = y * m_width + x;
+        fd.monsters[key] = MonsterDB::getByIndex(monsterId - 1);
+        fd.map[key] = Tile_Monster;
+    };
+
+    // 原版脚本动态生成、因而不在静态 mapinfo 中的关键战斗。
+    spawnEventMonster(20, 0, 0, 16);
+    m_floors[20].map[(7 - (-3)) * m_width + (0 + 7)] = Tile_DoorMagic;
+    spawnEventMonster(49, 0, 3, 33);
+    const int guardPositions[][2] = {
+        {-1, 4}, {0, 4}, {1, 4}, {-1, 3}, {1, 3}, {-1, 2}, {0, 2}, {1, 2}
+    };
+    for (const auto& point : guardPositions)
+        spawnEventMonster(49, point[0], point[1], 31);
+
     m_currentFloor = &m_floors[m_floor];
-    m_player.x = 2; m_player.y = 2; m_player.hp = 100; m_player.atk = 10; m_player.def = 5;
+    m_player = Player();
+    m_player.x = 7;
+    m_player.y = 12;
+    m_player.hp = 1000;
+    m_player.atk = 10;
+    m_player.def = 10;
 }
 
 void Game::initFloor(int floor)
@@ -235,7 +294,7 @@ bool Game::breakWall(int x, int y)
     if (x < 0 || y < 0 || x >= m_width || y >= m_height) return false;
     int idx = y * m_width + x;
     if (m_currentFloor->map[idx] == Tile_Wall) {
-        m_currentFloor->map[idx] = Tile_Floor;
+        m_currentFloor->map[idx] = m_currentFloor->items.count(idx) ? Tile_Item : Tile_Floor;
         return true;
     }
     return false;
@@ -320,8 +379,20 @@ Game::MoveResult Game::tryMovePlayer(int nx, int ny)
         }
         return Move_Block;
 
-    case Tile_DarkWall:
+    case Tile_Lava:
+    case Tile_StarRiver:
+        return Move_Block;
+
+    case Tile_DoorMagic:
+    case Tile_DoorIron:
+        // 原作由楼层剧情开启；当前事件兼容层在本层敌人清空后放行。
+        if (!m_currentFloor->monsters.empty()) return Move_DoorLocked;
         setTile(nx, ny, Tile_Floor);
+        m_player.x = nx; m_player.y = ny;
+        return Move_Ok;
+
+    case Tile_DarkWall:
+        setTile(nx, ny, m_currentFloor->items.count(posKey(nx, ny)) ? Tile_Item : Tile_Floor);
         m_player.x = nx; m_player.y = ny;
         return Move_Ok;
 
@@ -465,13 +536,35 @@ Game::FightResult Game::fightAt(int x, int y, std::vector<std::string>& outLog)
 
             int key = posKey(x, y);
             m_currentFloor->monsters.erase(key);
-            setTile(x, y, Tile_Floor);
+            setTile(x, y, m_currentFloor->items.count(key) ? Tile_Item : Tile_Floor);
+
+            if (m_floor == 49 && bossName == "丰川祥子·魔法警卫") {
+                auto eventKey = [this](int sourceX, int sourceY) {
+                    return (7 - sourceY) * m_width + (sourceX + 7);
+                };
+                const bool sealComplete =
+                    !m_currentFloor->monsters.count(eventKey(0, 4)) &&
+                    !m_currentFloor->monsters.count(eventKey(-1, 3)) &&
+                    !m_currentFloor->monsters.count(eventKey(1, 3)) &&
+                    !m_currentFloor->monsters.count(eventKey(0, 2));
+                if (sealComplete) {
+                    const int bossKey = eventKey(0, 3);
+                    m_currentFloor->monsters[bossKey] =
+                        Monster("长崎素世·魔王幻影", 800, 500, 100, 500);
+                    outLog.push_back("四名魔法警卫形成的封印生效，长崎素世·魔王幻影的属性降为原来的十分之一！");
+                }
+            }
+            if (m_floor == 49 && bossName == "长崎素世·魔王幻影") {
+                m_currentFloor->monsters.clear();
+                for (int& tile : m_currentFloor->map)
+                    if (tile == Tile_Monster) tile = Tile_Floor;
+            }
 
             std::ostringstream ss;
             ss << "你击败了 " << bossName << " 并获得 " << gold << " 金币。";
             outLog.push_back(ss.str());
             if (hasShield) m_player.tempShieldCharges--;
-            if (bossName == "长崎素世")
+            if (bossName == "长崎素世·魔王本体")
                 return Fight_GameWin;
             return Fight_PlayerWin;
         }
@@ -612,7 +705,8 @@ std::unique_ptr<Item> Game::createItemByName(const std::string& iname, int ival)
         return std::make_unique<Key>(KeyType::Red);
     if (iname == "Blue Key" || iname == QString::fromUtf8("蓝钥匙").toStdString())
         return std::make_unique<Key>(KeyType::Blue);
-    if (iname == "Green Key" || iname == QString::fromUtf8("绿钥匙").toStdString())
+    if (iname == "Green Key" || iname == QString::fromUtf8("绿钥匙").toStdString() ||
+        iname == "Yellow Key" || iname == QString::fromUtf8("黄钥匙").toStdString())
         return std::make_unique<Key>(KeyType::Green);
     if (iname == "Potion" || iname == QString::fromUtf8("生命药").toStdString())
         return std::make_unique<Potion>(ival);
@@ -640,6 +734,8 @@ std::unique_ptr<Item> Game::createItemByName(const std::string& iname, int ival)
         return std::make_unique<MatchaParfait>();
     if (iname == QString::fromUtf8("幸运金币").toStdString())
         return std::make_unique<LuckyCoin>();
+    if (iname == QString::fromUtf8("圣水").toStdString())
+        return std::make_unique<HolyWater>();
     return nullptr;
 }
 

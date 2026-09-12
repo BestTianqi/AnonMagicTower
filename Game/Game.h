@@ -22,7 +22,11 @@ enum TileType {
     Tile_DoorGreen,
     Tile_NPC,
     Tile_Shop,
-    Tile_DarkWall
+    Tile_DarkWall,
+    Tile_DoorMagic,
+    Tile_DoorIron,
+    Tile_Lava,
+    Tile_StarRiver
 };
 
 constexpr int MAP_SIZE = 15;

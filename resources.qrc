@@ -2,6 +2,7 @@
     <qresource prefix="/">
         <!-- 默认地图 -->
         <file>map.txt</file>
+        <file>data/classic50_map.txt</file>
         <!-- 地砖 -->
         <file>images/wall.png</file>
         <file>images/floor.png</file>

@@ -26,6 +26,16 @@ void Potion::Apply(Player& player) const
     player.hp += m_heal;
 }
 
+HolyWater::HolyWater()
+    : Item(QString::fromUtf8("圣水").toStdString(), 0)
+{
+}
+
+void HolyWater::Apply(Player& player) const
+{
+    player.hp += player.atk + player.def;
+}
+
 // Weapon
 Weapon::Weapon(int atkBonus)
     : Item("Weapon", atkBonus), m_atk(atkBonus)
@@ -82,7 +92,7 @@ std::string Key::nameForType(KeyType t) {
     switch (t) {
     case KeyType::Red: return QString::fromUtf8("红钥匙").toStdString();
     case KeyType::Blue: return QString::fromUtf8("蓝钥匙").toStdString();
-    case KeyType::Green: return QString::fromUtf8("绿钥匙").toStdString();
+    case KeyType::Green: return QString::fromUtf8("黄钥匙").toStdString();
     default: return "Key";
     }
 }
