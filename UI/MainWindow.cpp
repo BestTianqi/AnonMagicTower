@@ -1210,6 +1210,11 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
         return;
     }
 
+    // 游戏坐标已经按格更新；动画未结束前不接受下一次移动，避免把多个格点
+    // 合并成一次跨格插值。下一次按键仍会从整数目标格开始播放动画。
+    if (ui.mapWidget->isPlayerMoving())
+        return;
+
     // 检查上楼器/下楼器（传送到当前坐标，不找楼梯）
     if (m_game->player().stairUpUsed) {
         m_game->player().stairUpUsed = false;

@@ -29,6 +29,22 @@ public:
         }
     }
 
+    // Start one authoritative grid step. Non-adjacent changes (teleports,
+    // floor changes, save loading) are presentation snaps, never a walk.
+    bool beginGridStep(int fromTileX, int fromTileY, int toTileX, int toTileY,
+                       float pixelsPerSecond) {
+        const int distance = std::abs(toTileX - fromTileX) + std::abs(toTileY - fromTileY);
+        if (distance != 1) {
+            snapTo(toTileX, toTileY);
+            return false;
+        }
+        if (std::fabs(m_x - static_cast<float>(fromTileX)) > 0.001f ||
+            std::fabs(m_y - static_cast<float>(fromTileY)) > 0.001f)
+            snapTo(fromTileX, fromTileY);
+        begin(toTileX, toTileY, pixelsPerSecond);
+        return true;
+    }
+
     bool advance(float elapsedMs) {
         if (!isMoving()) return false;
         m_elapsedMs = std::min(m_durationMs, m_elapsedMs + std::max(0.0f, elapsedMs));

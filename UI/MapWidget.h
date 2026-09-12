@@ -25,6 +25,7 @@ public:
     void loadPlayerImage(const QString& path);
     void loadPlayerSpriteSheet(const QString& path);
     void setPlayerDirection(int dx, int dy);
+    bool isPlayerMoving() const { return m_motionInitialized && m_playerMotion.isMoving(); }
     void loadBackgroundImage(const QString& path);
 
     QSize sizeHint() const override;

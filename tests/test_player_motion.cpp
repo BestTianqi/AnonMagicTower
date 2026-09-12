@@ -18,5 +18,14 @@ int main() {
     motion.advance(500);
     assert(!motion.isMoving());
     assert(motion.x() == 3.0f && motion.y() == 2.0f);
+
+    // 游戏位置始终按格计算：只有相邻格才播放移动动画，传送等跨格变化直接吸附。
+    motion.snapTo(2, 3);
+    assert(motion.beginGridStep(2, 3, 3, 3, 180.0f));
+    assert(motion.isMoving());
+    motion.snapTo(2, 3);
+    assert(!motion.beginGridStep(2, 3, 4, 3, 180.0f));
+    assert(!motion.isMoving());
+    assert(motion.x() == 4.0f && motion.y() == 3.0f);
     return 0;
 }

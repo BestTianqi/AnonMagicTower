@@ -191,7 +191,8 @@ void MapWidget::syncPlayerMotionTarget()
         m_lastPlayerTileY = tileY;
         m_motionInitialized = true;
     } else if (tileX != m_lastPlayerTileX || tileY != m_lastPlayerTileY) {
-        m_playerMotion.begin(tileX, tileY, 180.0f);
+        m_playerMotion.beginGridStep(m_lastPlayerTileX, m_lastPlayerTileY,
+                                     tileX, tileY, 180.0f);
         m_lastPlayerTileX = tileX;
         m_lastPlayerTileY = tileY;
         m_frameElapsedMs = 0;
