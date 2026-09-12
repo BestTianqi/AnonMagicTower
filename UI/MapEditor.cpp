@@ -45,8 +45,8 @@ static QString editorTileAsset(int type)
     case Tile_DoorIron: return ":/images/runtime/tiles/door_iron.png";
     case Tile_Lava: return ":/images/runtime/tiles/lava.png";
     case Tile_StarRiver: return ":/images/runtime/tiles/star_river.png";
-    case Tile_NPC: return ":/images/npc.png";
-    case Tile_Shop: return ":/images/runtime/tiles/shop.png";
+    case Tile_NPC: return ":/images/characters/portraits/marina.png";
+    case Tile_Shop: return ":/images/characters/portraits/ririko.png";
     default: return {};
     }
 }

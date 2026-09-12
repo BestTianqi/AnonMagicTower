@@ -17,6 +17,8 @@
         <!-- NPC / 商店 -->
         <file>images/npc.png</file>
         <file>images/shop.png</file>
+        <file>images/characters/portraits/marina.png</file>
+        <file>images/characters/portraits/ririko.png</file>
         <!-- 玩家 -->
         <file>images/player.png</file>
         <!-- 18种怪物 -->

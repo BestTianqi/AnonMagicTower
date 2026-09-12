@@ -146,8 +146,9 @@ void MainWindow::loadAssets()
     mw->loadTileImage(Tile_StairsDown,  ":/images/runtime/tiles/stairs_down.png");
     mw->loadTileImage(Tile_Lava,        ":/images/runtime/tiles/lava.png");
     mw->loadTileImage(Tile_StarRiver,   ":/images/runtime/tiles/star_river.png");
-    mw->loadTileImage(Tile_Shop,        ":/images/runtime/tiles/shop.png");
-    mw->loadTileImage(Tile_NPC, ":/images/npc.png");
+    // 普通 NPC 使用麻里奈，商店使用凛凛子（均为 60×60 RGBA 角色小人）。
+    mw->loadTileImage(Tile_Shop,        ":/images/characters/portraits/ririko.png");
+    mw->loadTileImage(Tile_NPC,         ":/images/characters/portraits/marina.png");
 
     const std::vector<std::pair<const char*, const char*>> itemImages = {
         {"Red Key",       ":/images/runtime/items/key_red.png"},
@@ -369,13 +370,27 @@ void MainWindow::showNPCDialog(int x, int y)
 
     Player& p = m_game->player();
 
+    // NPC 对话使用与地图图块相同的角色头像，保持角色身份连续。
+    const QString npcPortrait = npc->IsTrader()
+        ? QStringLiteral(":/images/characters/portraits/ririko.png")
+        : QStringLiteral(":/images/characters/portraits/marina.png");
+    auto showNpcInfo = [&](const QString& title, const QString& text) {
+        QMessageBox box(this);
+        box.setWindowTitle(title);
+        box.setText(text);
+        QPixmap avatar(npcPortrait);
+        if (!avatar.isNull())
+            box.setIconPixmap(avatar.scaled(60, 60, Qt::KeepAspectRatio, Qt::FastTransformation));
+        box.exec();
+    };
+
     // 原版关键 NPC 事件（保留一次性状态）。
     const int classicId = npc->ClassicId();
     if (!npc->HasGivenReward() && classicId == 33) {
         p.atk = (p.atk * 103 + 99) / 100;
         p.def = (p.def * 103 + 99) / 100;
         npc->SetGiven(true);
-        QMessageBox::information(this, QString::fromUtf8("商人"), QString::fromUtf8("你的攻击力和防御力提升了 3%！"));
+        showNpcInfo(QString::fromUtf8("商人"), QString::fromUtf8("你的攻击力和防御力提升了 3%！"));
         updateHUD();
         return;
     }
@@ -385,7 +400,7 @@ void MainWindow::showNPCDialog(int x, int y)
         if (reply == QMessageBox::Yes) {
             npc->SetGiven(true);
             while (m_game->currentFloor() < 50) m_game->goUpFloor(p.x, p.y, false);
-            QMessageBox::information(this, QString::fromUtf8("公主"), QString::fromUtf8("我会在魔王身边等你。"));
+            showNpcInfo(QString::fromUtf8("公主"), QString::fromUtf8("我会在魔王身边等你。"));
         }
         updateHUD();
         return;
@@ -459,8 +474,7 @@ void MainWindow::showNPCDialog(int x, int y)
             }
             npc->SetTradeDone(true);
 
-            QMessageBox::information(this,
-                QString::fromStdString(npc->GetName()),
+            showNpcInfo(QString::fromStdString(npc->GetName()),
                 QString::fromUtf8("交易成功！获得了 %1。").arg(rewardDesc));
         } else {
             // 显示NPC对话
@@ -471,9 +485,7 @@ void MainWindow::showNPCDialog(int x, int y)
                     fullDialog += QString::fromStdString(npc->GetName()) + ": " + QString::fromStdString(dialog[i]);
                     if (i + 1 < dialog.size()) fullDialog += "\n";
                 }
-                QMessageBox::information(this,
-                    QString::fromStdString(npc->GetName()),
-                    fullDialog);
+                showNpcInfo(QString::fromStdString(npc->GetName()), fullDialog);
             }
         }
 
@@ -487,9 +499,7 @@ void MainWindow::showNPCDialog(int x, int y)
     std::string reply = npc->Interact(p);
 
     if (hadReward && npc->HasGivenReward()) {
-        QMessageBox::information(this,
-            QString::fromStdString(npc->GetName()),
-            QString::fromStdString(reply));
+        showNpcInfo(QString::fromStdString(npc->GetName()), QString::fromStdString(reply));
     } else {
         const auto& dialog = npc->Dialog();
         QString fullDialog;
@@ -497,9 +507,7 @@ void MainWindow::showNPCDialog(int x, int y)
             fullDialog += QString::fromStdString(npc->GetName()) + ": " + QString::fromStdString(dialog[i]);
             if (i + 1 < dialog.size()) fullDialog += "\n";
         }
-        QMessageBox::information(this,
-            QString::fromStdString(npc->GetName()),
-            fullDialog);
+        showNpcInfo(QString::fromStdString(npc->GetName()), fullDialog);
     }
 }
 
