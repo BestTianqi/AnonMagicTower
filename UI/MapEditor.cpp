@@ -16,9 +16,79 @@
 #include <QFrame>
 #include <QScrollArea>
 #include <QApplication>
+#include <QHash>
 #include <algorithm>
 
 // ==================== MapEditWidget ====================
+
+static QPixmap editorAsset(const QString& path)
+{
+    static QHash<QString, QPixmap> cache;
+    if (!cache.contains(path))
+        cache.insert(path, QPixmap(path).scaled(60, 60, Qt::IgnoreAspectRatio,
+                                                 Qt::FastTransformation));
+    return cache.value(path);
+}
+
+static QString editorTileAsset(int type)
+{
+    switch (type) {
+    case Tile_Floor: return ":/images/runtime/tiles/floor.png";
+    case Tile_Wall: return ":/images/runtime/tiles/wall.png";
+    case Tile_DarkWall: return ":/images/runtime/tiles/dark_wall.png";
+    case Tile_StairsUp: return ":/images/runtime/tiles/stairs_up.png";
+    case Tile_StairsDown: return ":/images/runtime/tiles/stairs_down.png";
+    case Tile_DoorRed: return ":/images/runtime/tiles/door_red.png";
+    case Tile_DoorBlue: return ":/images/runtime/tiles/door_blue.png";
+    case Tile_DoorGreen: return ":/images/runtime/tiles/door_yellow.png";
+    case Tile_DoorMagic: return ":/images/runtime/tiles/door_magic.png";
+    case Tile_DoorIron: return ":/images/runtime/tiles/door_iron.png";
+    case Tile_Lava: return ":/images/runtime/tiles/lava.png";
+    case Tile_StarRiver: return ":/images/runtime/tiles/star_river.png";
+    case Tile_NPC: return ":/images/npc.png";
+    case Tile_Shop: return ":/images/runtime/tiles/shop.png";
+    default: return {};
+    }
+}
+
+static QString editorItemAsset(const std::string& name)
+{
+    const QString item = QString::fromStdString(name);
+    if (item == "Red Key" || item == QString::fromUtf8("红钥匙")) return ":/images/runtime/items/key_red.png";
+    if (item == "Blue Key" || item == QString::fromUtf8("蓝钥匙")) return ":/images/runtime/items/key_blue.png";
+    if (item == "Green Key" || item == "Yellow Key" || item == QString::fromUtf8("绿钥匙") || item == QString::fromUtf8("黄钥匙")) return ":/images/runtime/items/key_yellow.png";
+    if (item == QString::fromUtf8("万能钥匙")) return ":/images/runtime/items/key_magic.png";
+    if (item == "Potion" || item == QString::fromUtf8("生命药") || item == QString::fromUtf8("药水")) return ":/images/runtime/items/potion.png";
+    if (item == "Weapon" || item == QString::fromUtf8("武器")) return ":/images/runtime/items/weapon.png";
+    if (item == "Armor" || item == QString::fromUtf8("防具")) return ":/images/runtime/items/armor.png";
+    if (item == "Treasure" || item == QString::fromUtf8("金币")) return ":/images/runtime/items/treasure.png";
+    if (item == QString::fromUtf8("匿名眼镜")) return ":/images/runtime/items/glasses.png";
+    if (item == QString::fromUtf8("破墙锤")) return ":/images/runtime/items/wall_breaker.png";
+    if (item == QString::fromUtf8("上楼器")) return ":/images/runtime/items/stairs_up.png";
+    if (item == QString::fromUtf8("下楼器")) return ":/images/runtime/items/stairs_down.png";
+    if (item == QString::fromUtf8("临时护盾")) return ":/images/runtime/items/temp_shield.png";
+    if (item == QString::fromUtf8("企鹅玩偶")) return ":/images/runtime/items/penguin_doll.png";
+    if (item == QString::fromUtf8("抹茶芭菲")) return ":/images/runtime/items/matcha_parfait.png";
+    if (item == QString::fromUtf8("幸运金币")) return ":/images/runtime/items/lucky_coin.png";
+    if (item == QString::fromUtf8("圣水")) return ":/images/runtime/items/holy_water.png";
+    return ":/images/runtime/items/artifact.png";
+}
+
+static QString editorMonsterAsset(const std::string& name)
+{
+    const QString monster = QString::fromStdString(name);
+    if (monster.contains(QString::fromUtf8("长崎素世"))) return ":/images/characters/portraits/soyo.png";
+    if (monster.contains(QString::fromUtf8("高松灯"))) return ":/images/characters/portraits/tomori.png";
+    if (monster.contains(QString::fromUtf8("椎名立希"))) return ":/images/characters/portraits/taki.png";
+    if (monster.contains(QString::fromUtf8("要乐奈"))) return ":/images/characters/portraits/rana.png";
+    if (monster.contains(QString::fromUtf8("八幡海铃"))) return ":/images/characters/portraits/umiri.png";
+    if (monster.contains(QString::fromUtf8("祐天寺若麦"))) return ":/images/characters/portraits/nyamu.png";
+    if (monster.contains(QString::fromUtf8("若叶睦"))) return ":/images/characters/portraits/mutsumi.png";
+    if (monster.contains(QString::fromUtf8("三角初华"))) return ":/images/characters/portraits/uika.png";
+    if (monster.contains(QString::fromUtf8("丰川祥子"))) return ":/images/characters/portraits/sakiko.png";
+    if (monster.contains(QString::fromUtf8("仲町"))) return ":/images/characters/portraits/arale.png";
+    return ":/images/characters/portraits/viola.png";
+}
 
 MapEditWidget::MapEditWidget(QWidget* parent)
     : QWidget(parent)
@@ -158,6 +228,17 @@ void MapEditWidget::paintEvent(QPaintEvent*)
             QRect r(x * 60, y * 60, 60, 60);
             QRect inner = r.adjusted(1, 1, -1, -1);
 
+            QString asset = editorTileAsset(t.type);
+            if (t.type == Tile_Item) asset = editorItemAsset(t.itemName);
+            if (t.type == Tile_Monster) asset = editorMonsterAsset(t.monsterName);
+            if (!asset.isEmpty()) {
+                if (t.type != Tile_Wall && t.type != Tile_DarkWall && t.type != Tile_Lava &&
+                    t.type != Tile_StarRiver && t.type != Tile_Floor)
+                    painter.drawPixmap(r, editorAsset(":/images/runtime/tiles/floor.png"));
+                painter.drawPixmap(r, editorAsset(asset));
+                continue;
+            }
+
             QColor fill;
             QString label;
             QString itemDesc;
@@ -282,13 +363,7 @@ void MapEditWidget::paintEvent(QPaintEvent*)
 
     // 玩家位置指示器
     QRect pr(m_floor.playerX * 60, m_floor.playerY * 60, 60, 60);
-    painter.setBrush(QColor(60, 130, 240, 180));
-    painter.setPen(QPen(QColor(30, 80, 180), 2));
-    painter.drawEllipse(pr.adjusted(8, 8, -8, -8));
-    QFont f; f.setPixelSize(16); f.setBold(true);
-    painter.setFont(f);
-    painter.setPen(Qt::white);
-    painter.drawText(pr, Qt::AlignCenter, QString::fromUtf8("勇"));
+    painter.drawPixmap(pr, editorAsset(":/images/characters/portraits/anon.png"));
 
     // 悬停高亮
     if (m_hoverX >= 0 && m_hoverY >= 0) {

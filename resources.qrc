@@ -70,6 +70,43 @@
         <file>images/tiles/doors_stairs.png</file>
         <file>images/tiles/props.png</file>
         <file>images/tiles/effects.png</file>
+        <!-- 从主题图集裁切的运行时图块、道具与UI纹理 -->
+        <file>images/runtime/tiles/floor.png</file>
+        <file>images/runtime/tiles/wall.png</file>
+        <file>images/runtime/tiles/dark_wall.png</file>
+        <file>images/runtime/tiles/dark_wall_revealed.png</file>
+        <file>images/runtime/tiles/door_red.png</file>
+        <file>images/runtime/tiles/door_blue.png</file>
+        <file>images/runtime/tiles/door_yellow.png</file>
+        <file>images/runtime/tiles/door_magic.png</file>
+        <file>images/runtime/tiles/door_iron.png</file>
+        <file>images/runtime/tiles/stairs_up.png</file>
+        <file>images/runtime/tiles/stairs_down.png</file>
+        <file>images/runtime/tiles/lava.png</file>
+        <file>images/runtime/tiles/star_river.png</file>
+        <file>images/runtime/tiles/shop.png</file>
+        <file>images/runtime/items/key_red.png</file>
+        <file>images/runtime/items/key_blue.png</file>
+        <file>images/runtime/items/key_yellow.png</file>
+        <file>images/runtime/items/key_magic.png</file>
+        <file>images/runtime/items/potion.png</file>
+        <file>images/runtime/items/weapon.png</file>
+        <file>images/runtime/items/armor.png</file>
+        <file>images/runtime/items/treasure.png</file>
+        <file>images/runtime/items/glasses.png</file>
+        <file>images/runtime/items/wall_breaker.png</file>
+        <file>images/runtime/items/stairs_up.png</file>
+        <file>images/runtime/items/stairs_down.png</file>
+        <file>images/runtime/items/temp_shield.png</file>
+        <file>images/runtime/items/penguin_doll.png</file>
+        <file>images/runtime/items/matcha_parfait.png</file>
+        <file>images/runtime/items/lucky_coin.png</file>
+        <file>images/runtime/items/holy_water.png</file>
+        <file>images/runtime/items/artifact.png</file>
+        <file>images/runtime/ui/panel_texture.png</file>
+        <file>images/runtime/ui/button_texture.png</file>
+        <file>images/runtime/ui/title_plaque.png</file>
+        <file>images/runtime/ui/menu_backdrop.png</file>
         <!-- 游戏内角色头像（从 4x4 图集裁剪的首帧） -->
         <file>images/characters/portraits/anon.png</file>
         <file>images/characters/portraits/soyo.png</file>

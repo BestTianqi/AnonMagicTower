@@ -154,6 +154,22 @@ void MapWidget::loadPlayerImage(const QString& path)
     }
 }
 
+void MapWidget::loadItemImage(const std::string& name, const QString& path)
+{
+    QPixmap px(path);
+    if (!px.isNull())
+        m_itemPix[name] = px.scaled(TILE_SIZE, TILE_SIZE, Qt::IgnoreAspectRatio,
+                                    Qt::FastTransformation);
+}
+
+void MapWidget::loadDarkWallRevealedImage(const QString& path)
+{
+    QPixmap px(path);
+    if (!px.isNull())
+        m_darkWallRevealed = px.scaled(TILE_SIZE, TILE_SIZE, Qt::IgnoreAspectRatio,
+                                       Qt::FastTransformation);
+}
+
 void MapWidget::loadBackgroundImage(const QString& path)
 {
     QPixmap px(path);
@@ -656,7 +672,10 @@ void MapWidget::paintEvent(QPaintEvent*)
         }
         const int ox = (m_backgroundScaled.width() - width()) / 2;
         const int oy = (m_backgroundScaled.height() - height()) / 2;
+        painter.save();
+        painter.setOpacity(0.24);
         painter.drawPixmap(0, 0, m_backgroundScaled, ox, oy, width(), height());
+        painter.restore();
     }
 
     int w = m_game->width();
@@ -667,8 +686,14 @@ void MapWidget::paintEvent(QPaintEvent*)
             int t = m_game->map()[y * w + x];
             QRect r(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
 
+            // 所有可行走对象先使用素材地板打底，透明角色和道具不再漏出背景图。
+            if (t != Tile_Wall && t != Tile_DarkWall && t != Tile_Lava &&
+                t != Tile_StarRiver && t != Tile_Empty) {
+                auto floor = m_tilePix.find(Tile_Floor);
+                if (floor != m_tilePix.end()) painter.drawPixmap(r, floor->second);
+            }
+
             QPixmap* pix = nullptr;
-            bool hasRealImage = false;
             std::string monsterName;
 
             // -- 怪物 --
@@ -679,94 +704,18 @@ void MapWidget::paintEvent(QPaintEvent*)
                     auto it = m_monsterPix.find(monsterName);
                     if (it != m_monsterPix.end()) {
                         pix = &it->second;
-                        hasRealImage = (m_hasMonsterImage.count(monsterName) > 0);
                     }
                 }
                 if (!pix) pix = &m_defaultMonsterPix;
             }
 
-            // -- 道具（始终动态渲染）--
+            // -- 道具：全部使用预制像素素材，不再由 QPainter 绘制形状 --
             if (t == Tile_Item) {
                 const Item* item = m_game->itemAt(x, y);
                 if (item) {
-                    QColor fill, border, textColor;
-                    QString label, desc;
-                    itemAppearance(item->GetName(), item->GetValue(), fill, border, label, desc, textColor);
-
-                    QPixmap px(TILE_SIZE, TILE_SIZE);
-                    px.fill(Qt::transparent);
-                    {
-                        QPainter p(&px);
-                        p.setRenderHint(QPainter::Antialiasing);
-                        QRect inner(1, 1, TILE_SIZE - 2, TILE_SIZE - 2);
-
-                        // 如果有加载的 Tile_Item 图片，用它做底
-                        auto it = m_tilePix.find(Tile_Item);
-                        if (it != m_tilePix.end() && m_hasTileImage.count(Tile_Item))
-                            p.drawPixmap(0, 0, it->second);
-                        else
-                            p.fillRect(inner, fill);
-                        p.setPen(QPen(QColor(50, 50, 50), 1));
-                        p.drawRect(0, 0, TILE_SIZE - 1, TILE_SIZE - 1);
-
-                        // 特殊形状道具
-                        std::string iname = item->GetName();
-                        QRect full(0, 0, TILE_SIZE, TILE_SIZE);
-                        if (isKeyItem(iname)) {
-                            drawKeyShape(p, full, fill);
-                        } else if (iname == "Treasure" || iname == "金币") {
-                            drawCoinShape(p, full, fill);
-                            drawOverlayText(p, full, desc, 10, true);
-                        } else if (iname == "Weapon" || iname == "武器") {
-                            drawSwordShape(p, full, fill);
-                            drawOverlayText(p, full, desc, 10, true);
-                        } else if (iname == "Armor" || iname == "防具") {
-                            drawShieldShape(p, full, fill);
-                            drawOverlayText(p, full, desc, 10, true);
-                        } else if (iname == "Potion" || iname == "生命药") {
-                            drawPotionShape(p, full, fill);
-                            drawOverlayText(p, full, desc, 10, true);
-                        } else if (iname == "匿名眼镜") {
-                            drawGlassesShape(p, full, fill);
-                        } else if (iname == "破墙锤") {
-                            drawHammerShape(p, full, fill);
-                        } else if (iname == "上楼器") {
-                            drawUpArrowShape(p, full, fill);
-                        } else if (iname == "下楼器") {
-                            drawDownArrowShape(p, full, fill);
-                        } else if (iname == "临时护盾") {
-                            drawTempShieldShape(p, full, fill);
-                        } else if (iname == "企鹅玩偶") {
-                            drawPenguinShape(p, full, fill);
-                        } else if (iname == "抹茶芭菲") {
-                            drawParfaitShape(p, full, fill);
-                        } else if (iname == "幸运金币") {
-                            drawLuckyCoinShape(p, full, fill);
-                        } else if (desc.isEmpty()) {
-                            QFont f;
-                            f.setPixelSize(label.length() > 2 ? 11 : 14);
-                            f.setBold(true);
-                            p.setFont(f);
-                            p.setPen(textColor);
-                            p.drawText(QRect(0, 0, TILE_SIZE, TILE_SIZE),
-                                Qt::AlignCenter, label);
-                        } else {
-                            QFont f;
-                            f.setPixelSize(11);
-                            f.setBold(true);
-                            p.setFont(f);
-                            p.setPen(textColor);
-                            p.drawText(QRect(0, 2, TILE_SIZE, 20),
-                                Qt::AlignHCenter | Qt::AlignTop, label);
-                            f.setPixelSize(10);
-                            f.setBold(false);
-                            p.setFont(f);
-                            p.drawText(QRect(2, 28, TILE_SIZE - 4, 28),
-                                Qt::AlignHCenter | Qt::AlignTop, desc);
-                        }
-                    }
-                    px.detach();
-                    painter.drawPixmap(r, px);
+                    auto icon = m_itemPix.find(item->GetName());
+                    if (icon == m_itemPix.end()) icon = m_itemPix.find("ClassicArtifact");
+                    if (icon != m_itemPix.end()) painter.drawPixmap(r, icon->second);
                     continue;
                 }
             }
@@ -780,7 +729,6 @@ void MapWidget::paintEvent(QPaintEvent*)
                 auto it = m_tilePix.find(t);
                 if (it != m_tilePix.end()) {
                     pix = &it->second;
-                    hasRealImage = (m_hasTileImage.count(t) > 0);
                 }
             }
 
@@ -788,18 +736,7 @@ void MapWidget::paintEvent(QPaintEvent*)
             if (pix && !pix->isNull())
                 painter.drawPixmap(r, *pix);
 
-            // 如果有真实图片，叠加文字（怪物除外，怪物信息在左侧面板显示）
-            if (hasRealImage && t != Tile_Monster) {
-                // NPC 特殊处理：显示 NPC 名字
-                if (t == Tile_NPC) {
-                    const NPC* npc = m_game->npcAt(x, y);
-                    QString name = npc ? QString::fromStdString(npc->GetName()).left(5)
-                                       : QString::fromUtf8("NPC");
-                    drawOverlayText(painter, r, name, 11, true);
-                } else {
-                    drawOverlayText(painter, r, tileLabel(t), 11, true);
-                }
-            }
+            // 门、楼梯、商店等均由素材本身表达，不再叠加代码绘制的标签底条。
         }
     }
 

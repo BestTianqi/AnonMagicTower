@@ -20,6 +20,24 @@
 #include <QComboBox>
 #include <QLabel>
 #include <QTabWidget>
+#include <QIcon>
+
+static void applyRuntimeArtSkin(QWidget& widget)
+{
+    widget.setStyleSheet(
+        "QDialog, QMessageBox { background-image: url(:/images/runtime/ui/panel_texture.png); color: #f1e8d0; }"
+        "QGroupBox, QTabWidget::pane, QListWidget, QScrollArea { background: rgba(14,15,25,210); color: #f1e8d0; border: 2px solid #777080; }"
+        "QLineEdit, QTextEdit, QSpinBox, QComboBox { background: rgba(14,15,25,220); color: white; border: 1px solid #9b93a3; padding: 4px; }"
+        "QLabel { color: #f1e8d0; }"
+        "QPushButton { color: #fff7d0; border-image: url(:/images/runtime/ui/button_texture.png) 18 24 18 24 stretch stretch; padding: 7px 14px; font-weight: 700; min-height: 24px; }"
+        "QPushButton:hover { color: white; }"
+    );
+    const QString buttonArt =
+        "QPushButton { color: #fff7d0; border-image: url(:/images/runtime/ui/button_texture.png) 18 24 18 24 stretch stretch; padding: 7px 14px; font-weight: 700; min-height: 24px; }"
+        "QPushButton:hover { color: white; }";
+    for (QPushButton* button : widget.findChildren<QPushButton*>())
+        button->setStyleSheet(buttonArt);
+}
 
 MainWindow::MainWindow(Game* game, QWidget* parent)
     : QWidget(parent), m_game(game)
@@ -30,17 +48,40 @@ MainWindow::MainWindow(Game* game, QWidget* parent)
     setMinimumSize(1100, 760);
     setStyleSheet(
         "QWidget#MainWindow { background: #111322; color: #e8e9f2; }"
-        "QWidget#sidePanel { background: #1a1d31; border-left: 1px solid #343852; }"
+        "QWidget#sidePanel { background-color: rgba(17,19,34,220); background-image: url(:/images/runtime/ui/panel_texture.png); border-left: 2px solid #777080; }"
         "QLabel { color: #dfe3f5; }"
         "QLabel#floorLabel { color: #f5c96a; font-size: 20px; font-weight: 700; padding: 8px 4px; }"
         "QLabel#hpLabel { color: #ff7188; font-size: 16px; font-weight: 700; }"
         "QLabel#atkLabel, QLabel#defLabel { color: #9fc5ff; font-size: 14px; font-weight: 600; }"
         "QLabel#goldLabel { color: #ffd66b; font-size: 14px; font-weight: 600; }"
         "QLabel#keysLabel, QLabel#inventoryLabel { color: #c2c8df; font-size: 13px; }"
-        "QPushButton { background: #2d3150; color: #f2f4ff; border: 1px solid #525a88; border-radius: 6px; padding: 8px 14px; font-size: 14px; }"
-        "QPushButton:hover { background: #414875; border-color: #7f8bce; }"
-        "QPushButton:pressed { background: #232640; }"
+        "QPushButton { color: #fff7d0; border-image: url(:/images/runtime/ui/button_texture.png) 18 24 18 24 stretch stretch; padding: 8px 14px; font-size: 14px; font-weight: 700; }"
+        "QPushButton:hover { color: white; }"
     );
+    const QString buttonArt =
+        "QPushButton { color: #fff7d0; border-image: url(:/images/runtime/ui/button_texture.png) 18 24 18 24 stretch stretch; padding: 8px 14px; font-size: 14px; font-weight: 700; }"
+        "QPushButton:hover { color: white; }";
+    for (QPushButton* button : {ui.invButton, ui.saveButton, ui.loadButton, ui.editorButton, ui.modButton})
+        button->setStyleSheet(buttonArt);
+    ui.invButton->setIcon(QIcon(":/images/runtime/items/artifact.png"));
+    ui.saveButton->setIcon(QIcon(":/images/runtime/items/treasure.png"));
+    ui.loadButton->setIcon(QIcon(":/images/runtime/items/stairs_down.png"));
+    ui.editorButton->setIcon(QIcon(":/images/runtime/items/glasses.png"));
+    ui.modButton->setIcon(QIcon(":/images/runtime/items/key_magic.png"));
+    for (QPushButton* button : {ui.invButton, ui.saveButton, ui.loadButton, ui.editorButton, ui.modButton})
+        button->setIconSize(QSize(30, 30));
+    ui.invButton->setText(QString::fromUtf8("背包"));
+    ui.saveButton->setText(QString::fromUtf8("保存"));
+    ui.loadButton->setText(QString::fromUtf8("读取"));
+    ui.editorButton->setText(QString::fromUtf8("地图编辑器"));
+    ui.modButton->setText(QString::fromUtf8("修改器"));
+    ui.monsterScroll->setStyleSheet(
+        "QScrollArea { background-color: rgba(17,19,34,220); background-image: url(:/images/runtime/ui/panel_texture.png); border: 2px solid #777080; }"
+        "QScrollBar:vertical { background: #171824; width: 9px; }"
+        "QScrollBar::handle:vertical { background: #777080; min-height: 24px; }"
+        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }");
+    ui.monsterPanel->setStyleSheet(
+        "background-color: rgba(17,19,34,220); background-image: url(:/images/runtime/ui/panel_texture.png);");
 
     ui.mapWidget->setGame(m_game);
     ui.mapWidget->setFocusPolicy(Qt::NoFocus);
@@ -89,8 +130,53 @@ void MainWindow::loadAssets()
     mw->loadPlayerImage(":/images/characters/portraits/anon.png");
     mw->loadBackgroundImage(":/images/backgrounds/tower_hub.png");
 
-    // 加载NPC图片
+    // 运行时地图图块全部来自已生成图集的裁切素材。
+    mw->loadTileImage(Tile_Floor,       ":/images/runtime/tiles/floor.png");
+    mw->loadTileImage(Tile_Wall,        ":/images/runtime/tiles/wall.png");
+    mw->loadTileImage(Tile_DarkWall,    ":/images/runtime/tiles/dark_wall.png");
+    mw->loadDarkWallRevealedImage(":/images/runtime/tiles/dark_wall_revealed.png");
+    mw->loadTileImage(Tile_DoorRed,     ":/images/runtime/tiles/door_red.png");
+    mw->loadTileImage(Tile_DoorBlue,    ":/images/runtime/tiles/door_blue.png");
+    mw->loadTileImage(Tile_DoorGreen,   ":/images/runtime/tiles/door_yellow.png");
+    mw->loadTileImage(Tile_DoorMagic,   ":/images/runtime/tiles/door_magic.png");
+    mw->loadTileImage(Tile_DoorIron,    ":/images/runtime/tiles/door_iron.png");
+    mw->loadTileImage(Tile_StairsUp,    ":/images/runtime/tiles/stairs_up.png");
+    mw->loadTileImage(Tile_StairsDown,  ":/images/runtime/tiles/stairs_down.png");
+    mw->loadTileImage(Tile_Lava,        ":/images/runtime/tiles/lava.png");
+    mw->loadTileImage(Tile_StarRiver,   ":/images/runtime/tiles/star_river.png");
+    mw->loadTileImage(Tile_Shop,        ":/images/runtime/tiles/shop.png");
     mw->loadTileImage(Tile_NPC, ":/images/npc.png");
+
+    const std::vector<std::pair<const char*, const char*>> itemImages = {
+        {"Red Key",       ":/images/runtime/items/key_red.png"},
+        {"红钥匙",        ":/images/runtime/items/key_red.png"},
+        {"Blue Key",      ":/images/runtime/items/key_blue.png"},
+        {"蓝钥匙",        ":/images/runtime/items/key_blue.png"},
+        {"Green Key",     ":/images/runtime/items/key_yellow.png"},
+        {"Yellow Key",    ":/images/runtime/items/key_yellow.png"},
+        {"黄钥匙",        ":/images/runtime/items/key_yellow.png"},
+        {"万能钥匙",      ":/images/runtime/items/key_magic.png"},
+        {"Potion",        ":/images/runtime/items/potion.png"},
+        {"生命药",        ":/images/runtime/items/potion.png"},
+        {"Weapon",        ":/images/runtime/items/weapon.png"},
+        {"武器",          ":/images/runtime/items/weapon.png"},
+        {"Armor",         ":/images/runtime/items/armor.png"},
+        {"防具",          ":/images/runtime/items/armor.png"},
+        {"Treasure",      ":/images/runtime/items/treasure.png"},
+        {"金币",          ":/images/runtime/items/treasure.png"},
+        {"匿名眼镜",      ":/images/runtime/items/glasses.png"},
+        {"破墙锤",        ":/images/runtime/items/wall_breaker.png"},
+        {"上楼器",        ":/images/runtime/items/stairs_up.png"},
+        {"下楼器",        ":/images/runtime/items/stairs_down.png"},
+        {"临时护盾",      ":/images/runtime/items/temp_shield.png"},
+        {"企鹅玩偶",      ":/images/runtime/items/penguin_doll.png"},
+        {"抹茶芭菲",      ":/images/runtime/items/matcha_parfait.png"},
+        {"幸运金币",      ":/images/runtime/items/lucky_coin.png"},
+        {"圣水",          ":/images/runtime/items/holy_water.png"},
+        {"ClassicArtifact", ":/images/runtime/items/artifact.png"}
+    };
+    for (const auto& [name, path] : itemImages)
+        mw->loadItemImage(name, QString::fromUtf8(path));
 
     // 加载怪物图片
     auto monsters = MonsterDB::all();
@@ -252,6 +338,7 @@ void MainWindow::showInventory()
     connect(btnBox, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
     connect(list, &QListWidget::itemDoubleClicked, btnBox, &QDialogButtonBox::accepted);
 
+    applyRuntimeArtSkin(dlg);
     dlg.exec();
 }
 
@@ -438,6 +525,7 @@ void MainWindow::showShopDialog(int x, int y)
     connect(leaveBtn, &QPushButton::clicked, &dlg, &QDialog::accept);
     layout->addWidget(leaveBtn);
 
+    applyRuntimeArtSkin(dlg);
     dlg.exec();
     updateHUD();
 }
@@ -660,6 +748,7 @@ void MainWindow::showModifier()
         dlg.accept();
     });
 
+    applyRuntimeArtSkin(dlg);
     dlg.exec();
     updateHUD();
 }
@@ -983,6 +1072,7 @@ void MainWindow::gameOver()
     QPushButton* menuBtn    = msgBox.addButton(QString::fromUtf8("返回主菜单"), QMessageBox::RejectRole);
     msgBox.setDefaultButton(restartBtn);
 
+    applyRuntimeArtSkin(msgBox);
     msgBox.exec();
 
     if (msgBox.clickedButton() == restartBtn) {
@@ -1019,6 +1109,7 @@ void MainWindow::gameWin()
     QPushButton* menuBtn    = msgBox.addButton(QString::fromUtf8("返回主菜单"), QMessageBox::RejectRole);
     msgBox.setDefaultButton(menuBtn);
 
+    applyRuntimeArtSkin(msgBox);
     msgBox.exec();
 
     if (msgBox.clickedButton() == restartBtn) {

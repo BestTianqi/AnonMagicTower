@@ -6,6 +6,7 @@
 #include <QApplication>
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QIcon>
 
 MenuWindow::MenuWindow(QWidget* parent)
     : QWidget(parent)
@@ -14,12 +15,28 @@ MenuWindow::MenuWindow(QWidget* parent)
     setWindowTitle(QString::fromUtf8("MYGO!!!!! × Ave Mujica：梦限大魔塔"));
     setMinimumSize(520, 420);
     setStyleSheet(
-        "QWidget#MenuWindow { background-color: #111322; background-image: url(:/images/backgrounds/tower_hub.png); background-position: center; background-repeat: no-repeat; color: #e8e9f2; }"
-        "QPushButton { background: #2d3150; color: #f2f4ff; border: 1px solid #525a88; border-radius: 8px; padding: 10px 18px; font-size: 15px; }"
-        "QPushButton:hover { background: #414875; border-color: #7f8bce; }"
-        "QPushButton:pressed { background: #232640; }"
+        "QWidget#MenuWindow { background-color: #111322; background-image: url(:/images/runtime/ui/menu_backdrop.png); background-position: center; background-repeat: no-repeat; color: #e8e9f2; }"
+        "QPushButton { color: #fff7d0; border-image: url(:/images/runtime/ui/button_texture.png) 18 24 18 24 stretch stretch; padding: 10px 18px; font-size: 15px; font-weight: 700; }"
+        "QPushButton:hover { color: #ffffff; }"
         "QLabel { color: #dfe3f5; }"
     );
+    const QString buttonArt =
+        "QPushButton { color: #fff7d0; border-image: url(:/images/runtime/ui/button_texture.png) 18 24 18 24 stretch stretch; padding: 10px 18px; font-size: 20px; font-weight: 700; }"
+        "QPushButton:hover { color: white; }";
+    for (QPushButton* button : {ui.newGameBtn, ui.loadGameBtn, ui.mapEditorBtn, ui.settingsBtn})
+        button->setStyleSheet(buttonArt);
+    ui.newGameBtn->setIcon(QIcon(":/images/runtime/items/weapon.png"));
+    ui.loadGameBtn->setIcon(QIcon(":/images/runtime/items/treasure.png"));
+    ui.mapEditorBtn->setIcon(QIcon(":/images/runtime/items/artifact.png"));
+    ui.settingsBtn->setIcon(QIcon(":/images/runtime/items/stairs_down.png"));
+    for (QPushButton* button : {ui.newGameBtn, ui.loadGameBtn, ui.mapEditorBtn, ui.settingsBtn})
+        button->setIconSize(QSize(38, 38));
+    ui.newGameBtn->setText(QString::fromUtf8("新 游 戏"));
+    ui.loadGameBtn->setText(QString::fromUtf8("读 取 存 档"));
+    ui.mapEditorBtn->setText(QString::fromUtf8("地 图 编 辑 器"));
+    ui.settingsBtn->setText(QString::fromUtf8("设 置"));
+    ui.titleLabel->setStyleSheet(
+        "color: #fff2bd; border-image: url(:/images/runtime/ui/title_plaque.png) 18 32 18 32 stretch stretch; padding: 18px 70px;");
 
     connect(ui.newGameBtn,   &QPushButton::clicked, this, &MenuWindow::onNewGame);
     connect(ui.loadGameBtn,  &QPushButton::clicked, this, &MenuWindow::onLoadGame);
