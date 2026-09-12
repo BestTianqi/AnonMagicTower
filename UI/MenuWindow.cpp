@@ -15,7 +15,7 @@ MenuWindow::MenuWindow(QWidget* parent)
     setWindowTitle(QString::fromUtf8("MYGO!!!!! × Ave Mujica：梦限大魔塔"));
     setMinimumSize(520, 420);
     setStyleSheet(
-        "QWidget#MenuWindow { background-color: #111322; background-image: url(:/images/runtime/ui/menu_backdrop.png); background-position: center; background-repeat: no-repeat; color: #e8e9f2; }"
+        "QWidget#MenuWindow { background-color: #0a0812; background-image: url(:/images/backgrounds/mujica_theater.png); background-position: center; background-repeat: no-repeat; color: #e8e9f2; }"
         "QPushButton { color: #fff7d0; border-image: url(:/images/runtime/ui/button_texture.png) 18 24 18 24 stretch stretch; padding: 10px 18px; font-size: 15px; font-weight: 700; }"
         "QPushButton:hover { color: #ffffff; }"
         "QLabel { color: #dfe3f5; }"
