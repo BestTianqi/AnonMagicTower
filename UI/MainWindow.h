@@ -28,5 +28,9 @@ private:
 
     Game* m_game;
     QTimer m_battleFeedbackTimer;
+    QTimer m_movementQueueTimer;
+    int m_pendingMoveDx = 0;
+    int m_pendingMoveDy = 0;
+    bool m_hasPendingMove = false;
     Ui::MainWindow ui;
 };

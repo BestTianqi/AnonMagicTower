@@ -5,6 +5,10 @@
 #include <QFont>
 #include <QtMath>
 
+namespace {
+constexpr float kPlayerWalkSpeed = 260.0f;
+}
+
 MapWidget::MapWidget(Game* game, QWidget* parent)
     : QWidget(parent), m_game(game)
 {
@@ -193,7 +197,7 @@ void MapWidget::syncPlayerMotionTarget()
         m_motionInitialized = true;
     } else if (tileX != m_lastPlayerTileX || tileY != m_lastPlayerTileY) {
         const bool animated = m_playerMotion.beginGridStep(m_lastPlayerTileX, m_lastPlayerTileY,
-                                                           tileX, tileY, 180.0f);
+                                                           tileX, tileY, kPlayerWalkSpeed);
         if (!animated) m_playerFrame = 1;
         m_lastPlayerTileX = tileX;
         m_lastPlayerTileY = tileY;

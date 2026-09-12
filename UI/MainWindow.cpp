@@ -116,6 +116,18 @@ MainWindow::MainWindow(Game* game, QWidget* parent)
     ui.mapWidget->setGame(m_game);
     ui.mapWidget->setFocusPolicy(Qt::NoFocus);
     updateHUD();
+    m_movementQueueTimer.setInterval(16);
+    connect(&m_movementQueueTimer, &QTimer::timeout, this, [this]() {
+        if (!m_hasPendingMove || ui.mapWidget->isPlayerMoving()) return;
+        const int dx = m_pendingMoveDx;
+        const int dy = m_pendingMoveDy;
+        m_hasPendingMove = false;
+        const int key = dx < 0 ? Qt::Key_Left : dx > 0 ? Qt::Key_Right :
+                        dy < 0 ? Qt::Key_Up : Qt::Key_Down;
+        QKeyEvent queued(QEvent::KeyPress, key, Qt::NoModifier);
+        keyPressEvent(&queued);
+    });
+    m_movementQueueTimer.start();
     connect(&m_battleFeedbackTimer, &QTimer::timeout, this, [this]() {
         if (ui.battleLabel) ui.battleLabel->setVisible(false);
     });
@@ -1210,10 +1222,14 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
         return;
     }
 
-    // 游戏坐标已经按格更新；动画未结束前不接受下一次移动，避免把多个格点
-    // 合并成一次跨格插值。下一次按键仍会从整数目标格开始播放动画。
-    if (ui.mapWidget->isPlayerMoving())
+    // 游戏坐标已经按格更新；动画未结束前只缓存最后一次方向，动画结束后
+    // 自动请求下一格，避免按住方向键时出现停顿或跨格插值。
+    if (ui.mapWidget->isPlayerMoving()) {
+        m_pendingMoveDx = dx;
+        m_pendingMoveDy = dy;
+        m_hasPendingMove = true;
         return;
+    }
 
     // 检查上楼器/下楼器（传送到当前坐标，不找楼梯）
     if (m_game->player().stairUpUsed) {

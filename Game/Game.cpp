@@ -507,12 +507,14 @@ Game::MoveResult Game::tryMovePlayer(int nx, int ny)
         return Move_Ok;
 
     case Tile_DarkWall:
-        // 暗墙与普通墙一样不可直接穿过；破墙道具可将其打开。
+        // 暗墙是可撞开的机关墙：第一次碰撞只打开墙体，下一次移动才进入。
+        // 破墙道具仍可立即打开并进入，普通墙不会走这条分支。
         if (m_player.wallBreakerUsed && breakWall(nx, ny)) {
             m_player.wallBreakerUsed = false;
             m_player.x = nx; m_player.y = ny;
             return Move_Ok;
         }
+        setTile(nx, ny, m_currentFloor->items.count(posKey(nx, ny)) ? Tile_Item : Tile_Floor);
         return Move_Block;
 
     case Tile_Floor:

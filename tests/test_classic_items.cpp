@@ -166,6 +166,9 @@ int main() {
     hiddenWall.setTile(4, 3, Tile_DarkWall);
     assert(hiddenWall.tryMovePlayer(4, 3) == Game::Move_Block);
     assert(hiddenWall.player().x == 3 && hiddenWall.player().y == 3);
+    assert(hiddenWall.tileAt(4, 3) == Tile_Floor);
+    assert(hiddenWall.tryMovePlayer(4, 3) == Game::Move_Ok);
+    assert(hiddenWall.player().x == 4 && hiddenWall.player().y == 3);
 
     Game bombGame;
     bombGame.player().x = 5;
