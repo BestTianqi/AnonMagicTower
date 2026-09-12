@@ -25,6 +25,7 @@ private:
     void gameWin();
     QString getItemDescription(const Item* item) const;
     void showBattleFeedback(const QString& message);
+    void flushPendingMove();
 
     Game* m_game;
     QTimer m_battleFeedbackTimer;

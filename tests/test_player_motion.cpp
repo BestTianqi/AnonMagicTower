@@ -21,6 +21,14 @@ int main() {
     assert(!motion.isMoving());
     assert(motion.x() == 3.0f && motion.y() == 2.0f);
 
+    // 动画完成后状态立即可用于开始下一格。
+    motion.snapTo(2, 3);
+    motion.beginGridStep(2, 3, 3, 3, 260.0f);
+    motion.advance(250);
+    assert(!motion.isMoving());
+    assert(motion.beginGridStep(3, 3, 4, 3, 260.0f));
+    assert(motion.isMoving());
+
     // 游戏位置始终按格计算：只有相邻格才播放移动动画，传送等跨格变化直接吸附。
     motion.snapTo(2, 3);
     assert(motion.beginGridStep(2, 3, 3, 3, 180.0f));

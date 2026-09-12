@@ -32,6 +32,7 @@ public:
 
 signals:
     void tileClicked(int x, int y);
+    void playerMotionFinished();
 
 protected:
     void paintEvent(QPaintEvent* event) override;

@@ -230,10 +230,15 @@ void MapWidget::advancePlayerMotion()
     const qint64 elapsedMs = std::clamp<qint64>(m_motionClock.restart(), 1, 50);
     syncPlayerMotionTarget();
     if (!m_motionInitialized) return;
-    if (m_playerMotion.isMoving()) {
+    const bool wasMoving = m_playerMotion.isMoving();
+    if (wasMoving) {
         m_playerMotion.advance(static_cast<float>(elapsedMs));
         m_playerFrame = m_playerMotion.walkingFrame(4);
-        if (!m_playerMotion.isMoving()) m_playerFrame = 1;
+        const bool finished = !m_playerMotion.isMoving();
+        if (finished) {
+            m_playerFrame = 1;
+            emit playerMotionFinished();
+        }
         update();
     }
 }

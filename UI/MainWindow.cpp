@@ -165,16 +165,10 @@ MainWindow::MainWindow(Game* game, QWidget* parent)
     });
     updateHUD();
     m_movementQueueTimer.setInterval(16);
-    connect(&m_movementQueueTimer, &QTimer::timeout, this, [this]() {
-        if (!m_hasPendingMove || ui.mapWidget->isPlayerMoving()) return;
-        const int dx = m_pendingMoveDx;
-        const int dy = m_pendingMoveDy;
-        m_hasPendingMove = false;
-        const int key = dx < 0 ? Qt::Key_Left : dx > 0 ? Qt::Key_Right :
-                        dy < 0 ? Qt::Key_Up : Qt::Key_Down;
-        QKeyEvent queued(QEvent::KeyPress, key, Qt::NoModifier);
-        keyPressEvent(&queued);
-    });
+    connect(&m_movementQueueTimer, &QTimer::timeout, this, &MainWindow::flushPendingMove);
+    // 动画结束的同一帧立即衔接下一格，定时器仅作为事件循环繁忙时的兜底。
+    connect(ui.mapWidget, &MapWidget::playerMotionFinished,
+            this, &MainWindow::flushPendingMove);
     m_movementQueueTimer.start();
     connect(&m_battleFeedbackTimer, &QTimer::timeout, this, [this]() {
         if (ui.battleLabel) ui.battleLabel->setVisible(false);
@@ -213,6 +207,18 @@ MainWindow::MainWindow(Game* game, QWidget* parent)
     connect(ui.invButton, &QPushButton::clicked, this, &MainWindow::showInventory);
 
     connect(ui.modButton, &QPushButton::clicked, this, &MainWindow::showModifier);
+}
+
+void MainWindow::flushPendingMove()
+{
+    if (!m_hasPendingMove || ui.mapWidget->isPlayerMoving()) return;
+    const int dx = m_pendingMoveDx;
+    const int dy = m_pendingMoveDy;
+    m_hasPendingMove = false;
+    const int key = dx < 0 ? Qt::Key_Left : dx > 0 ? Qt::Key_Right :
+                    dy < 0 ? Qt::Key_Up : Qt::Key_Down;
+    QKeyEvent queued(QEvent::KeyPress, key, Qt::NoModifier);
+    keyPressEvent(&queued);
 }
 
 void MainWindow::showBattleFeedback(const QString& message)
