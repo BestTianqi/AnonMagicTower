@@ -224,8 +224,12 @@ Pickaxe::Pickaxe()
 Bomb::Bomb()
     : WallBreaker(QString::fromUtf8("炸弹").toStdString()) {}
 
+void Bomb::Apply(Player& /*player*/) const {}
+
 EarthquakeScroll::EarthquakeScroll()
     : WallBreaker(QString::fromUtf8("地震卷轴").toStdString()) {}
+
+void EarthquakeScroll::Apply(Player& /*player*/) const {}
 
 void Cross::Apply(Player& player) const {
     player.hasCross = true;

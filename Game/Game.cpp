@@ -356,6 +356,43 @@ bool Game::breakWall(int x, int y)
     return false;
 }
 
+int Game::useBomb()
+{
+    int defeated = 0;
+    static const int directions[][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+    for (const auto& direction : directions) {
+        const int x = m_player.x + direction[0];
+        const int y = m_player.y + direction[1];
+        const int key = posKey(x, y);
+        auto it = m_currentFloor->monsters.find(key);
+        if (it == m_currentFloor->monsters.end()) continue;
+        const std::string name = it->second.GetName();
+        // 原版炸弹不能伤害四类头目。
+        if (name.find("魔王") != std::string::npos || name.find("魔龙") != std::string::npos ||
+            name.find("大法师") != std::string::npos) continue;
+        m_player.gold += it->second.GetGold();
+        m_currentFloor->monsters.erase(it);
+        setTile(x, y, m_currentFloor->items.count(key) ? Tile_Item : Tile_Floor);
+        ++defeated;
+    }
+    return defeated;
+}
+
+int Game::useEarthquakeScroll()
+{
+    int cleared = 0;
+    for (int y = 2; y <= m_height - 3; ++y) {
+        for (int x = 2; x <= m_width - 3; ++x) {
+            const int tile = tileAt(x, y);
+            if (tile == Tile_Wall || tile == Tile_DarkWall) {
+                setTile(x, y, m_currentFloor->items.count(posKey(x, y)) ? Tile_Item : Tile_Floor);
+                ++cleared;
+            }
+        }
+    }
+    return cleared;
+}
+
 void Game::goUpFloor(int srcX, int srcY, bool findStairs)
 {
     m_floor++;

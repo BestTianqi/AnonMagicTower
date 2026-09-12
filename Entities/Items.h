@@ -252,11 +252,13 @@ public:
 class Bomb : public WallBreaker {
 public:
     Bomb();
+    void Apply(Player& player) const override;
 };
 
 class EarthquakeScroll : public WallBreaker {
 public:
     EarthquakeScroll();
+    void Apply(Player& player) const override;
 };
 
 class Cross : public Item {

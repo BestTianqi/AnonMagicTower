@@ -142,6 +142,23 @@ int main() {
     assert(lava.tileAt(3, 3) == Tile_Floor);
     assert(!lava.player().freezeMagicUsed);
 
+    Game bombGame;
+    bombGame.player().x = 5;
+    bombGame.player().y = 5;
+    bombGame.spawnMonster(6, 5, Monster("普通怪物", 10, 1, 0, 7));
+    bombGame.spawnMonster(4, 5, Monster("魔龙", 10, 1, 0, 99));
+    assert(bombGame.useBomb() == 1);
+    assert(!bombGame.hasMonsterAt(6, 5));
+    assert(bombGame.hasMonsterAt(4, 5));
+    assert(bombGame.player().gold == 7);
+
+    Game quakeGame;
+    quakeGame.setTile(4, 4, Tile_Wall);
+    quakeGame.setTile(5, 5, Tile_DarkWall);
+    assert(quakeGame.useEarthquakeScroll() == 2);
+    assert(quakeGame.tileAt(4, 4) == Tile_Floor);
+    assert(quakeGame.tileAt(5, 5) == Tile_Floor);
+
     NPC npc("商人", {"测试"}, nullptr, true, 25,
             std::make_unique<RubyGem>(), 15);
     assert(npc.ClassicId() == 15);

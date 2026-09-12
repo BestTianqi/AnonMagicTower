@@ -411,6 +411,8 @@ void MainWindow::showInventory()
                 } else {
                     const bool isFlyingWand = dynamic_cast<const FlyingWand*>(item) != nullptr;
                     const bool isSymmetryFlyer = dynamic_cast<const SymmetryFlyer*>(item) != nullptr;
+                    const bool isBomb = dynamic_cast<const Bomb*>(item) != nullptr;
+                    const bool isEarthquake = dynamic_cast<const EarthquakeScroll*>(item) != nullptr;
                     QString msg = QString::fromUtf8("使用了 %1: %2")
                         .arg(QString::fromStdString(item->GetName()))
                         .arg(getItemDescription(item));
@@ -434,6 +436,10 @@ void MainWindow::showInventory()
                             m_game->player().y = mirroredY;
                             m_game->player().UseItem(idx);
                         }
+                    } else if (isBomb || isEarthquake) {
+                        const int affected = isBomb ? m_game->useBomb() : m_game->useEarthquakeScroll();
+                        m_game->player().UseItem(idx);
+                        msg += QString::fromUtf8("（影响 %1 个图块/敌人）").arg(affected);
                     } else {
                         m_game->player().UseItem(idx);
                     }
