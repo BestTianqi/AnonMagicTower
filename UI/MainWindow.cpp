@@ -250,6 +250,13 @@ QString MainWindow::getItemDescription(const Item* item) const
 {
     if (!item) return QString::fromUtf8("(空)");
 
+    if (const auto* unknown = dynamic_cast<const UnknownItem*>(item)) {
+        const QString source = QString::fromStdString(unknown->SourceName());
+        return source.isEmpty()
+            ? QString::fromUtf8("未知道具（名称无效）")
+            : QString::fromUtf8("未知道具（原名：%1，暂无效果）").arg(source);
+    }
+
     const std::string canonical = Game::canonicalItemName(item->GetName());
     if (canonical.empty())
         return QString::fromUtf8("未知道具（名称无效）");

@@ -27,6 +27,11 @@ int main() {
     assert(Game::canonicalItemName("Small Potion") == "小血瓶");
     assert(!Game::isKnownItemName("未知道具"));
     assert(Game::canonicalItemName("未知道具").empty());
+    auto unknown = Game::createItemByName("Mystery Relic", 42);
+    assert(unknown != nullptr);
+    assert(unknown->GetName() == "未知道具");
+    assert(unknown->GetValue() == 42);
+    assert(dynamic_cast<UnknownItem*>(unknown.get())->SourceName() == "Mystery Relic");
 
     Player player;
     player.hp = 100;

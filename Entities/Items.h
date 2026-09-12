@@ -44,6 +44,19 @@ private:
     int value;
 };
 
+// 存档或自定义地图遇到未注册名称时使用的安全占位道具。
+// 它不会产生任何效果，但会保留原始名称，便于后续补充道具定义。
+class UnknownItem : public Item {
+public:
+    UnknownItem(const std::string& sourceName, int value)
+        : Item("未知道具", value), m_sourceName(sourceName) {}
+    const std::string& SourceName() const { return m_sourceName; }
+    void Apply(Player& /*player*/) const override {}
+
+private:
+    std::string m_sourceName;
+};
+
 // 新增道具种类
 enum class ItemType {
     Potion,

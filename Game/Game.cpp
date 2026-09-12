@@ -640,6 +640,12 @@ bool Game::saveToFile(const std::string& path) const
     std::ofstream ofs(path);
     if (!ofs) return false;
 
+    const auto serializedItemName = [](const Item* item) {
+        if (const auto* unknown = dynamic_cast<const UnknownItem*>(item))
+            if (!unknown->SourceName().empty()) return unknown->SourceName();
+        return item ? item->GetName() : std::string("-");
+    };
+
     ofs << "MOTA2\n";
     ofs << m_width << " " << m_height << "\n";
     ofs << m_floor << "\n";
@@ -664,7 +670,7 @@ bool Game::saveToFile(const std::string& path) const
             const Item* item = ikv.second.get();
             int x = key % m_width;
             int y = key / m_width;
-            ofs << x << " " << y << " " << item->GetName() << " " << item->GetValue() << "\n";
+            ofs << x << " " << y << " " << serializedItemName(item) << " " << item->GetValue() << "\n";
         }
 
         // 怪物
@@ -689,10 +695,10 @@ bool Game::saveToFile(const std::string& path) const
             ofs << x << " " << y << " " << n.GetName() << " "
                 << n.HasGivenReward() << " "
                 << n.Dialog().size() << " "
-                << (reward ? reward->GetName() : "-") << " "
+                << serializedItemName(reward) << " "
                 << (reward ? reward->GetValue() : 0) << " "
                 << n.IsTrader() << " " << n.GetTradeGoldCost() << " "
-                << (tradeReward ? tradeReward->GetName() : "-") << " "
+                << serializedItemName(tradeReward) << " "
                 << (tradeReward ? tradeReward->GetValue() : 0) << " "
                 << n.IsTradeDone() << " " << n.ClassicId() << "\n";
             for (auto& d : n.Dialog())
@@ -745,7 +751,7 @@ bool Game::saveToFile(const std::string& path) const
     for (int i = 0; i < m_player.InventoryCount(); ++i) {
         auto* item = m_player.GetItem(i);
         if (item) {
-            ofs << item->GetName() << " " << item->GetValue() << "\n";
+            ofs << serializedItemName(item) << " " << item->GetValue() << "\n";
         }
     }
 
@@ -827,7 +833,8 @@ std::unique_ptr<Item> Game::createItemByName(const std::string& iname, int ival)
         return std::make_unique<LuckyCoin>();
     if (iname == QString::fromUtf8("圣水").toStdString())
         return std::make_unique<HolyWater>();
-    return nullptr;
+    // 未知名称不再静默丢弃，转为无效果占位道具，保证地图/存档数据可见。
+    return std::make_unique<UnknownItem>(iname, ival);
 }
 
 bool Game::loadFromFile(const std::string& path)
