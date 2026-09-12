@@ -7,15 +7,17 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QIcon>
+#include <QPainter>
 
 MenuWindow::MenuWindow(QWidget* parent)
     : QWidget(parent)
 {
     ui.setupUi(this);
+    m_backgroundImage.load(QStringLiteral(":/images/backgrounds/mujica_theater.png"));
     setWindowTitle(QString::fromUtf8("MYGO!!!!! × Ave Mujica：梦限大魔塔"));
     setMinimumSize(520, 420);
     setStyleSheet(
-        "QWidget#MenuWindow { background-color: #0a0812; background-image: url(:/images/backgrounds/mujica_theater.png); background-position: center; background-repeat: no-repeat; color: #e8e9f2; }"
+        "QWidget#MenuWindow { background-color: #0a0812; color: #e8e9f2; }"
         "QPushButton { color: #fff7d0; border-image: url(:/images/runtime/ui/button_texture.png) 18 24 18 24 stretch stretch; padding: 10px 18px; font-size: 15px; font-weight: 700; }"
         "QPushButton:hover { color: #ffffff; }"
         "QLabel { color: #dfe3f5; }"
@@ -42,6 +44,19 @@ MenuWindow::MenuWindow(QWidget* parent)
     connect(ui.loadGameBtn,  &QPushButton::clicked, this, &MenuWindow::onLoadGame);
     connect(ui.mapEditorBtn, &QPushButton::clicked, this, &MenuWindow::onMapEditor);
     connect(ui.settingsBtn,  &QPushButton::clicked, this, &MenuWindow::onSettings);
+}
+
+void MenuWindow::paintEvent(QPaintEvent* /*event*/)
+{
+    QPainter painter(this);
+    painter.fillRect(rect(), QColor("#0a0812"));
+    if (m_backgroundImage.isNull()) return;
+
+    const QPixmap scaled = m_backgroundImage.scaled(size(), Qt::KeepAspectRatioByExpanding,
+                                                     Qt::SmoothTransformation);
+    const int x = (scaled.width() - width()) / 2;
+    const int y = (scaled.height() - height()) / 2;
+    painter.drawPixmap(0, 0, scaled, x, y, width(), height());
 }
 
 void MenuWindow::onNewGame()
