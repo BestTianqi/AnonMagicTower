@@ -413,6 +413,7 @@ void MainWindow::showInventory()
                     const bool isSymmetryFlyer = dynamic_cast<const SymmetryFlyer*>(item) != nullptr;
                     const bool isBomb = dynamic_cast<const Bomb*>(item) != nullptr;
                     const bool isEarthquake = dynamic_cast<const EarthquakeScroll*>(item) != nullptr;
+                    const bool isFreezeMagic = dynamic_cast<const FreezeMagic*>(item) != nullptr;
                     QString msg = QString::fromUtf8("使用了 %1: %2")
                         .arg(QString::fromStdString(item->GetName()))
                         .arg(getItemDescription(item));
@@ -436,6 +437,10 @@ void MainWindow::showInventory()
                             m_game->player().y = mirroredY;
                             m_game->player().UseItem(idx);
                         }
+                    } else if (isFreezeMagic) {
+                        m_game->player().UseItem(idx);
+                        const int affected = m_game->useFreezeMagic();
+                        msg += QString::fromUtf8("（冻结 %1 格岩浆）").arg(affected);
                     } else if (isBomb || isEarthquake) {
                         const int affected = isBomb ? m_game->useBomb() : m_game->useEarthquakeScroll();
                         m_game->player().UseItem(idx);

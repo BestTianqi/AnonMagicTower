@@ -159,6 +159,15 @@ int main() {
     assert(quakeGame.tileAt(4, 4) == Tile_Floor);
     assert(quakeGame.tileAt(5, 5) == Tile_Floor);
 
+    Game freezeGame;
+    freezeGame.setTile(4, 4, Tile_Lava);
+    freezeGame.setTile(6, 6, Tile_Lava);
+    freezeGame.player().freezeMagicUsed = true;
+    assert(freezeGame.useFreezeMagic() == 2);
+    assert(freezeGame.tileAt(4, 4) == Tile_Floor);
+    assert(freezeGame.tileAt(6, 6) == Tile_Floor);
+    assert(!freezeGame.player().freezeMagicUsed);
+
     NPC npc("商人", {"测试"}, nullptr, true, 25,
             std::make_unique<RubyGem>(), 15);
     assert(npc.ClassicId() == 15);

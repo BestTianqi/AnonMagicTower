@@ -393,6 +393,21 @@ int Game::useEarthquakeScroll()
     return cleared;
 }
 
+int Game::useFreezeMagic()
+{
+    int frozen = 0;
+    for (int y = 0; y < m_height; ++y) {
+        for (int x = 0; x < m_width; ++x) {
+            if (tileAt(x, y) == Tile_Lava) {
+                setTile(x, y, Tile_Floor);
+                ++frozen;
+            }
+        }
+    }
+    m_player.freezeMagicUsed = false;
+    return frozen;
+}
+
 void Game::goUpFloor(int srcX, int srcY, bool findStairs)
 {
     m_floor++;

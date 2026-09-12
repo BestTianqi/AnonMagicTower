@@ -92,6 +92,9 @@ public:
     ShopData* shopAt(int x, int y);
 
     bool breakWall(int x, int y);
+    int useBomb();
+    int useEarthquakeScroll();
+    int useFreezeMagic();
     void goUpFloor(int srcX, int srcY, bool findStairs = true);
     void goDownFloor(int srcX, int srcY, bool findStairs = true);
     void initFloor(int floor);
