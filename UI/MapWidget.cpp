@@ -185,6 +185,18 @@ void MapWidget::setPlayerDirection(int dx, int dy)
     else if (dy > 0) m_playerDirectionRow = 0;
 }
 
+void MapWidget::mousePressEvent(QMouseEvent* event)
+{
+    if (event->button() == Qt::LeftButton) {
+        const QPoint tile = event->position().toPoint() / TILE_SIZE;
+        if (tile.x() >= 0 && tile.y() >= 0 &&
+            tile.x() < m_game->width() && tile.y() < m_game->height()) {
+            emit tileClicked(tile.x(), tile.y());
+        }
+    }
+    QWidget::mousePressEvent(event);
+}
+
 void MapWidget::syncPlayerMotionTarget()
 {
     if (!m_game) return;

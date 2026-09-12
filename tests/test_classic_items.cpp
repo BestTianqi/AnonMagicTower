@@ -170,6 +170,17 @@ int main() {
     assert(hiddenWall.tryMovePlayer(4, 3) == Game::Move_Ok);
     assert(hiddenWall.player().x == 4 && hiddenWall.player().y == 3);
 
+    // 鼠标瞬移只能到当前格子连通的可行走区域，不能跨墙。
+    Game reachable;
+    reachable.player().x = 3;
+    reachable.player().y = 3;
+    for (int y = 2; y <= 12; ++y) reachable.setTile(4, y, Tile_Wall);
+    assert(!reachable.isTeleportReachable(5, 3));
+    reachable.setTile(4, 3, Tile_Floor);
+    assert(reachable.isTeleportReachable(5, 3));
+    reachable.setTile(5, 3, Tile_Wall);
+    assert(!reachable.isTeleportReachable(5, 3));
+
     Game bombGame;
     bombGame.player().x = 5;
     bombGame.player().y = 5;

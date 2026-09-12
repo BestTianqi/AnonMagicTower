@@ -115,6 +115,14 @@ MainWindow::MainWindow(Game* game, QWidget* parent)
 
     ui.mapWidget->setGame(m_game);
     ui.mapWidget->setFocusPolicy(Qt::NoFocus);
+    connect(ui.mapWidget, &MapWidget::tileClicked, this, [this](int x, int y) {
+        if (m_game->player().hp <= 0 || ui.mapWidget->isPlayerMoving()) return;
+        if (!m_game->isTeleportReachable(x, y)) return;
+        m_game->player().x = x;
+        m_game->player().y = y;
+        ui.mapWidget->update();
+        updateHUD();
+    });
     updateHUD();
     m_movementQueueTimer.setInterval(16);
     connect(&m_movementQueueTimer, &QTimer::timeout, this, [this]() {
@@ -183,7 +191,7 @@ void MainWindow::loadAssets()
 
     // 加载玩家图片
     mw->loadPlayerImage(":/images/characters/portraits/anon.png");
-    mw->loadPlayerSpriteSheet(":/images/characters/pilot/anon_casual.png");
+    mw->loadPlayerSpriteSheet(":/images/characters/pilot/anon_stage.png");
     mw->loadBackgroundImage(":/images/backgrounds/bangdream_gbp_cover.jpg");
 
     // 运行时地图图块全部来自已生成图集的裁切素材。

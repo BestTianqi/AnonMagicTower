@@ -72,6 +72,8 @@ public:
     int tileAt(int x, int y) const;
     void setTile(int x, int y, int tile);
     MoveResult tryMovePlayer(int nx, int ny);
+    // UI 鼠标移动使用的连通性检查，不执行拾取、战斗或开门副作用。
+    bool isTeleportReachable(int targetX, int targetY) const;
 
     enum FightResult { Fight_PlayerWin, Fight_PlayerDead, Fight_GameWin, Fight_Stalemate };
     FightResult fightAt(int x, int y, std::vector<std::string>& outLog);

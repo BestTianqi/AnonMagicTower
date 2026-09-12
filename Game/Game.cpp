@@ -7,6 +7,7 @@
 #include <QTextStream>
 #include <algorithm>
 #include <fstream>
+#include <queue>
 #include <sstream>
 
 Game::Game()
@@ -335,6 +336,44 @@ const ShopData* Game::shopAt(int x, int y) const
     auto it = m_currentFloor->shops.find(key);
     if (it == m_currentFloor->shops.end()) return nullptr;
     return &it->second;
+}
+
+bool Game::isTeleportReachable(int targetX, int targetY) const
+{
+    if (targetX < 0 || targetY < 0 || targetX >= m_width || targetY >= m_height)
+        return false;
+    if (targetX == m_player.x && targetY == m_player.y)
+        return true;
+
+    const auto walkable = [](int tile) {
+        return tile == Tile_Floor || tile == Tile_Item ||
+               tile == Tile_StairsUp || tile == Tile_StairsDown;
+    };
+    if (!walkable(tileAt(targetX, targetY))) return false;
+    if (!walkable(tileAt(m_player.x, m_player.y))) return false;
+
+    std::vector<unsigned char> visited(static_cast<size_t>(m_width * m_height), 0);
+    std::queue<std::pair<int, int>> pending;
+    const auto index = [this](int x, int y) { return y * m_width + x; };
+    pending.emplace(m_player.x, m_player.y);
+    visited[index(m_player.x, m_player.y)] = 1;
+    static constexpr int directions[][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+
+    while (!pending.empty()) {
+        const auto [x, y] = pending.front();
+        pending.pop();
+        for (const auto& direction : directions) {
+            const int nx = x + direction[0];
+            const int ny = y + direction[1];
+            if (nx < 0 || ny < 0 || nx >= m_width || ny >= m_height) continue;
+            if (nx == targetX && ny == targetY) return true;
+            const int cell = index(nx, ny);
+            if (visited[cell] || !walkable(tileAt(nx, ny))) continue;
+            visited[cell] = 1;
+            pending.emplace(nx, ny);
+        }
+    }
+    return false;
 }
 
 ShopData* Game::shopAt(int x, int y)

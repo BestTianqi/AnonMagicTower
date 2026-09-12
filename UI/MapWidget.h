@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QWidget>
+#include <QMouseEvent>
 #include <QPixmap>
 #include <QTimer>
 #include <QElapsedTimer>
@@ -27,11 +28,14 @@ public:
     void setPlayerDirection(int dx, int dy);
     bool isPlayerMoving() const { return m_motionInitialized && m_playerMotion.isMoving(); }
     void loadBackgroundImage(const QString& path);
-
     QSize sizeHint() const override;
+
+signals:
+    void tileClicked(int x, int y);
 
 protected:
     void paintEvent(QPaintEvent* event) override;
+    void mousePressEvent(QMouseEvent* event) override;
 
 private:
     void generatePlaceholders();
