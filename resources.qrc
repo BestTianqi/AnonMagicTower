@@ -37,5 +37,37 @@
         <file>images/monster_16.png</file>
         <file>images/monster_17.png</file>
         <file>images/monster_18.png</file>
+        <!-- MyGO / Ave Mujica / 梦限大角色扩展立绘 -->
+        <file>images/characters/extended/taki_casual.png</file>
+        <file>images/characters/extended/taki_stage.png</file>
+        <file>images/characters/extended/rana_casual.png</file>
+        <file>images/characters/extended/rana_stage.png</file>
+        <file>images/characters/extended/sakiko_casual.png</file>
+        <file>images/characters/extended/sakiko_stage.png</file>
+        <file>images/characters/extended/mutsumi_casual.png</file>
+        <file>images/characters/extended/mutsumi_stage.png</file>
+        <file>images/characters/extended/umiri_casual.png</file>
+        <file>images/characters/extended/umiri_stage.png</file>
+        <file>images/characters/extended/nyamu_casual.png</file>
+        <file>images/characters/extended/nyamu_stage.png</file>
+        <file>images/characters/extended/nonoka_casual.png</file>
+        <file>images/characters/extended/nonoka_stage.png</file>
+        <file>images/characters/extended/ritsu_casual.png</file>
+        <file>images/characters/extended/ritsu_stage.png</file>
+        <file>images/characters/extended/miyako_casual.png</file>
+        <file>images/characters/extended/miyako_stage.png</file>
+        <file>images/characters/extended/yuno_casual.png</file>
+        <file>images/characters/extended/yuno_stage.png</file>
+        <!-- 主题背景与地图图块图集 -->
+        <file>images/backgrounds/tower_hub.png</file>
+        <file>images/backgrounds/mygo_stage.png</file>
+        <file>images/backgrounds/mujica_theater.png</file>
+        <file>images/backgrounds/yumemita_dream.png</file>
+        <file>images/backgrounds/boss_soyo.png</file>
+        <file>images/backgrounds/shop_music.png</file>
+        <file>images/tiles/dungeon_tiles.png</file>
+        <file>images/tiles/doors_stairs.png</file>
+        <file>images/tiles/props.png</file>
+        <file>images/tiles/effects.png</file>
     </qresource>
 </RCC>
