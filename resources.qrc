@@ -69,5 +69,18 @@
         <file>images/tiles/doors_stairs.png</file>
         <file>images/tiles/props.png</file>
         <file>images/tiles/effects.png</file>
+        <!-- 游戏内角色头像（从 4x4 图集裁剪的首帧） -->
+        <file>images/characters/portraits/anon.png</file>
+        <file>images/characters/portraits/soyo.png</file>
+        <file>images/characters/portraits/tomori.png</file>
+        <file>images/characters/portraits/rana.png</file>
+        <file>images/characters/portraits/taki.png</file>
+        <file>images/characters/portraits/umiri.png</file>
+        <file>images/characters/portraits/nyamu.png</file>
+        <file>images/characters/portraits/mutsumi.png</file>
+        <file>images/characters/portraits/uika.png</file>
+        <file>images/characters/portraits/sakiko.png</file>
+        <file>images/characters/portraits/arale.png</file>
+        <file>images/characters/portraits/viola.png</file>
     </qresource>
 </RCC>

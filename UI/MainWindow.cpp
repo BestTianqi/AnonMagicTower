@@ -86,7 +86,7 @@ void MainWindow::loadAssets()
     auto* mw = ui.mapWidget;
 
     // 加载玩家图片
-    mw->loadPlayerImage(":/images/player.png");
+    mw->loadPlayerImage(":/images/characters/portraits/anon.png");
     mw->loadBackgroundImage(":/images/backgrounds/tower_hub.png");
 
     // 加载NPC图片
@@ -98,6 +98,21 @@ void MainWindow::loadAssets()
         QString path = QString(":/images/monster_%1.png").arg(i + 1, 2, 10, QChar('0'));
         mw->loadMonsterImage(monsters[i].GetName(), path);
     }
+
+    // 将主题角色首帧用于对应怪物，保留数据库中的数值和战斗顺序。
+    const std::vector<std::pair<const char*, const char*>> themedMonsters = {
+        {"要乐奈", ":/images/characters/portraits/rana.png"},
+        {"高松灯", ":/images/characters/portraits/tomori.png"},
+        {"椎名立希", ":/images/characters/portraits/taki.png"},
+        {"八幡海铃", ":/images/characters/portraits/umiri.png"},
+        {"祐天寺若麦", ":/images/characters/portraits/nyamu.png"},
+        {"若叶睦", ":/images/characters/portraits/mutsumi.png"},
+        {"三角初华", ":/images/characters/portraits/uika.png"},
+        {"丰川祥子", ":/images/characters/portraits/sakiko.png"},
+        {"长崎素世", ":/images/characters/portraits/soyo.png"}
+    };
+    for (const auto& [name, path] : themedMonsters)
+        mw->loadMonsterImage(name, QString::fromUtf8(path));
 
     mw->update();
 }
