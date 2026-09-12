@@ -62,6 +62,29 @@ void Game::generateClassicTower()
         if (floor % 7 == 0) {
             set(3, 11, Tile_Item); fd.items.emplace(11 * m_width + 3, createItemByName("武器", 3 + floor / 10));
         }
+        // 五个十层区域的经典补给节点与关键装备房。
+        if (floor == 11 || floor == 21 || floor == 31 || floor == 41) {
+            set(6, 3, Tile_Shop);
+            fd.shops.emplace(3 * m_width + 6,
+                ShopData{120 + floor * 8, 180 + floor * 10, 160 + floor * 9,
+                         100 + floor * 5, 5 + floor / 10, 5 + floor / 12});
+        }
+        if (floor == 20) {
+            set(5, 11, Tile_Item);
+            fd.items.emplace(11 * m_width + 5, createItemByName("蓝钥匙", 0));
+        }
+        if (floor == 35) {
+            set(5, 5, Tile_Item);
+            fd.items.emplace(5 * m_width + 5, createItemByName("武器", 40));
+        }
+        if (floor == 37) {
+            set(9, 5, Tile_Item);
+            fd.items.emplace(5 * m_width + 9, createItemByName("防具", 40));
+        }
+        if (floor == 41) {
+            set(9, 9, Tile_Item);
+            fd.items.emplace(9 * m_width + 9, createItemByName("幸运金币", 0));
+        }
         if (floor == 50) {
             set(7, 6, Tile_Monster);
             fd.monsters.emplace(6 * m_width + 7, MonsterDB::get("长崎素世"));
