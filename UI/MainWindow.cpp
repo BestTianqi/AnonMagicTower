@@ -26,7 +26,7 @@ MainWindow::MainWindow(Game* game, QWidget* parent)
 {
     setFocusPolicy(Qt::StrongFocus);
     ui.setupUi(this);
-    setWindowTitle(QString::fromUtf8("魔塔"));
+    setWindowTitle(QString::fromUtf8("MYGO!!!!! × Ave Mujica：梦限大魔塔"));
     setMinimumSize(1100, 760);
     setStyleSheet(
         "QWidget#MainWindow { background: #111322; color: #e8e9f2; }"
