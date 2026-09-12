@@ -404,9 +404,9 @@ if ($Phase -in @('Normalizer', 'All')) {
                 Assert-True ($bitmap.Width -eq 240 -and $bitmap.Height -eq 240) 'normalizer must resize to 240x240'
                 Assert-True ($bitmap.PixelFormat -eq [Drawing.Imaging.PixelFormat]::Format32bppArgb) 'normalizer must save Format32bppArgb'
                 Assert-True ($bitmap.GetPixel(0,0).A -eq 0) 'alpha 127 must map to 0'
-                Assert-True ($bitmap.GetPixel(119,0).A -eq 0) 'nearest-neighbor left half must retain source pixel'
-                Assert-True ($bitmap.GetPixel(120,0).A -eq 255) 'alpha 128 must map to 255'
-                Assert-True ($bitmap.GetPixel(239,239).A -eq 255) 'nearest-neighbor right half must retain source pixel'
+                Assert-True ($bitmap.GetPixel(119,2).A -eq 0) 'two-pixel guard must clear cell edge'
+                Assert-True ($bitmap.GetPixel(122,2).A -eq 255) 'alpha 128 must map to 255 inside cell'
+                Assert-True ($bitmap.GetPixel(237,2).A -eq 255) 'nearest-neighbor right half must retain source pixel inside cell'
             } finally { $bitmap.Dispose() }
             $firstHash=(Get-FileHash -Algorithm SHA256 $output).Hash
             $again=Invoke-Script $script:Normalizer @('-InputPath',$output,'-OutputPath',$output)

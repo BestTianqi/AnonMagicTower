@@ -37,6 +37,22 @@ try {
             $target.SetPixel($x,$y,[Drawing.Color]::FromArgb($alpha,$pixel.R,$pixel.G,$pixel.B))
         }
     }
+    # Enforce the sprite contract's two-pixel transparent guard in every 60x60 cell.
+    for ($row=0; $row -lt 4; $row++) {
+        for ($column=0; $column -lt 4; $column++) {
+            $left=$column*60; $top=$row*60
+            for ($local=0; $local -lt 60; $local++) {
+                foreach ($point in @(
+                    [pscustomobject]@{X=$left+$local;Y=$top}, [pscustomobject]@{X=$left+$local;Y=$top+1},
+                    [pscustomobject]@{X=$left+$local;Y=$top+58}, [pscustomobject]@{X=$left+$local;Y=$top+59},
+                    [pscustomobject]@{X=$left;Y=$top+$local}, [pscustomobject]@{X=$left+1;Y=$top+$local},
+                    [pscustomobject]@{X=$left+58;Y=$top+$local}, [pscustomobject]@{X=$left+59;Y=$top+$local}
+                )) {
+                    $p=$target.GetPixel($point.X,$point.Y); $target.SetPixel($point.X,$point.Y,[Drawing.Color]::FromArgb(0,$p.R,$p.G,$p.B))
+                }
+            }
+        }
+    }
     $source.Dispose()
     $source=$null
 
