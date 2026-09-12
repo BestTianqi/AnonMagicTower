@@ -109,6 +109,42 @@
         <file>images/runtime/items/lucky_coin.png</file>
         <file>images/runtime/items/holy_water.png</file>
         <file>images/runtime/items/artifact.png</file>
+        <!-- MyGO / Ave Mujica 本地化道具图标（60×60 RGBA） -->
+        <file>images/runtime/items/mygo/mygo_support_badge_red.png</file>
+        <file>images/runtime/items/mygo/mujica_support_badge_blue.png</file>
+        <file>images/runtime/items/mygo/live_ticket_red.png</file>
+        <file>images/runtime/items/mygo/live_ticket_blue.png</file>
+        <file>images/runtime/items/mygo/live_ticket_yellow.png</file>
+        <file>images/runtime/items/mygo/tomori_warm_milk.png</file>
+        <file>images/runtime/items/mygo/anon_energy_drink.png</file>
+        <file>images/runtime/items/mygo/rikki_water_kettle.png</file>
+        <file>images/runtime/items/mygo/anon_selfie_glasses.png</file>
+        <file>images/runtime/items/mygo/backstage_pass.png</file>
+        <file>images/runtime/items/mygo/anon_guitar_pick.png</file>
+        <file>images/runtime/items/mygo/taki_drumsticks.png</file>
+        <file>images/runtime/items/mygo/rana_cat_claw.png</file>
+        <file>images/runtime/items/mygo/tomori_microphone.png</file>
+        <file>images/runtime/items/mygo/mutsumi_bass.png</file>
+        <file>images/runtime/items/mygo/soyo_music_stand.png</file>
+        <file>images/runtime/items/mygo/umiri_metronome.png</file>
+        <file>images/runtime/items/mygo/uika_in_ear.png</file>
+        <file>images/runtime/items/mygo/sakiko_sheet_music.png</file>
+        <file>images/runtime/items/mygo/mujica_finale_mask.png</file>
+        <file>images/runtime/items/mygo/mutsumi_pickaxe_toolbox.png</file>
+        <file>images/runtime/items/mygo/mujica_smoke_bomb.png</file>
+        <file>images/runtime/items/mygo/mujica_stage_quake_scroll.png</file>
+        <file>images/runtime/items/mygo/mygo_reconciliation_badge.png</file>
+        <file>images/runtime/items/mygo/sakiko_conductor_baton.png</file>
+        <file>images/runtime/items/mygo/umiri_calm_command.png</file>
+        <file>images/runtime/items/mygo/anon_smartphone.png</file>
+        <file>images/runtime/items/mygo/mujica_mirror_ticket.png</file>
+        <file>images/runtime/items/mygo/tomori_lyric_notebook.png</file>
+        <file>images/runtime/items/mygo/band_shield_sticker.png</file>
+        <file>images/runtime/items/mygo/rikki_penguin_keychain.png</file>
+        <file>images/runtime/items/mygo/rana_matcha_parfait.png</file>
+        <file>images/runtime/items/mygo/rana_lucky_coin.png</file>
+        <file>images/runtime/items/mygo/stage_lift_card.png</file>
+        <file>images/runtime/items/mygo/exit_pass.png</file>
         <file>images/runtime/ui/panel_texture.png</file>
         <file>images/runtime/ui/button_texture.png</file>
         <file>images/runtime/ui/title_plaque.png</file>

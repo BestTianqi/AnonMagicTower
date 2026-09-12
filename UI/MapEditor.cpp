@@ -54,6 +54,43 @@ static QString editorTileAsset(int type)
 static QString editorItemAsset(const std::string& name)
 {
     const QString item = QString::fromStdString(name);
+    // MyGO / Ave Mujica 本地化道具使用对应主题像素图标。
+    if (item == QString::fromUtf8("红色Live票")) return ":/images/runtime/items/mygo/live_ticket_red.png";
+    if (item == QString::fromUtf8("蓝色Live票")) return ":/images/runtime/items/mygo/live_ticket_blue.png";
+    if (item == QString::fromUtf8("黄色Live票")) return ":/images/runtime/items/mygo/live_ticket_yellow.png";
+    if (item == QString::fromUtf8("后台万能通行证")) return ":/images/runtime/items/mygo/backstage_pass.png";
+    if (item == QString::fromUtf8("现场补给")) return ":/images/runtime/items/mygo/mygo_support_badge_red.png";
+    if (item == QString::fromUtf8("灯的热牛奶")) return ":/images/runtime/items/mygo/tomori_warm_milk.png";
+    if (item == QString::fromUtf8("爱音能量饮")) return ":/images/runtime/items/mygo/anon_energy_drink.png";
+    if (item == QString::fromUtf8("MyGO应援红章")) return ":/images/runtime/items/mygo/mygo_support_badge_red.png";
+    if (item == QString::fromUtf8("Mujica应援蓝章")) return ":/images/runtime/items/mygo/mujica_support_badge_blue.png";
+    if (item == QString::fromUtf8("爱音拨片")) return ":/images/runtime/items/mygo/anon_guitar_pick.png";
+    if (item == QString::fromUtf8("立希鼓棒")) return ":/images/runtime/items/mygo/taki_drumsticks.png";
+    if (item == QString::fromUtf8("乐奈猫爪")) return ":/images/runtime/items/mygo/rana_cat_claw.png";
+    if (item == QString::fromUtf8("灯的麦克风")) return ":/images/runtime/items/mygo/tomori_microphone.png";
+    if (item == QString::fromUtf8("睦的贝斯")) return ":/images/runtime/items/mygo/mutsumi_bass.png";
+    if (item == QString::fromUtf8("素世谱架")) return ":/images/runtime/items/mygo/soyo_music_stand.png";
+    if (item == QString::fromUtf8("海铃节拍器")) return ":/images/runtime/items/mygo/umiri_metronome.png";
+    if (item == QString::fromUtf8("初华舞台耳返")) return ":/images/runtime/items/mygo/uika_in_ear.png";
+    if (item == QString::fromUtf8("祥子黑色乐谱")) return ":/images/runtime/items/mygo/sakiko_sheet_music.png";
+    if (item == QString::fromUtf8("Mujica终幕面具")) return ":/images/runtime/items/mygo/mujica_finale_mask.png";
+    if (item == QString::fromUtf8("爱音手机")) return ":/images/runtime/items/mygo/anon_smartphone.png";
+    if (item == QString::fromUtf8("Mujica镜面舞台票")) return ":/images/runtime/items/mygo/mujica_mirror_ticket.png";
+    if (item == QString::fromUtf8("灯的歌词本")) return ":/images/runtime/items/mygo/tomori_lyric_notebook.png";
+    if (item == QString::fromUtf8("立希水壶")) return ":/images/runtime/items/mygo/rikki_water_kettle.png";
+    if (item == QString::fromUtf8("爱音自拍眼镜")) return ":/images/runtime/items/mygo/anon_selfie_glasses.png";
+    if (item == QString::fromUtf8("睦的镐子")) return ":/images/runtime/items/mygo/mutsumi_pickaxe_toolbox.png";
+    if (item == QString::fromUtf8("Mujica烟雾弹")) return ":/images/runtime/items/mygo/mujica_smoke_bomb.png";
+    if (item == QString::fromUtf8("Mujica舞台震响卷")) return ":/images/runtime/items/mygo/mujica_stage_quake_scroll.png";
+    if (item == QString::fromUtf8("MyGO和解徽章")) return ":/images/runtime/items/mygo/mygo_reconciliation_badge.png";
+    if (item == QString::fromUtf8("祥子指挥棒")) return ":/images/runtime/items/mygo/sakiko_conductor_baton.png";
+    if (item == QString::fromUtf8("海铃冷静指令")) return ":/images/runtime/items/mygo/umiri_calm_command.png";
+    if (item == QString::fromUtf8("乐队护盾贴")) return ":/images/runtime/items/mygo/band_shield_sticker.png";
+    if (item == QString::fromUtf8("立希企鹅挂件")) return ":/images/runtime/items/mygo/rikki_penguin_keychain.png";
+    if (item == QString::fromUtf8("乐奈抹茶芭菲")) return ":/images/runtime/items/mygo/rana_matcha_parfait.png";
+    if (item == QString::fromUtf8("乐奈幸运硬币")) return ":/images/runtime/items/mygo/rana_lucky_coin.png";
+    if (item == QString::fromUtf8("舞台升降卡")) return ":/images/runtime/items/mygo/stage_lift_card.png";
+    if (item == QString::fromUtf8("撤场通行卡")) return ":/images/runtime/items/mygo/exit_pass.png";
     if (item == "Red Key" || item == QString::fromUtf8("红钥匙") || item == QString::fromUtf8("红色Live票")) return ":/images/runtime/items/key_red.png";
     if (item == "Blue Key" || item == QString::fromUtf8("蓝钥匙") || item == QString::fromUtf8("蓝色Live票")) return ":/images/runtime/items/key_blue.png";
     if (item == "Green Key" || item == "Yellow Key" || item == QString::fromUtf8("绿钥匙") || item == QString::fromUtf8("黄钥匙") || item == QString::fromUtf8("黄色Live票")) return ":/images/runtime/items/key_yellow.png";
