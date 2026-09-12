@@ -9,7 +9,9 @@ int main() {
     motion.begin(3, 3, 180.0f);
     assert(motion.isMoving());
     motion.advance(100);
-    assert(std::fabs(motion.x() - 2.30f) < 0.001f);
+    assert(std::fabs(motion.progress() - 0.30f) < 0.001f);
+    assert(std::fabs(motion.x() - 2.216f) < 0.002f);
+    assert(motion.walkingFrame() == 1);
     assert(motion.isMoving());
     motion.advance(240);
     assert(!motion.isMoving());

@@ -11,6 +11,7 @@ MapWidget::MapWidget(Game* game, QWidget* parent)
     setFixedSize(900, 900);
     generatePlaceholders();
     m_motionTimer.setInterval(16);
+    m_motionClock.start();
     connect(&m_motionTimer, &QTimer::timeout, this, &MapWidget::advancePlayerMotion);
     m_motionTimer.start();
 }
@@ -191,25 +192,22 @@ void MapWidget::syncPlayerMotionTarget()
         m_lastPlayerTileY = tileY;
         m_motionInitialized = true;
     } else if (tileX != m_lastPlayerTileX || tileY != m_lastPlayerTileY) {
-        m_playerMotion.beginGridStep(m_lastPlayerTileX, m_lastPlayerTileY,
-                                     tileX, tileY, 180.0f);
+        const bool animated = m_playerMotion.beginGridStep(m_lastPlayerTileX, m_lastPlayerTileY,
+                                                           tileX, tileY, 180.0f);
+        if (!animated) m_playerFrame = 1;
         m_lastPlayerTileX = tileX;
         m_lastPlayerTileY = tileY;
-        m_frameElapsedMs = 0;
     }
 }
 
 void MapWidget::advancePlayerMotion()
 {
+    const qint64 elapsedMs = std::clamp<qint64>(m_motionClock.restart(), 1, 50);
     syncPlayerMotionTarget();
     if (!m_motionInitialized) return;
     if (m_playerMotion.isMoving()) {
-        m_playerMotion.advance(16.0f);
-        m_frameElapsedMs += 16;
-        if (m_frameElapsedMs >= 80) {
-            m_frameElapsedMs = 0;
-            m_playerFrame = (m_playerFrame + 1) % 4;
-        }
+        m_playerMotion.advance(static_cast<float>(elapsedMs));
+        m_playerFrame = m_playerMotion.walkingFrame(4);
         if (!m_playerMotion.isMoving()) m_playerFrame = 1;
         update();
     }

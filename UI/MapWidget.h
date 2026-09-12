@@ -58,10 +58,10 @@ private:
     bool m_hasPlayerSheet = false;
     int m_playerDirectionRow = 0; // down, left, right, up
     int m_playerFrame = 1;
-    int m_frameElapsedMs = 0;
     int m_lastPlayerTileX = 0;
     int m_lastPlayerTileY = 0;
     bool m_motionInitialized = false;
     PlayerMotionState m_playerMotion;
     QTimer m_motionTimer;
+    QElapsedTimer m_motionClock;
 };

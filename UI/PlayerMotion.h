@@ -48,7 +48,10 @@ public:
     bool advance(float elapsedMs) {
         if (!isMoving()) return false;
         m_elapsedMs = std::min(m_durationMs, m_elapsedMs + std::max(0.0f, elapsedMs));
-        const float t = m_durationMs <= 0.0f ? 1.0f : m_elapsedMs / m_durationMs;
+        const float linearT = progress();
+        // Smoothstep gives the walk a gentle acceleration and deceleration
+        // while keeping the authoritative destination unchanged.
+        const float t = linearT * linearT * (3.0f - 2.0f * linearT);
         m_x = m_startX + (m_targetX - m_startX) * t;
         m_y = m_startY + (m_targetY - m_startY) * t;
         if (m_elapsedMs >= m_durationMs) {
@@ -59,6 +62,16 @@ public:
     }
 
     bool isMoving() const { return m_elapsedMs < m_durationMs; }
+    float progress() const {
+        if (m_durationMs <= 0.0f) return 1.0f;
+        return std::clamp(m_elapsedMs / m_durationMs, 0.0f, 1.0f);
+    }
+    int walkingFrame(int frameCount = 4) const {
+        if (frameCount <= 1) return 0;
+        if (!isMoving()) return std::min(1, frameCount - 1);
+        return std::min(frameCount - 1,
+                        static_cast<int>(progress() * static_cast<float>(frameCount)));
+    }
     float x() const { return m_x; }
     float y() const { return m_y; }
 
