@@ -117,11 +117,51 @@ MainWindow::MainWindow(Game* game, QWidget* parent)
     ui.mapWidget->setFocusPolicy(Qt::NoFocus);
     connect(ui.mapWidget, &MapWidget::tileClicked, this, [this](int x, int y) {
         if (m_game->player().hp <= 0 || ui.mapWidget->isPlayerMoving()) return;
-        if (!m_game->isTeleportReachable(x, y)) return;
-        m_game->player().x = x;
-        m_game->player().y = y;
-        ui.mapWidget->update();
-        updateHUD();
+        const auto result = m_game->teleportPlayerTo(x, y);
+        switch (result) {
+        case Game::Move_Pickup:
+        case Game::Move_Ok:
+            ui.mapWidget->update();
+            updateHUD();
+            break;
+        case Game::Move_NPC:
+            showNPCDialog(x, y);
+            ui.mapWidget->update();
+            updateHUD();
+            break;
+        case Game::Move_Shop:
+            showShopDialog(x, y);
+            ui.mapWidget->update();
+            updateHUD();
+            break;
+        case Game::Move_Encounter: {
+            // 点击怪物格也走统一战斗入口；瞬移后玩家坐标已在目标格，
+            // 因而战斗结束后可以继续从该格移动或拾取战利品。
+            std::vector<std::string> log;
+            const auto fightResult = m_game->fightAt(x, y, log);
+            showBattleFeedback(QString::fromStdString(summarizeBattleLog(log)));
+            ui.mapWidget->update();
+            updateHUD();
+            if (fightResult == Game::Fight_GameWin) {
+                gameWin();
+            } else if (fightResult == Game::Fight_PlayerDead) {
+                gameOver();
+            }
+            break;
+        }
+        case Game::Move_StairsUp:
+            m_game->goUpFloor(x, y);
+            ui.mapWidget->update();
+            updateHUD();
+            break;
+        case Game::Move_StairsDown:
+            m_game->goDownFloor(x, y);
+            ui.mapWidget->update();
+            updateHUD();
+            break;
+        default:
+            break;
+        }
     });
     updateHUD();
     m_movementQueueTimer.setInterval(16);

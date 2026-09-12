@@ -349,7 +349,10 @@ bool Game::isTeleportReachable(int targetX, int targetY) const
         return tile == Tile_Floor || tile == Tile_Item ||
                tile == Tile_StairsUp || tile == Tile_StairsDown;
     };
-    if (!walkable(tileAt(targetX, targetY))) return false;
+    const int targetTile = tileAt(targetX, targetY);
+    const bool targetInteractable = targetTile == Tile_NPC || targetTile == Tile_Shop ||
+                                    (targetTile == Tile_Monster && hasMonsterAt(targetX, targetY));
+    if (!walkable(targetTile) && !targetInteractable) return false;
     if (!walkable(tileAt(m_player.x, m_player.y))) return false;
 
     std::vector<unsigned char> visited(static_cast<size_t>(m_width * m_height), 0);
@@ -366,6 +369,7 @@ bool Game::isTeleportReachable(int targetX, int targetY) const
             const int nx = x + direction[0];
             const int ny = y + direction[1];
             if (nx < 0 || ny < 0 || nx >= m_width || ny >= m_height) continue;
+            // 交互对象本身不可作为路径中间节点，但可以作为终点点击。
             if (nx == targetX && ny == targetY) return true;
             const int cell = index(nx, ny);
             if (visited[cell] || !walkable(tileAt(nx, ny))) continue;
@@ -374,6 +378,47 @@ bool Game::isTeleportReachable(int targetX, int targetY) const
         }
     }
     return false;
+}
+
+Game::MoveResult Game::teleportPlayerTo(int targetX, int targetY)
+{
+    if (!isTeleportReachable(targetX, targetY)) return Move_Block;
+
+    const int tile = tileAt(targetX, targetY);
+    m_player.x = targetX;
+    m_player.y = targetY;
+
+    switch (tile) {
+    case Tile_Item: {
+        auto item = takeItemAt(targetX, targetY);
+        if (!item) {
+            setTile(targetX, targetY, Tile_Floor);
+            return Move_Ok;
+        }
+        if (item->IsUseItem()) {
+            m_player.AddItem(std::move(item));
+        } else if (item->IsPassiveEffect()) {
+            item->Apply(m_player);
+            m_player.AddItem(std::move(item));
+        } else {
+            item->Apply(m_player);
+        }
+        setTile(targetX, targetY, Tile_Floor);
+        return Move_Pickup;
+    }
+    case Tile_NPC:
+        return Move_NPC;
+    case Tile_Shop:
+        return Move_Shop;
+    case Tile_Monster:
+        return hasMonsterAt(targetX, targetY) ? Move_Encounter : Move_Ok;
+    case Tile_StairsUp:
+        return Move_StairsUp;
+    case Tile_StairsDown:
+        return Move_StairsDown;
+    default:
+        return Move_Ok;
+    }
 }
 
 ShopData* Game::shopAt(int x, int y)

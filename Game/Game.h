@@ -74,6 +74,8 @@ public:
     MoveResult tryMovePlayer(int nx, int ny);
     // UI 鼠标移动使用的连通性检查，不执行拾取、战斗或开门副作用。
     bool isTeleportReachable(int targetX, int targetY) const;
+    // 将玩家移动到鼠标选中的可达格，并执行该格应有的交互。
+    MoveResult teleportPlayerTo(int targetX, int targetY);
 
     enum FightResult { Fight_PlayerWin, Fight_PlayerDead, Fight_GameWin, Fight_Stalemate };
     FightResult fightAt(int x, int y, std::vector<std::string>& outLog);

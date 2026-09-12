@@ -181,6 +181,34 @@ int main() {
     reachable.setTile(5, 3, Tile_Wall);
     assert(!reachable.isTeleportReachable(5, 3));
 
+    // 鼠标瞬移复用移动交互：到达道具格时立即拾取，而不是只改坐标。
+    Game teleportItem;
+    teleportItem.player().x = 3;
+    teleportItem.player().y = 3;
+    teleportItem.addItemAt(4, 3, std::make_unique<SmallPotion>(200));
+    teleportItem.setTile(4, 3, Tile_Item);
+    const int hpBeforeTeleport = teleportItem.player().hp;
+    assert(teleportItem.teleportPlayerTo(4, 3) == Game::Move_Pickup);
+    assert(teleportItem.player().x == 4 && teleportItem.player().y == 3);
+    assert(teleportItem.player().hp == hpBeforeTeleport + 200);
+    assert(teleportItem.itemAt(4, 3) == nullptr);
+
+    Game teleportNpc;
+    teleportNpc.player().x = 3;
+    teleportNpc.player().y = 3;
+    teleportNpc.addNPCAt(4, 3, NPC("凛凛子", {"欢迎来到商店。"}));
+    teleportNpc.setTile(4, 3, Tile_NPC);
+    assert(teleportNpc.teleportPlayerTo(4, 3) == Game::Move_NPC);
+    assert(teleportNpc.player().x == 4 && teleportNpc.player().y == 3);
+
+    Game teleportMonster;
+    teleportMonster.player().x = 3;
+    teleportMonster.player().y = 3;
+    teleportMonster.spawnMonster(4, 3, Monster("练习怪", 1, 0, 0, 0));
+    teleportMonster.setTile(4, 3, Tile_Monster);
+    assert(teleportMonster.teleportPlayerTo(4, 3) == Game::Move_Encounter);
+    assert(teleportMonster.player().x == 4 && teleportMonster.player().y == 3);
+
     Game bombGame;
     bombGame.player().x = 5;
     bombGame.player().y = 5;

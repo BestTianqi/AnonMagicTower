@@ -4,6 +4,7 @@
 #include <QPainterPath>
 #include <QFont>
 #include <QtMath>
+#include <algorithm>
 
 namespace {
 constexpr float kPlayerWalkSpeed = 260.0f;
@@ -187,11 +188,19 @@ void MapWidget::setPlayerDirection(int dx, int dy)
 
 void MapWidget::mousePressEvent(QMouseEvent* event)
 {
-    if (event->button() == Qt::LeftButton) {
-        const QPoint tile = event->position().toPoint() / TILE_SIZE;
-        if (tile.x() >= 0 && tile.y() >= 0 &&
-            tile.x() < m_game->width() && tile.y() < m_game->height()) {
-            emit tileClicked(tile.x(), tile.y());
+    if (event->button() == Qt::LeftButton && m_game) {
+        // position() 已经是 MapWidget 的本地坐标；按实际绘制区域换算，
+        // 避免窗口缩放、DPI 或布局边距导致整列/整行偏移。
+        const QPointF local = event->position();
+        const int mapWidth = std::max(1, width());
+        const int mapHeight = std::max(1, height());
+        if (local.x() >= 0.0 && local.y() >= 0.0 &&
+            local.x() < mapWidth && local.y() < mapHeight) {
+            const int tileX = std::clamp(static_cast<int>(local.x() * m_game->width() / mapWidth),
+                                         0, m_game->width() - 1);
+            const int tileY = std::clamp(static_cast<int>(local.y() * m_game->height() / mapHeight),
+                                         0, m_game->height() - 1);
+            emit tileClicked(tileX, tileY);
         }
     }
     QWidget::mousePressEvent(event);
