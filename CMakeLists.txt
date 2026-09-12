@@ -46,3 +46,8 @@ add_executable(mota_motion_tests
     tests/test_player_motion.cpp
 )
 target_include_directories(mota_motion_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+add_executable(mota_battle_feedback_tests
+    tests/test_battle_feedback.cpp
+)
+target_include_directories(mota_battle_feedback_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

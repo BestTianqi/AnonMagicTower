@@ -3,6 +3,7 @@
 #include <QWidget>
 #include "Game/Game.h"
 #include "ui_MainWindow.h"
+#include <QTimer>
 
 class MainWindow : public QWidget {
     Q_OBJECT
@@ -23,7 +24,9 @@ private:
     void gameOver();
     void gameWin();
     QString getItemDescription(const Item* item) const;
+    void showBattleFeedback(const QString& message);
 
     Game* m_game;
+    QTimer m_battleFeedbackTimer;
     Ui::MainWindow ui;
 };

@@ -1,6 +1,7 @@
 #include "MainWindow.h"
 #include "MapWidget.h"
 #include "MapEditor.h"
+#include "BattleFeedback.h"
 #include "Entities/MonsterDB.h"
 #include <QPainter>
 #include <QKeyEvent>
@@ -113,6 +114,9 @@ MainWindow::MainWindow(Game* game, QWidget* parent)
     ui.mapWidget->setGame(m_game);
     ui.mapWidget->setFocusPolicy(Qt::NoFocus);
     updateHUD();
+    connect(&m_battleFeedbackTimer, &QTimer::timeout, this, [this]() {
+        if (ui.battleLabel) ui.battleLabel->setVisible(false);
+    });
 
     connect(ui.saveButton, &QPushButton::clicked, this, [this]() {
         QString file = QFileDialog::getSaveFileName(this, QString::fromUtf8("保存存档"),
@@ -147,6 +151,16 @@ MainWindow::MainWindow(Game* game, QWidget* parent)
     connect(ui.invButton, &QPushButton::clicked, this, &MainWindow::showInventory);
 
     connect(ui.modButton, &QPushButton::clicked, this, &MainWindow::showModifier);
+}
+
+void MainWindow::showBattleFeedback(const QString& message)
+{
+    if (!ui.battleLabel) return;
+    ui.battleLabel->setText(message);
+    ui.battleLabel->setVisible(true);
+    m_battleFeedbackTimer.stop();
+    m_battleFeedbackTimer.setSingleShot(true);
+    m_battleFeedbackTimer.start(3500);
 }
 
 void MainWindow::loadAssets()
@@ -1262,69 +1276,45 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
         bool canWin = (dmgToMonster > 0) && (totalDamage < m_game->player().hp);
         bool isStalemate = (dmgToMonster <= 0 && dmgToPlayer <= 0);
 
-        // 需要确认的情况：无法取胜 或 有眼镜查看信息
-        bool needConfirm = !canWin || m_game->player().hasGlasses;
-
-        if (needConfirm) {
-            QString info;
-            if (m_game->player().hasGlasses) {
-                info = QString::fromUtf8(
-                    "【怪物信息】\n名称: %1\n生命: %2  攻击: %3  防御: %4  金币: %5\n\n"
-                    "你的攻击: %6  你的防御: %7\n"
-                    "预计造成伤害: %8/回合\n预计受到伤害: %9/回合\n"
-                    "预计需要: %10 回合\n预计损失: %11 HP")
-                    .arg(QString::fromStdString(m->GetName()))
-                    .arg(m->GetHP()).arg(m->GetATK()).arg(m->GetDEF()).arg(m->GetGold())
-                    .arg(m_game->player().atk).arg(m_game->player().def)
-                    .arg(dmgToMonster).arg(dmgToPlayer)
-                    .arg(roundsToKill > 0 ? QString::number(roundsToKill) : QString::fromUtf8("∞"))
-                    .arg(totalDamage);
-            }
-            if (isStalemate) {
-                if (!info.isEmpty()) info += "\n\n";
-                info += QString::fromUtf8("双方防御均高于对方攻击，无法互相造成伤害。\n战斗无法继续。");
-                QMessageBox::information(this, QString::fromUtf8("遭遇怪物"), info);
-                break;
-            } else if (!canWin) {
-                if (!info.isEmpty()) info += "\n\n";
-                if (dmgToMonster <= 0)
-                    info += QString::fromUtf8("⚠ 攻击力不足以穿透怪物防御！");
-                else
-                    info += QString::fromUtf8("⚠ 你很可能被击败（预计损失 %1 HP，当前只有 %2 HP）！")
-                        .arg(totalDamage).arg(m_game->player().hp);
-            }
-
-            info += QString::fromUtf8("\n\n是否战斗？");
-            auto reply = QMessageBox::question(this, QString::fromUtf8("遭遇怪物"), info,
-                QMessageBox::Yes | QMessageBox::No, canWin ? QMessageBox::Yes : QMessageBox::No);
-            if (reply != QMessageBox::Yes)
-                break;
+        QString battlePrefix;
+        if (m_game->player().hasGlasses) {
+            battlePrefix = QString::fromUtf8("%1  HP:%2 ATK:%3 DEF:%4  ")
+                .arg(QString::fromStdString(m->GetName()))
+                .arg(m->GetHP()).arg(m->GetATK()).arg(m->GetDEF());
+        }
+        if (isStalemate) {
+            showBattleFeedback(battlePrefix + QString::fromUtf8("双方无法造成伤害，战斗停止。"));
+            break;
+        }
+        if (!canWin) {
+            battlePrefix += dmgToMonster <= 0
+                ? QString::fromUtf8("⚠ 攻击力不足以穿透防御。")
+                : QString::fromUtf8("⚠ 预计损失 %1 HP。 ").arg(totalDamage);
         }
 
         ui.mapWidget->update();
         std::vector<std::string> log;
         auto fightRes = m_game->fightAt(nx, ny, log);
 
-        QString dlg;
-        for (const auto& s : log)
-            dlg += QString::fromStdString(s) + "\n";
+        QString dlg = QString::fromStdString(summarizeBattleLog(log));
+        if (!battlePrefix.isEmpty()) dlg = battlePrefix + "\n" + dlg;
 
         if (fightRes == Game::Fight_GameWin) {
             ui.mapWidget->update();
             updateHUD();
-            QMessageBox::information(this, QString::fromUtf8("战斗"), dlg);
+            showBattleFeedback(dlg);
             gameWin();
             return;
         } else if (fightRes == Game::Fight_PlayerWin) {
             ui.mapWidget->update();
             updateHUD();
-            QMessageBox::information(this, QString::fromUtf8("战斗"), dlg);
+            showBattleFeedback(dlg);
         } else if (fightRes == Game::Fight_Stalemate) {
             ui.mapWidget->update();
             updateHUD();
-            QMessageBox::information(this, QString::fromUtf8("战斗"), dlg);
+            showBattleFeedback(dlg);
         } else {
-            QMessageBox::critical(this, QString::fromUtf8("战斗"), dlg);
+            showBattleFeedback(dlg);
             updateHUD();
             gameOver();
             return;

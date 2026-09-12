@@ -27,6 +27,7 @@ public:
     QLabel*      goldLabel    = nullptr;
     QLabel*      keysLabel    = nullptr;
     QLabel*      invItemsLabel = nullptr;
+    QLabel*      battleLabel   = nullptr;
     QPushButton* invButton    = nullptr;
     QPushButton* saveButton   = nullptr;
     QPushButton* loadButton   = nullptr;
@@ -129,6 +130,15 @@ public:
         invItemsLabel->setWordWrap(true);
         invItemsLabel->setStyleSheet("color: #c2c8df; font-size: 12px; padding: 6px 4px; background: rgba(10,11,20,120); border: 1px solid #45465d; border-radius: 4px;");
         vbox->addWidget(invItemsLabel);
+
+        battleLabel = new QLabel(sidePanel);
+        battleLabel->setObjectName("battleLabel");
+        battleLabel->setWordWrap(true);
+        battleLabel->setMinimumHeight(48);
+        battleLabel->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+        battleLabel->setStyleSheet("color: #ffd98a; font-size: 12px; padding: 7px; background: rgba(42,30,55,190); border: 1px solid #8c6ba8; border-radius: 4px;");
+        battleLabel->setVisible(false);
+        vbox->addWidget(battleLabel);
 
         auto* spacer = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
         vbox->addSpacerItem(spacer);
