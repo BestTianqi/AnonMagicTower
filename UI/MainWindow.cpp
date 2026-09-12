@@ -16,6 +16,7 @@
 #include <QHBoxLayout>
 #include <QFrame>
 #include <QSpinBox>
+#include <QInputDialog>
 #include <QGroupBox>
 #include <QComboBox>
 #include <QLabel>
@@ -279,6 +280,15 @@ QString MainWindow::getItemDescription(const Item* item) const
         return QString::fromUtf8("攻击力 +%1").arg(val);
     if (name == "Armor" || name == QString::fromUtf8("防具"))
         return QString::fromUtf8("防御力 +%1").arg(val);
+    if (name == QString::fromUtf8("铁剑") || name == QString::fromUtf8("银剑") ||
+        name == QString::fromUtf8("骑士剑") || name == QString::fromUtf8("圣剑") ||
+        name == QString::fromUtf8("神圣剑"))
+        return QString::fromUtf8("攻击力 +%1").arg(val);
+    if (name == QString::fromUtf8("铁盾") || name == QString::fromUtf8("银盾") ||
+        name == QString::fromUtf8("骑士盾"))
+        return QString::fromUtf8("防御力 +%1").arg(val);
+    if (name == QString::fromUtf8("圣盾") || name == QString::fromUtf8("神圣盾"))
+        return QString::fromUtf8("防御力 +%1，并免疫魔法攻击").arg(val);
     if (name == "Treasure" || name == QString::fromUtf8("金币"))
         return QString::fromUtf8("获得 %1 金币").arg(val);
     if (name == "Red Key" || name == QString::fromUtf8("红钥匙"))
@@ -308,6 +318,22 @@ QString MainWindow::getItemDescription(const Item* item) const
         return QString::fromUtf8("面对要乐奈和小猫时伤害减半");
     if (name == QString::fromUtf8("幸运金币"))
         return QString::fromUtf8("打怪和拾取金币翻倍");
+    if (name == QString::fromUtf8("镐"))
+        return QString::fromUtf8("点击使用，下一次移动可摧毁墙壁");
+    if (name == QString::fromUtf8("炸弹") || name == QString::fromUtf8("地震卷轴"))
+        return QString::fromUtf8("点击使用，摧毁墙壁");
+    if (name == QString::fromUtf8("十字架"))
+        return QString::fromUtf8("对吸血鬼和兽人攻击翻倍");
+    if (name == QString::fromUtf8("屠龙匕"))
+        return QString::fromUtf8("对魔龙攻击翻倍");
+    if (name == QString::fromUtf8("冰冻魔法"))
+        return QString::fromUtf8("点击使用，冻结下一格岩浆");
+    if (name == QString::fromUtf8("飞行魔杖"))
+        return QString::fromUtf8("点击使用，传送到指定楼层");
+    if (name == QString::fromUtf8("对称飞行器"))
+        return QString::fromUtf8("点击使用，剩余 %1 次").arg(item->GetValue());
+    if (name == QString::fromUtf8("记事本"))
+        return QString::fromUtf8("记录魔塔提示");
 
     return name;
 }
@@ -383,10 +409,34 @@ void MainWindow::showInventory()
                             QString::fromStdString(item->GetName()),
                             getItemDescription(item)));
                 } else {
+                    const bool isFlyingWand = dynamic_cast<const FlyingWand*>(item) != nullptr;
+                    const bool isSymmetryFlyer = dynamic_cast<const SymmetryFlyer*>(item) != nullptr;
                     QString msg = QString::fromUtf8("使用了 %1: %2")
                         .arg(QString::fromStdString(item->GetName()))
                         .arg(getItemDescription(item));
-                    m_game->player().UseItem(idx);
+                    if (isFlyingWand) {
+                        bool ok = false;
+                        const int target = QInputDialog::getInt(&dlg, QString::fromUtf8("飞行魔杖"),
+                            QString::fromUtf8("选择目标楼层（1-50）:"), m_game->currentFloor(), 1, 50, 1, &ok);
+                        if (!ok) return;
+                        m_game->player().UseItem(idx);
+                        while (m_game->currentFloor() < target)
+                            m_game->goUpFloor(m_game->player().x, m_game->player().y, false);
+                        while (m_game->currentFloor() > target)
+                            m_game->goDownFloor(m_game->player().x, m_game->player().y, false);
+                    } else if (isSymmetryFlyer) {
+                        const int mirroredX = m_game->width() - 1 - m_game->player().x;
+                        const int mirroredY = m_game->player().y;
+                        const int targetTile = m_game->tileAt(mirroredX, mirroredY);
+                        if (targetTile == Tile_Floor || targetTile == Tile_Item ||
+                            targetTile == Tile_StairsUp || targetTile == Tile_StairsDown) {
+                            m_game->player().x = mirroredX;
+                            m_game->player().y = mirroredY;
+                            m_game->player().UseItem(idx);
+                        }
+                    } else {
+                        m_game->player().UseItem(idx);
+                    }
                     updateHUD();
                     QMessageBox::information(&dlg, QString::fromUtf8("使用物品"), msg);
                     dlg.accept();
@@ -570,7 +620,7 @@ void MainWindow::showShopDialog(int x, int y)
     case 36: offer = {QString::fromUtf8("黄钥匙 ×3"), 200, [&] { p.AddKey(KeyType::Green, 3); }}; break;
     case 38: offer = {QString::fromUtf8("蓝钥匙 ×3"), 2000, [&] { p.AddKey(KeyType::Blue, 3); }}; break;
     case 41: offer = {QString::fromUtf8("生命值 +2000"), 1000, [&] { p.hp += 2000; }}; break;
-    case 44: offer = {QString::fromUtf8("地震卷轴"), 4000, [&] { p.AddItem(std::make_unique<WallBreaker>()); }}; break;
+    case 44: offer = {QString::fromUtf8("地震卷轴"), 4000, [&] { p.AddItem(std::make_unique<EarthquakeScroll>()); }}; break;
     default: fixed = false; break;
     }
     if (fixed) {
@@ -1137,9 +1187,21 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
         if (!m) break;
 
         // 预判战斗结果
-        int dmgToMonster = std::max(0, m_game->player().atk - m->GetDEF());
+        int attackPower = m_game->player().atk;
+        const bool vampireOrOrc = m->GetName().find("吸血") != std::string::npos ||
+                                  m->GetName().find("兽人") != std::string::npos;
+        const bool dragon = m->GetName().find("魔龙") != std::string::npos ||
+                            m->GetName().find("龙") != std::string::npos;
+        if (m_game->player().hasCross && vampireOrOrc) attackPower *= 2;
+        if (m_game->player().hasDragonSlayer && dragon) attackPower *= 2;
+        int dmgToMonster = std::max(0, attackPower - m->GetDEF());
         int shieldBonus = (m_game->player().tempShieldCharges > 0) ? 50 : 0;
         int dmgToPlayer = std::max(0, m->GetATK() - m_game->player().def - shieldBonus);
+        const bool magicAttacker = m->GetName().find("法师") != std::string::npos ||
+                                   m->GetName().find("巫师") != std::string::npos ||
+                                   m->GetName().find("大法师") != std::string::npos ||
+                                   m->GetName().find("魔法") != std::string::npos;
+        if (m_game->player().hasHolyShield && magicAttacker) dmgToPlayer = 0;
         // 特殊道具减伤
         std::string mn = m->GetName();
         if (m_game->player().hasPenguinDoll && (mn == "高松灯" || mn == "企鹅"))

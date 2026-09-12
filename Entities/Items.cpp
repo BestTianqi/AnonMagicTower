@@ -86,8 +86,8 @@ void HolyWater::Apply(Player& player) const
 }
 
 // Weapon
-Weapon::Weapon(int atkBonus)
-    : Item("Weapon", atkBonus), m_atk(atkBonus)
+Weapon::Weapon(int atkBonus, const std::string& displayName)
+    : Item(displayName, atkBonus), m_atk(atkBonus)
 {
 }
 
@@ -97,8 +97,8 @@ void Weapon::Apply(Player& player) const
 }
 
 // Armor
-Armor::Armor(int defBonus)
-    : Item("Armor", defBonus), m_def(defBonus)
+Armor::Armor(int defBonus, const std::string& displayName)
+    : Item(displayName, defBonus), m_def(defBonus)
 {
 }
 
@@ -197,8 +197,8 @@ void StairLower::Apply(Player& player) const {
     player.stairDownUsed = true;
 }
 
-WallBreaker::WallBreaker()
-    : Item(QString::fromUtf8("破墙锤").toStdString(), 0) {}
+WallBreaker::WallBreaker(const std::string& displayName)
+    : Item(displayName, 0) {}
 
 void WallBreaker::Apply(Player& player) const {
     player.wallBreakerUsed = true;
@@ -217,3 +217,61 @@ LuckyCoin::LuckyCoin()
 void LuckyCoin::Apply(Player& player) const {
     player.hasLuckyCoin = true;
 }
+
+Pickaxe::Pickaxe()
+    : WallBreaker(QString::fromUtf8("镐").toStdString()) {}
+
+Bomb::Bomb()
+    : WallBreaker(QString::fromUtf8("炸弹").toStdString()) {}
+
+EarthquakeScroll::EarthquakeScroll()
+    : WallBreaker(QString::fromUtf8("地震卷轴").toStdString()) {}
+
+void Cross::Apply(Player& player) const {
+    player.hasCross = true;
+}
+
+Cross::Cross()
+    : Item(QString::fromUtf8("十字架").toStdString(), 0) {}
+
+DragonSlayer::DragonSlayer()
+    : Item(QString::fromUtf8("屠龙匕").toStdString(), 0) {}
+
+void DragonSlayer::Apply(Player& player) const {
+    player.hasDragonSlayer = true;
+}
+
+FreezeMagic::FreezeMagic()
+    : Item(QString::fromUtf8("冰冻魔法").toStdString(), 0) {}
+
+void FreezeMagic::Apply(Player& player) const {
+    player.freezeMagicUsed = true;
+}
+
+FlyingWand::FlyingWand()
+    : Item(QString::fromUtf8("飞行魔杖").toStdString(), 0) {}
+
+void FlyingWand::Apply(Player& player) const {
+    ++player.flyWandUses;
+}
+
+SymmetryFlyer::SymmetryFlyer()
+    : Item(QString::fromUtf8("对称飞行器").toStdString(), 3) {}
+
+void SymmetryFlyer::Apply(Player& player) const {
+    player.symmetryFlyerUses += 3;
+}
+
+NoteBook::NoteBook()
+    : Item(QString::fromUtf8("记事本").toStdString(), 0) {}
+
+HolyShield::HolyShield(int defBonus, const std::string& displayName)
+    : Armor(defBonus, displayName) {}
+
+void HolyShield::Apply(Player& player) const {
+    Armor::Apply(player);
+    player.hasHolyShield = true;
+}
+
+DivineShield::DivineShield(int defBonus, const std::string& displayName)
+    : HolyShield(defBonus, displayName) {}

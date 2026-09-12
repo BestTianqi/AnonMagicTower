@@ -69,6 +69,12 @@ static QString editorItemAsset(const std::string& name)
     if (item == "Sapphire Gem") return ":/images/runtime/items/sapphire_gem.png";
     if (item == "Weapon" || item == QString::fromUtf8("武器")) return ":/images/runtime/items/weapon.png";
     if (item == "Armor" || item == QString::fromUtf8("防具")) return ":/images/runtime/items/armor.png";
+    if (item == QString::fromUtf8("铁剑") || item == QString::fromUtf8("银剑") ||
+        item == QString::fromUtf8("骑士剑") || item == QString::fromUtf8("圣剑") ||
+        item == QString::fromUtf8("神圣剑")) return ":/images/runtime/items/weapon.png";
+    if (item == QString::fromUtf8("铁盾") || item == QString::fromUtf8("银盾") ||
+        item == QString::fromUtf8("骑士盾") || item == QString::fromUtf8("圣盾") ||
+        item == QString::fromUtf8("神圣盾")) return ":/images/runtime/items/armor.png";
     if (item == "Treasure" || item == QString::fromUtf8("金币")) return ":/images/runtime/items/treasure.png";
     if (item == QString::fromUtf8("匿名眼镜")) return ":/images/runtime/items/glasses.png";
     if (item == QString::fromUtf8("破墙锤")) return ":/images/runtime/items/wall_breaker.png";
@@ -79,6 +85,12 @@ static QString editorItemAsset(const std::string& name)
     if (item == QString::fromUtf8("抹茶芭菲")) return ":/images/runtime/items/matcha_parfait.png";
     if (item == QString::fromUtf8("幸运金币")) return ":/images/runtime/items/lucky_coin.png";
     if (item == QString::fromUtf8("圣水")) return ":/images/runtime/items/holy_water.png";
+    if (item == QString::fromUtf8("镐") || item == QString::fromUtf8("炸弹") ||
+        item == QString::fromUtf8("地震卷轴")) return ":/images/runtime/items/wall_breaker.png";
+    if (item == QString::fromUtf8("十字架") || item == QString::fromUtf8("屠龙匕") ||
+        item == QString::fromUtf8("冰冻魔法") || item == QString::fromUtf8("飞行魔杖") ||
+        item == QString::fromUtf8("对称飞行器") || item == QString::fromUtf8("记事本"))
+        return ":/images/runtime/items/artifact.png";
     return ":/images/runtime/items/artifact.png";
 }
 
@@ -457,6 +469,25 @@ static const ItemDef g_itemDefs[] = {
     {QString::fromUtf8("武器"), 5, "攻击力+"},
     {QString::fromUtf8("防具"), 3, "防御力+"},
     {QString::fromUtf8("金币"), 10, "金币"},
+    {QString::fromUtf8("铁剑"), 10, "攻击+10"},
+    {QString::fromUtf8("银剑"), 20, "攻击+20"},
+    {QString::fromUtf8("骑士剑"), 40, "攻击+40"},
+    {QString::fromUtf8("圣剑"), 50, "攻击+50"},
+    {QString::fromUtf8("神圣剑"), 100, "攻击+100"},
+    {QString::fromUtf8("铁盾"), 10, "防御+10"},
+    {QString::fromUtf8("银盾"), 20, "防御+20"},
+    {QString::fromUtf8("骑士盾"), 40, "防御+40"},
+    {QString::fromUtf8("圣盾"), 50, "防御+50，免疫魔法"},
+    {QString::fromUtf8("神圣盾"), 100, "防御+100，免疫魔法"},
+    {QString::fromUtf8("镐"), 0, "摧毁墙壁"},
+    {QString::fromUtf8("炸弹"), 0, "摧毁墙壁"},
+    {QString::fromUtf8("地震卷轴"), 0, "摧毁墙壁"},
+    {QString::fromUtf8("十字架"), 0, "对吸血鬼和兽人攻击翻倍"},
+    {QString::fromUtf8("屠龙匕"), 0, "对魔龙攻击翻倍"},
+    {QString::fromUtf8("冰冻魔法"), 0, "冻结岩浆"},
+    {QString::fromUtf8("飞行魔杖"), 0, "传送到指定楼层"},
+    {QString::fromUtf8("对称飞行器"), 3, "可使用3次"},
+    {QString::fromUtf8("记事本"), 0, "记录魔塔提示"},
     {QString::fromUtf8("红钥匙"), 1, "红钥匙"},
     {QString::fromUtf8("蓝钥匙"), 2, "蓝钥匙"},
     {QString::fromUtf8("绿钥匙"), 3, "绿钥匙"},
@@ -464,7 +495,9 @@ static const ItemDef g_itemDefs[] = {
 };
 static const char* g_specialItems[] = {
     "万能钥匙", "匿名眼镜", "破墙锤", "上楼器", "下楼器",
-    "临时护盾", "企鹅玩偶", "抹茶芭菲", "幸运金币", nullptr
+    "临时护盾", "企鹅玩偶", "抹茶芭菲", "幸运金币", "圣水",
+    "镐", "炸弹", "地震卷轴", "十字架", "屠龙匕", "冰冻魔法",
+    "飞行魔杖", "对称飞行器", "记事本", nullptr
 };
 
 MapEditor::MapEditor(QWidget* parent)
@@ -654,6 +687,26 @@ MapEditor::MapEditor(QWidget* parent)
         { QString::fromUtf8("企鹅玩偶"), 0, "#d6a", false, QString::fromUtf8("神秘的企鹅玩偶") },
         { QString::fromUtf8("抹茶芭菲"), 0, "#8c6", false, QString::fromUtf8("美味的抹茶芭菲") },
         { QString::fromUtf8("幸运金币"), 0, "#da0", false, QString::fromUtf8("打怪和拾取金币翻倍") },
+        { QString::fromUtf8("圣水"), 0, "#8cf", false, QString::fromUtf8("生命值增加攻击力与防御力之和") },
+        { QString::fromUtf8("铁剑"), 10, "#c86", false, QString::fromUtf8("攻击力+10") },
+        { QString::fromUtf8("银剑"), 20, "#ccc", false, QString::fromUtf8("攻击力+20") },
+        { QString::fromUtf8("骑士剑"), 40, "#e8c", false, QString::fromUtf8("攻击力+40") },
+        { QString::fromUtf8("圣剑"), 50, "#fd6", false, QString::fromUtf8("攻击力+50") },
+        { QString::fromUtf8("神圣剑"), 100, "#fff", false, QString::fromUtf8("攻击力+100") },
+        { QString::fromUtf8("铁盾"), 10, "#78a", false, QString::fromUtf8("防御力+10") },
+        { QString::fromUtf8("银盾"), 20, "#9bd", false, QString::fromUtf8("防御力+20") },
+        { QString::fromUtf8("骑士盾"), 40, "#68c", false, QString::fromUtf8("防御力+40") },
+        { QString::fromUtf8("圣盾"), 50, "#6df", false, QString::fromUtf8("防御力+50，免疫魔法") },
+        { QString::fromUtf8("神圣盾"), 100, "#aff", false, QString::fromUtf8("防御力+100，免疫魔法") },
+        { QString::fromUtf8("镐"), 0, "#864", false, QString::fromUtf8("摧毁墙壁") },
+        { QString::fromUtf8("炸弹"), 0, "#a44", false, QString::fromUtf8("摧毁墙壁") },
+        { QString::fromUtf8("地震卷轴"), 0, "#a84", false, QString::fromUtf8("摧毁墙壁") },
+        { QString::fromUtf8("十字架"), 0, "#ff8", false, QString::fromUtf8("对吸血鬼和兽人攻击翻倍") },
+        { QString::fromUtf8("屠龙匕"), 0, "#f88", false, QString::fromUtf8("对魔龙攻击翻倍") },
+        { QString::fromUtf8("冰冻魔法"), 0, "#8df", false, QString::fromUtf8("冻结岩浆") },
+        { QString::fromUtf8("飞行魔杖"), 0, "#c8f", false, QString::fromUtf8("传送到指定楼层") },
+        { QString::fromUtf8("对称飞行器"), 3, "#f8c", false, QString::fromUtf8("可使用3次") },
+        { QString::fromUtf8("记事本"), 0, "#dda", false, QString::fromUtf8("记录魔塔提示") },
     };
     const int itemBtnCount = sizeof(itemBtns) / sizeof(itemBtns[0]);
 
@@ -1171,40 +1224,7 @@ void MapEditor::onNewMap()
 
 static std::unique_ptr<Item> createItem(const std::string& name, int value)
 {
-    // English names (from save files)
-    if (name == "Potion")   return std::make_unique<Potion>(value);
-    if (name == "Small Potion") return std::make_unique<SmallPotion>(value);
-    if (name == "Large Potion") return std::make_unique<LargePotion>(value);
-    if (name == "Ruby Gem") return std::make_unique<RubyGem>(value);
-    if (name == "Sapphire Gem") return std::make_unique<SapphireGem>(value);
-    if (name == "Weapon")   return std::make_unique<Weapon>(value);
-    if (name == "Armor")    return std::make_unique<Armor>(value);
-    if (name == "Treasure") return std::make_unique<Treasure>(value);
-    if (name == "Red Key")  return std::make_unique<Key>(KeyType::Red);
-    if (name == "Blue Key") return std::make_unique<Key>(KeyType::Blue);
-    if (name == "Green Key") return std::make_unique<Key>(KeyType::Green);
-    // Chinese names (from editor buttons)
-    if (name == QString::fromUtf8("生命药").toStdString())   return std::make_unique<Potion>(value);
-    if (name == QString::fromUtf8("小血瓶").toStdString())   return std::make_unique<SmallPotion>(value);
-    if (name == QString::fromUtf8("大血瓶").toStdString())   return std::make_unique<LargePotion>(value);
-    if (name == QString::fromUtf8("红宝石").toStdString())   return std::make_unique<RubyGem>(value);
-    if (name == QString::fromUtf8("蓝宝石").toStdString())   return std::make_unique<SapphireGem>(value);
-    if (name == QString::fromUtf8("武器").toStdString())     return std::make_unique<Weapon>(value);
-    if (name == QString::fromUtf8("防具").toStdString())     return std::make_unique<Armor>(value);
-    if (name == QString::fromUtf8("金币").toStdString())     return std::make_unique<Treasure>(value);
-    if (name == QString::fromUtf8("红钥匙").toStdString())   return std::make_unique<Key>(KeyType::Red);
-    if (name == QString::fromUtf8("蓝钥匙").toStdString())   return std::make_unique<Key>(KeyType::Blue);
-    if (name == QString::fromUtf8("绿钥匙").toStdString())   return std::make_unique<Key>(KeyType::Green);
-    if (name == QString::fromUtf8("万能钥匙").toStdString()) return std::make_unique<MagicKey>();
-    if (name == QString::fromUtf8("匿名眼镜").toStdString()) return std::make_unique<AnonGlasses>();
-    if (name == QString::fromUtf8("破墙锤").toStdString())   return std::make_unique<WallBreaker>();
-    if (name == QString::fromUtf8("上楼器").toStdString())   return std::make_unique<StairUpper>();
-    if (name == QString::fromUtf8("下楼器").toStdString())   return std::make_unique<StairLower>();
-    if (name == QString::fromUtf8("临时护盾").toStdString()) return std::make_unique<TempShield>();
-    if (name == QString::fromUtf8("企鹅玩偶").toStdString()) return std::make_unique<PenguinDoll>();
-    if (name == QString::fromUtf8("抹茶芭菲").toStdString()) return std::make_unique<MatchaParfait>();
-    if (name == QString::fromUtf8("幸运金币").toStdString()) return std::make_unique<LuckyCoin>();
-    return nullptr;
+    return Game::createItemByName(name, value);
 }
 
 bool MapEditor::saveToPath(const QString& path)

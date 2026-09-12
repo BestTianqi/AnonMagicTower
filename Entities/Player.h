@@ -27,6 +27,12 @@ public:
     bool wallBreakerUsed = false;  // 破墙锤已激活
     bool stairUpUsed = false;      // 上楼器已激活
     bool stairDownUsed = false;    // 下楼器已激活
+    bool hasCross = false;          // 十字架：对吸血鬼/兽人攻击翻倍
+    bool hasDragonSlayer = false;   // 屠龙匕：对魔龙攻击翻倍
+    bool hasHolyShield = false;     // 圣盾/神圣盾：免疫魔法攻击
+    bool freezeMagicUsed = false;   // 冰冻魔法：下一次进入岩浆时冻结
+    int flyWandUses = 0;            // 飞行魔杖使用次数
+    int symmetryFlyerUses = 0;      // 对称飞行器剩余次数
 
     // 钥匙相关接口
     void AddKey(KeyType type, int count = 1);

@@ -543,6 +543,11 @@ static bool hasCustomShape(const std::string& name)
            name == "Potion" || name == "生命药" ||
            name == "小血瓶" || name == "大血瓶" ||
            name == "红宝石" || name == "蓝宝石" ||
+           name == "铁剑" || name == "银剑" || name == "骑士剑" || name == "圣剑" || name == "神圣剑" ||
+           name == "铁盾" || name == "银盾" || name == "骑士盾" || name == "圣盾" || name == "神圣盾" ||
+           name == "圣水" || name == "镐" || name == "炸弹" || name == "地震卷轴" ||
+           name == "十字架" || name == "屠龙匕" || name == "冰冻魔法" || name == "飞行魔杖" ||
+           name == "对称飞行器" || name == "记事本" ||
            name == "匿名眼镜" ||
            name == "破墙锤" ||
            name == "上楼器" ||
@@ -600,6 +605,28 @@ static void itemAppearance(const std::string& name, int value, QColor& fill, QCo
         { fill = QColor(220, 180, 40); border = QColor(170, 130, 20);
           label = QString::fromUtf8("金币"); textColor = QColor(100, 60, 0);
           desc = QString("%1G").arg(value); return; }
+    if (qname == QString::fromUtf8("铁剑") || qname == QString::fromUtf8("银剑") ||
+        qname == QString::fromUtf8("骑士剑") || qname == QString::fromUtf8("圣剑") ||
+        qname == QString::fromUtf8("神圣剑"))
+        { fill = QColor(210, 140, 40); border = QColor(160, 100, 20);
+          label = qname; textColor = Qt::white; desc = QString("ATK+%1").arg(value); return; }
+    if (qname == QString::fromUtf8("铁盾") || qname == QString::fromUtf8("银盾") ||
+        qname == QString::fromUtf8("骑士盾") || qname == QString::fromUtf8("圣盾") ||
+        qname == QString::fromUtf8("神圣盾"))
+        { fill = QColor(60, 120, 200); border = QColor(30, 80, 160);
+          label = qname; textColor = Qt::white; desc = QString("DEF+%1").arg(value); return; }
+    if (qname == QString::fromUtf8("圣水"))
+        { fill = QColor(80, 180, 240); border = QColor(30, 120, 190);
+          label = qname; textColor = Qt::white; return; }
+    if (qname == QString::fromUtf8("镐") || qname == QString::fromUtf8("炸弹") ||
+        qname == QString::fromUtf8("地震卷轴"))
+        { fill = QColor(140, 100, 70); border = QColor(100, 70, 40);
+          label = qname; textColor = Qt::white; return; }
+    if (qname == QString::fromUtf8("十字架") || qname == QString::fromUtf8("屠龙匕") ||
+        qname == QString::fromUtf8("冰冻魔法") || qname == QString::fromUtf8("飞行魔杖") ||
+        qname == QString::fromUtf8("对称飞行器") || qname == QString::fromUtf8("记事本"))
+        { fill = QColor(150, 90, 190); border = QColor(100, 50, 140);
+          label = qname; textColor = Qt::white; return; }
 
     // 特殊道具
     if (qname == QString::fromUtf8("匿名眼镜"))

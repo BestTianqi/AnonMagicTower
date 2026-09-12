@@ -52,6 +52,14 @@ bool Player::UseItem(int index)
         return false;
     if (m_items[index]->IsPassiveEffect())
         return true;  // 被动效果不消耗，仅查看
+    if (auto* flyer = dynamic_cast<SymmetryFlyer*>(m_items[index].get())) {
+        if (symmetryFlyerUses <= 0)
+            flyer->Apply(*this); // 首次使用初始化原版的3次次数
+        --symmetryFlyerUses;
+        if (symmetryFlyerUses <= 0)
+            m_items.erase(m_items.begin() + index);
+        return true;
+    }
     m_items[index]->Apply(*this);
     m_items.erase(m_items.begin() + index);
     return true;

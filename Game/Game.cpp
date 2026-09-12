@@ -45,22 +45,27 @@ void Game::generateClassicTower()
         case 6:  return std::make_unique<LargePotion>(tier.largePotionHp);
         case 7:  return std::make_unique<RubyGem>(tier.rubyAttack);
         case 8:  return std::make_unique<SapphireGem>(tier.sapphireDefense);
+        case 9:  return std::make_unique<FlyingWand>();
+        case 11: return std::make_unique<NoteBook>();
         case 10: return std::make_unique<AnonGlasses>();
-        case 13: return std::make_unique<WallBreaker>();
+        case 15: return std::make_unique<FreezeMagic>();
+        case 16: return std::make_unique<Bomb>();
+        case 19: return std::make_unique<Cross>();
+        case 13: return std::make_unique<Pickaxe>();
         case 17: return std::make_unique<HolyWater>();
         case 18: return std::make_unique<LuckyCoin>();
         case 21: return std::make_unique<StairUpper>();
         case 22: return std::make_unique<StairLower>();
-        case 24: return std::make_unique<Weapon>(10);
-        case 25: return std::make_unique<Armor>(10);
-        case 26: return std::make_unique<Weapon>(20);
-        case 27: return std::make_unique<Armor>(20);
-        case 28: return std::make_unique<Weapon>(40);
-        case 29: return std::make_unique<Armor>(40);
-        case 30: return std::make_unique<Weapon>(50);
-        case 31: return std::make_unique<Armor>(50);
-        case 32: return std::make_unique<Weapon>(100);
-        case 33: return std::make_unique<Armor>(100);
+        case 24: return std::make_unique<Weapon>(10, "铁剑");
+        case 25: return std::make_unique<Armor>(10, "铁盾");
+        case 26: return std::make_unique<Weapon>(20, "银剑");
+        case 27: return std::make_unique<Armor>(20, "银盾");
+        case 28: return std::make_unique<Weapon>(40, "骑士剑");
+        case 29: return std::make_unique<Armor>(40, "骑士盾");
+        case 30: return std::make_unique<Weapon>(50, "圣剑");
+        case 31: return std::make_unique<HolyShield>(50, "圣盾");
+        case 32: return std::make_unique<Weapon>(100, "神圣剑");
+        case 33: return std::make_unique<DivineShield>(100, "神圣盾");
         default: return std::make_unique<Item>("ClassicArtifact", id);
         }
     };
@@ -431,6 +436,13 @@ Game::MoveResult Game::tryMovePlayer(int nx, int ny)
         return Move_Block;
 
     case Tile_Lava:
+        if (m_player.freezeMagicUsed) {
+            m_player.freezeMagicUsed = false;
+            setTile(nx, ny, Tile_Floor);
+            m_player.x = nx; m_player.y = ny;
+            return Move_Ok;
+        }
+        return Move_Block;
     case Tile_StarRiver:
         return Move_Block;
 
@@ -549,12 +561,24 @@ Game::FightResult Game::fightAt(int x, int y, std::vector<std::string>& outLog)
 
     while (true) {
         // 玩家攻击：atk - 怪物def (至少为0)
-        int dmgToMonster = m_player.atk - m->GetDEF();
+        int attackPower = m_player.atk;
+        const bool vampireOrOrc = bossName.find("吸血") != std::string::npos ||
+                                  bossName.find("兽人") != std::string::npos;
+        const bool dragon = bossName.find("魔龙") != std::string::npos ||
+                            bossName.find("龙") != std::string::npos;
+        if (m_player.hasCross && vampireOrOrc) attackPower *= 2;
+        if (m_player.hasDragonSlayer && dragon) attackPower *= 2;
+        int dmgToMonster = attackPower - m->GetDEF();
         if (dmgToMonster < 0) dmgToMonster = 0;
 
         // 怪物攻击：atk - 玩家def - 护盾 (至少为0)
         int dmgToPlayer = m->Attack() - m_player.def - shieldBonus;
         if (dmgToPlayer < 0) dmgToPlayer = 0;
+        const bool magicAttacker = bossName.find("法师") != std::string::npos ||
+                                   bossName.find("巫师") != std::string::npos ||
+                                   bossName.find("大法师") != std::string::npos ||
+                                   bossName.find("魔法") != std::string::npos;
+        if (m_player.hasHolyShield && magicAttacker) dmgToPlayer = 0;
         if (m_player.hasPenguinDoll && (bossName == "高松灯" || bossName == "企鹅"))
             dmgToPlayer /= 2;
         if (m_player.hasMatchaParfait && (bossName == "要乐奈" || bossName == "小猫"))
@@ -744,7 +768,10 @@ bool Game::saveToFile(const std::string& path) const
     ofs << "EXTRA " << m_player.hasLuckyCoin << " " << m_player.shopUseCount << " "
         << m_player.wallBreakerUsed << " " << m_player.stairUpUsed << " "
         << m_player.stairDownUsed << " "
-        << m_player.magicKeyUses << " " << m_player.tempShieldCharges << "\n";
+        << m_player.magicKeyUses << " " << m_player.tempShieldCharges << " "
+        << m_player.hasCross << " " << m_player.hasDragonSlayer << " "
+        << m_player.hasHolyShield << " " << m_player.freezeMagicUsed << " "
+        << m_player.flyWandUses << " " << m_player.symmetryFlyerUses << "\n";
 
     // 背包物品
     ofs << m_player.InventoryCount() << "\n";
@@ -772,12 +799,33 @@ std::string Game::canonicalItemName(const std::string& iname)
     if (iname == "Weapon" || iname == QString::fromUtf8("武器").toStdString()) return "Weapon";
     if (iname == "Armor" || iname == QString::fromUtf8("防具").toStdString()) return "Armor";
     if (iname == "Treasure" || iname == QString::fromUtf8("金币").toStdString()) return "Treasure";
+    const std::pair<const char*, const char*> originalItems[] = {
+        {"Iron Sword", "铁剑"}, {"Silver Sword", "银剑"}, {"Knight Sword", "骑士剑"},
+        {"Holy Sword", "圣剑"}, {"Divine Sword", "神圣剑"},
+        {"Iron Shield", "铁盾"}, {"Silver Shield", "银盾"}, {"Knight Shield", "骑士盾"},
+        {"Holy Shield", "圣盾"}, {"Divine Shield", "神圣盾"},
+        {"Pickaxe", "镐"}, {"Bomb", "炸弹"}, {"Earthquake Scroll", "地震卷轴"},
+        {"Cross", "十字架"}, {"Dragon Slayer", "屠龙匕"}, {"Freeze Magic", "冰冻魔法"},
+        {"Flying Wand", "飞行魔杖"}, {"Symmetry Flyer", "对称飞行器"}, {"Note Book", "记事本"},
+        {"Magic Key", "万能钥匙"}, {"Holy Water", "圣水"}, {"Lucky Coin", "幸运金币"},
+        {"Anon Glasses", "匿名眼镜"}, {"Wall Breaker", "破墙锤"}, {"Up Flyer", "上楼器"},
+        {"Down Flyer", "下楼器"}
+    };
+    for (const auto& pair : originalItems) {
+        if (iname == pair.first || iname == pair.second) return pair.second;
+    }
     const QString special = QString::fromStdString(iname);
     static const QStringList specials = {
         QString::fromUtf8("万能钥匙"), QString::fromUtf8("匿名眼镜"), QString::fromUtf8("破墙锤"),
         QString::fromUtf8("上楼器"), QString::fromUtf8("下楼器"), QString::fromUtf8("临时护盾"),
         QString::fromUtf8("企鹅玩偶"), QString::fromUtf8("抹茶芭菲"), QString::fromUtf8("幸运金币"),
-        QString::fromUtf8("圣水")
+        QString::fromUtf8("圣水"), QString::fromUtf8("铁剑"), QString::fromUtf8("银剑"),
+        QString::fromUtf8("骑士剑"), QString::fromUtf8("圣剑"), QString::fromUtf8("神圣剑"),
+        QString::fromUtf8("铁盾"), QString::fromUtf8("银盾"), QString::fromUtf8("骑士盾"),
+        QString::fromUtf8("圣盾"), QString::fromUtf8("神圣盾"), QString::fromUtf8("镐"),
+        QString::fromUtf8("炸弹"), QString::fromUtf8("地震卷轴"), QString::fromUtf8("十字架"),
+        QString::fromUtf8("屠龙匕"), QString::fromUtf8("冰冻魔法"), QString::fromUtf8("飞行魔杖"),
+        QString::fromUtf8("对称飞行器"), QString::fromUtf8("记事本")
     };
     for (const auto& name : specials)
         if (special == name) return name.toStdString();
@@ -813,15 +861,34 @@ std::unique_ptr<Item> Game::createItemByName(const std::string& iname, int ival)
         return std::make_unique<Armor>(ival);
     if (iname == "Treasure" || iname == QString::fromUtf8("金币").toStdString())
         return std::make_unique<Treasure>(ival);
-    if (iname == QString::fromUtf8("万能钥匙").toStdString())
+    if (iname == "Iron Sword" || iname == QString::fromUtf8("铁剑").toStdString()) return std::make_unique<Weapon>(ival, "铁剑");
+    if (iname == "Silver Sword" || iname == QString::fromUtf8("银剑").toStdString()) return std::make_unique<Weapon>(ival, "银剑");
+    if (iname == "Knight Sword" || iname == QString::fromUtf8("骑士剑").toStdString()) return std::make_unique<Weapon>(ival, "骑士剑");
+    if (iname == "Holy Sword" || iname == QString::fromUtf8("圣剑").toStdString()) return std::make_unique<Weapon>(ival, "圣剑");
+    if (iname == "Divine Sword" || iname == QString::fromUtf8("神圣剑").toStdString()) return std::make_unique<Weapon>(ival, "神圣剑");
+    if (iname == "Iron Shield" || iname == QString::fromUtf8("铁盾").toStdString()) return std::make_unique<Armor>(ival, "铁盾");
+    if (iname == "Silver Shield" || iname == QString::fromUtf8("银盾").toStdString()) return std::make_unique<Armor>(ival, "银盾");
+    if (iname == "Knight Shield" || iname == QString::fromUtf8("骑士盾").toStdString()) return std::make_unique<Armor>(ival, "骑士盾");
+    if (iname == "Holy Shield" || iname == QString::fromUtf8("圣盾").toStdString()) return std::make_unique<HolyShield>(ival, "圣盾");
+    if (iname == "Divine Shield" || iname == QString::fromUtf8("神圣盾").toStdString()) return std::make_unique<DivineShield>(ival, "神圣盾");
+    if (iname == "Pickaxe" || iname == QString::fromUtf8("镐").toStdString()) return std::make_unique<Pickaxe>();
+    if (iname == "Bomb" || iname == QString::fromUtf8("炸弹").toStdString()) return std::make_unique<Bomb>();
+    if (iname == "Earthquake Scroll" || iname == QString::fromUtf8("地震卷轴").toStdString()) return std::make_unique<EarthquakeScroll>();
+    if (iname == "Cross" || iname == QString::fromUtf8("十字架").toStdString()) return std::make_unique<Cross>();
+    if (iname == "Dragon Slayer" || iname == QString::fromUtf8("屠龙匕").toStdString()) return std::make_unique<DragonSlayer>();
+    if (iname == "Freeze Magic" || iname == QString::fromUtf8("冰冻魔法").toStdString()) return std::make_unique<FreezeMagic>();
+    if (iname == "Flying Wand" || iname == QString::fromUtf8("飞行魔杖").toStdString()) return std::make_unique<FlyingWand>();
+    if (iname == "Symmetry Flyer" || iname == QString::fromUtf8("对称飞行器").toStdString()) return std::make_unique<SymmetryFlyer>();
+    if (iname == "Note Book" || iname == QString::fromUtf8("记事本").toStdString()) return std::make_unique<NoteBook>();
+    if (iname == "Magic Key" || iname == QString::fromUtf8("万能钥匙").toStdString())
         return std::make_unique<MagicKey>();
-    if (iname == QString::fromUtf8("匿名眼镜").toStdString())
+    if (iname == "Anon Glasses" || iname == QString::fromUtf8("匿名眼镜").toStdString())
         return std::make_unique<AnonGlasses>();
-    if (iname == QString::fromUtf8("破墙锤").toStdString())
+    if (iname == "Wall Breaker" || iname == QString::fromUtf8("破墙锤").toStdString())
         return std::make_unique<WallBreaker>();
-    if (iname == QString::fromUtf8("上楼器").toStdString())
+    if (iname == "Up Flyer" || iname == QString::fromUtf8("上楼器").toStdString())
         return std::make_unique<StairUpper>();
-    if (iname == QString::fromUtf8("下楼器").toStdString())
+    if (iname == "Down Flyer" || iname == QString::fromUtf8("下楼器").toStdString())
         return std::make_unique<StairLower>();
     if (iname == QString::fromUtf8("临时护盾").toStdString())
         return std::make_unique<TempShield>();
@@ -829,9 +896,9 @@ std::unique_ptr<Item> Game::createItemByName(const std::string& iname, int ival)
         return std::make_unique<PenguinDoll>();
     if (iname == QString::fromUtf8("抹茶芭菲").toStdString())
         return std::make_unique<MatchaParfait>();
-    if (iname == QString::fromUtf8("幸运金币").toStdString())
+    if (iname == "Lucky Coin" || iname == QString::fromUtf8("幸运金币").toStdString())
         return std::make_unique<LuckyCoin>();
-    if (iname == QString::fromUtf8("圣水").toStdString())
+    if (iname == "Holy Water" || iname == QString::fromUtf8("圣水").toStdString())
         return std::make_unique<HolyWater>();
     // 未知名称不再静默丢弃，转为无效果占位道具，保证地图/存档数据可见。
     return std::make_unique<UnknownItem>(iname, ival);
@@ -984,6 +1051,8 @@ bool Game::loadFromFile(const std::string& path)
     // 扩展标记 (v2, 可选)
     bool hasLc = false; int mkUses = 0, shopUse = 0, tsc = 0;
     bool wbUsed = false, suUsed = false, sdUsed = false;
+    bool hasCross = false, hasDragonSlayer = false, hasHolyShield = false, freezeMagicUsed = false;
+    int flyWandUses = 0, symmetryFlyerUses = 0;
     std::string invToken;
     ifs >> invToken;
     if (invToken == "EXTRA") {
@@ -991,6 +1060,10 @@ bool Game::loadFromFile(const std::string& path)
         // v3 扩展: 万能钥匙 + 临时护盾次数
         if (ifs.peek() != '\n' && ifs.peek() != '\r' && ifs.peek() != EOF) {
             ifs >> mkUses >> tsc;
+            if (ifs.peek() != '\n' && ifs.peek() != '\r' && ifs.peek() != EOF) {
+                ifs >> hasCross >> hasDragonSlayer >> hasHolyShield >> freezeMagicUsed
+                    >> flyWandUses >> symmetryFlyerUses;
+            }
         }
         ifs >> invToken; // 下一个是背包数量
     }
@@ -1015,6 +1088,12 @@ bool Game::loadFromFile(const std::string& path)
     m_player.stairDownUsed = sdUsed;
     m_player.magicKeyUses = mkUses;
     m_player.tempShieldCharges = tsc;
+    m_player.hasCross = hasCross;
+    m_player.hasDragonSlayer = hasDragonSlayer;
+    m_player.hasHolyShield = hasHolyShield;
+    m_player.freezeMagicUsed = freezeMagicUsed;
+    m_player.flyWandUses = flyWandUses;
+    m_player.symmetryFlyerUses = symmetryFlyerUses;
 
     for (int i = 0; i < invCount; ++i) {
         std::string iname; int ival;

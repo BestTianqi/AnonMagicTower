@@ -76,7 +76,18 @@ enum class ItemType {
     WallBreaker,
     MagicKey,
     AnonGlasses,
-    LuckyCoin
+    LuckyCoin,
+    Pickaxe,
+    Bomb,
+    EarthquakeScroll,
+    Cross,
+    DragonSlayer,
+    FreezeMagic,
+    FlyingWand,
+    SymmetryFlyer,
+    NoteBook,
+    HolyShield,
+    DivineShield
 };
 
 class Potion : public Item {
@@ -121,7 +132,7 @@ public:
 
 class Weapon : public Item {
 public:
-    Weapon(int atkBonus);
+    Weapon(int atkBonus, const std::string& displayName = "Weapon");
     void Apply(Player& player) const override;
     int AtkBonus() const { return m_atk; }
 private:
@@ -130,7 +141,7 @@ private:
 
 class Armor : public Item {
 public:
-    Armor(int defBonus);
+    Armor(int defBonus, const std::string& displayName = "Armor");
     void Apply(Player& player) const override;
     int DefBonus() const { return m_def; }
 private:
@@ -208,7 +219,7 @@ public:
 
 class WallBreaker : public Item {
 public:
-    WallBreaker();
+    explicit WallBreaker(const std::string& displayName = "破墙锤");
     void Apply(Player& player) const override;
     bool IsUseItem() const override { return true; }
 };
@@ -231,4 +242,69 @@ public:
     LuckyCoin();
     void Apply(Player& player) const override;
     bool IsPassiveEffect() const override { return true; }
+};
+
+class Pickaxe : public WallBreaker {
+public:
+    Pickaxe();
+};
+
+class Bomb : public WallBreaker {
+public:
+    Bomb();
+};
+
+class EarthquakeScroll : public WallBreaker {
+public:
+    EarthquakeScroll();
+};
+
+class Cross : public Item {
+public:
+    Cross();
+    void Apply(Player& player) const override;
+};
+
+class DragonSlayer : public Item {
+public:
+    DragonSlayer();
+    void Apply(Player& player) const override;
+};
+
+class FreezeMagic : public Item {
+public:
+    FreezeMagic();
+    void Apply(Player& player) const override;
+    bool IsUseItem() const override { return true; }
+};
+
+class FlyingWand : public Item {
+public:
+    FlyingWand();
+    void Apply(Player& player) const override;
+    bool IsUseItem() const override { return true; }
+};
+
+class SymmetryFlyer : public Item {
+public:
+    SymmetryFlyer();
+    void Apply(Player& player) const override;
+    bool IsUseItem() const override { return true; }
+};
+
+class NoteBook : public Item {
+public:
+    NoteBook();
+    bool IsPassiveEffect() const override { return true; }
+};
+
+class HolyShield : public Armor {
+public:
+    HolyShield(int defBonus = 50, const std::string& displayName = "圣盾");
+    void Apply(Player& player) const override;
+};
+
+class DivineShield : public HolyShield {
+public:
+    DivineShield(int defBonus = 100, const std::string& displayName = "神圣盾");
 };
