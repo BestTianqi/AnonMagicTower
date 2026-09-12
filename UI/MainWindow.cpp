@@ -27,6 +27,20 @@ MainWindow::MainWindow(Game* game, QWidget* parent)
     setFocusPolicy(Qt::StrongFocus);
     ui.setupUi(this);
     setWindowTitle(QString::fromUtf8("魔塔"));
+    setMinimumSize(1100, 760);
+    setStyleSheet(
+        "QWidget#MainWindow { background: #111322; color: #e8e9f2; }"
+        "QWidget#sidePanel { background: #1a1d31; border-left: 1px solid #343852; }"
+        "QLabel { color: #dfe3f5; }"
+        "QLabel#floorLabel { color: #f5c96a; font-size: 20px; font-weight: 700; padding: 8px 4px; }"
+        "QLabel#hpLabel { color: #ff7188; font-size: 16px; font-weight: 700; }"
+        "QLabel#atkLabel, QLabel#defLabel { color: #9fc5ff; font-size: 14px; font-weight: 600; }"
+        "QLabel#goldLabel { color: #ffd66b; font-size: 14px; font-weight: 600; }"
+        "QLabel#keysLabel, QLabel#inventoryLabel { color: #c2c8df; font-size: 13px; }"
+        "QPushButton { background: #2d3150; color: #f2f4ff; border: 1px solid #525a88; border-radius: 6px; padding: 8px 14px; font-size: 14px; }"
+        "QPushButton:hover { background: #414875; border-color: #7f8bce; }"
+        "QPushButton:pressed { background: #232640; }"
+    );
 
     ui.mapWidget->setGame(m_game);
     ui.mapWidget->setFocusPolicy(Qt::NoFocus);

@@ -12,6 +12,14 @@ MenuWindow::MenuWindow(QWidget* parent)
 {
     ui.setupUi(this);
     setWindowTitle(QString::fromUtf8("魔塔"));
+    setMinimumSize(520, 420);
+    setStyleSheet(
+        "QWidget#MenuWindow { background: #111322; color: #e8e9f2; }"
+        "QPushButton { background: #2d3150; color: #f2f4ff; border: 1px solid #525a88; border-radius: 8px; padding: 10px 18px; font-size: 15px; }"
+        "QPushButton:hover { background: #414875; border-color: #7f8bce; }"
+        "QPushButton:pressed { background: #232640; }"
+        "QLabel { color: #dfe3f5; }"
+    );
 
     connect(ui.newGameBtn,   &QPushButton::clicked, this, &MenuWindow::onNewGame);
     connect(ui.loadGameBtn,  &QPushButton::clicked, this, &MenuWindow::onLoadGame);
