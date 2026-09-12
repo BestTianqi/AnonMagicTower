@@ -9,8 +9,9 @@ int main() {
     assert(classicItemTierForFloor(10).largePotionHp == 200);
     assert(classicItemTierForFloor(11).rubyAttack == 2);
     assert(classicItemTierForFloor(15).smallPotionHp == 100);
-    assert(classicItemTierForFloor(16).sapphireDefense == 3);
-    assert(classicItemTierForFloor(50).largePotionHp == 1800);
+    assert(classicItemTierForFloor(20).sapphireDefense == 2);
+    assert(classicItemTierForFloor(21).rubyAttack == 3);
+    assert(classicItemTierForFloor(50).largePotionHp == 1000);
 
     Player player;
     player.hp = 100;

@@ -6,7 +6,7 @@
 ClassicItemTier classicItemTierForFloor(int floor)
 {
     const int clamped = std::max(1, std::min(50, floor));
-    const int tier = clamped <= 10 ? 1 : ((clamped - 11) / 5 + 2);
+    const int tier = ((clamped - 1) / 10) + 1;
     return {tier, tier, tier * 50, tier * 200};
 }
 
