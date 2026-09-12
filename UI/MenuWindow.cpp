@@ -30,7 +30,7 @@ MenuWindow::MenuWindow(QWidget* parent)
 void MenuWindow::onNewGame()
 {
     auto* game = new Game();
-    game->loadDefaultMap();
+    game->generateClassicTower();
     QMessageBox::information(this,
         QString::fromUtf8("梦限大魔塔"),
         QString::fromUtf8("千早爱音踏入了被音乐诅咒的魔塔。\n\n"

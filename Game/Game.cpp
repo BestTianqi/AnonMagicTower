@@ -1,4 +1,5 @@
 #include "Game.h"
+#include "Entities/MonsterDB.h"
 #include <QString>
 #include <QFile>
 #include <QDir>
@@ -10,6 +11,65 @@ Game::Game()
     : m_width(MAP_SIZE), m_height(MAP_SIZE)
 {
     initFloor(1);
+}
+
+void Game::generateClassicTower()
+{
+    m_floors.clear();
+    m_floor = 1;
+    for (int floor = 1; floor <= 50; ++floor) {
+        FloorData fd;
+        fd.map.assign(m_width * m_height, Tile_Floor);
+        auto set = [&](int x, int y, int tile) { fd.map[y * m_width + x] = tile; };
+
+        // 原版 50 层魔塔常见的双层外墙与十字分区结构。
+        for (int i = 0; i < m_width; ++i) {
+            set(i, 0, Tile_Wall); set(i, 1, Tile_Wall);
+            set(i, m_height - 2, Tile_Wall); set(i, m_height - 1, Tile_Wall);
+            set(0, i, Tile_Wall); set(1, i, Tile_Wall);
+            set(m_width - 2, i, Tile_Wall); set(m_width - 1, i, Tile_Wall);
+        }
+        for (int y = 2; y < 13; ++y) {
+            if (y != 3 + (floor % 5)) set(7, y, Tile_Wall);
+        }
+        for (int x = 2; x < 13; ++x) {
+            if (x != 4 + (floor % 6)) set(x, 7, Tile_Wall);
+        }
+
+        set(2, 2, floor == 1 ? Tile_Floor : Tile_StairsUp);
+        set(12, 12, floor == 50 ? Tile_Floor : Tile_StairsDown);
+        if (floor % 3 == 0) set(7, 3 + (floor % 5), Tile_DoorRed);
+        if (floor % 3 == 1) set(4 + (floor % 6), 7, Tile_DoorBlue);
+        if (floor % 3 == 2) set(7, 3 + (floor % 5), Tile_DoorGreen);
+        if (floor >= 10 && floor % 5 == 0) set(10, 10, Tile_DarkWall);
+
+        const int tier = std::min(17, (floor - 1) / 3);
+        const int spots[][2] = {{3, 5}, {10, 5}, {5, 10}, {10, 10}};
+        const int count = 2 + (floor % 3);
+        for (int i = 0; i < count; ++i) {
+            int x = spots[i][0], y = spots[i][1];
+            if (x == 10 && y == 10 && floor >= 10 && floor % 5 == 0) { x = 11; y = 10; }
+            set(x, y, Tile_Monster);
+            fd.monsters.emplace(y * m_width + x,
+                MonsterDB::getByIndex(std::min(17, tier + (i > 1 ? 1 : 0))));
+        }
+        if (floor % 2 == 1) {
+            set(3, 3, Tile_Item); fd.items.emplace(3 * m_width + 3, createItemByName("生命药", 50 + floor * 4));
+        }
+        if (floor % 4 == 0) {
+            set(11, 3, Tile_Item); fd.items.emplace(3 * m_width + 11, createItemByName("红钥匙", 0));
+        }
+        if (floor % 7 == 0) {
+            set(3, 11, Tile_Item); fd.items.emplace(11 * m_width + 3, createItemByName("武器", 3 + floor / 10));
+        }
+        if (floor == 50) {
+            set(7, 6, Tile_Monster);
+            fd.monsters.emplace(6 * m_width + 7, MonsterDB::get("长崎素世"));
+        }
+        m_floors.emplace(floor, std::move(fd));
+    }
+    m_currentFloor = &m_floors[m_floor];
+    m_player.x = 2; m_player.y = 2; m_player.hp = 100; m_player.atk = 10; m_player.def = 5;
 }
 
 void Game::initFloor(int floor)

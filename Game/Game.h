@@ -48,6 +48,7 @@ class Game {
 public:
     Game();
     bool loadDefaultMap();
+    void generateClassicTower();
 
     const std::vector<int>& map() const { return m_currentFloor->map; }
     int width()  const { return m_width; }
