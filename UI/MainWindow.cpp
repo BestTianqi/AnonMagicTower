@@ -537,12 +537,12 @@ void MainWindow::showShopDialog(int x, int y)
         return;
     }
     if (shop->classicShopFloor > 0) {
-        const ClassicShopOffer offer = classicShopOfferForFloor(shop->classicShopFloor, shop->classicPurchaseCount);
+        const ClassicShopOffer offer = classicShopOfferForFloor(shop->classicShopFloor, p.shopUseCount);
         QDialog dlg(this);
         dlg.setWindowTitle(QString::fromUtf8("属性商店"));
         dlg.setFixedSize(400, 300);
         auto* layout = new QVBoxLayout(&dlg);
-        layout->addWidget(new QLabel(QString::fromUtf8("原版商店：第 %1 次购买价格 %2 金币").arg(shop->classicPurchaseCount + 1).arg(offer.price), &dlg));
+        layout->addWidget(new QLabel(QString::fromUtf8("原版商店：全局第 %1 次购买价格 %2 金币").arg(p.shopUseCount + 1).arg(offer.price), &dlg));
         struct Offer { QString name; QString effect; std::function<void()> apply; };
         const Offer offers[] = {
             {QString::fromUtf8("生命值"), QString::fromUtf8("+%1").arg(offer.hp), [&]{ p.hp += offer.hp; }},
@@ -552,10 +552,10 @@ void MainWindow::showShopDialog(int x, int y)
         for (const auto& item : offers) {
             auto* button = new QPushButton(QString::fromUtf8("购买 %1（%2）").arg(item.name, item.effect), &dlg);
             button->setEnabled(p.gold >= offer.price);
-            QObject::connect(button, &QPushButton::clicked, &dlg, [&dlg, &p, shop, offer, item] {
+            QObject::connect(button, &QPushButton::clicked, &dlg, [&dlg, &p, offer, item] {
                 p.gold -= offer.price;
                 item.apply();
-                ++shop->classicPurchaseCount;
+                ++p.shopUseCount;
                 dlg.accept();
             });
             layout->addWidget(button);

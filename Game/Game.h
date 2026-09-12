@@ -41,7 +41,7 @@ struct ShopData {
     // 原版商人/罐子编号；0 表示编辑器自定义商店。
     int classicNpcId = 0;
     int classicShopFloor = 0;
-    int classicPurchaseCount = 0;
+    int classicPurchaseCount = 0; // 兼容旧存档；运行时统一使用 Player::shopUseCount
 };
 
 struct FloorData {
