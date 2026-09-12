@@ -325,6 +325,21 @@ void MapEditWidget::paintEvent(QPaintEvent*)
                         { fill = QColor(140, 200, 100); label = QString::fromUtf8("芭菲"); }
                     else if (iname == QString::fromUtf8("幸运金币"))
                         { fill = QColor(240, 200, 20); label = QString::fromUtf8("幸运币"); }
+                    else if (iname == QString::fromUtf8("红色Live票") || iname == QString::fromUtf8("蓝色Live票") ||
+                             iname == QString::fromUtf8("黄色Live票"))
+                        { fill = QColor(100, 80, 180); label = iname.left(2); }
+                    else if (iname == QString::fromUtf8("爱音拨片") || iname == QString::fromUtf8("立希鼓棒") ||
+                             iname == QString::fromUtf8("乐奈猫爪") || iname == QString::fromUtf8("灯的麦克风") ||
+                             iname == QString::fromUtf8("睦的贝斯"))
+                        { fill = QColor(210, 140, 40); label = iname.left(4); }
+                    else if (iname == QString::fromUtf8("素世谱架") || iname == QString::fromUtf8("海铃节拍器") ||
+                             iname == QString::fromUtf8("初华舞台耳返") || iname == QString::fromUtf8("祥子黑色乐谱") ||
+                             iname == QString::fromUtf8("Mujica终幕面具"))
+                        { fill = QColor(60, 120, 200); label = iname.left(4); }
+                    else if (iname == QString::fromUtf8("MyGO和解徽章") || iname == QString::fromUtf8("祥子指挥棒") ||
+                             iname == QString::fromUtf8("海铃冷静指令") || iname == QString::fromUtf8("爱音手机") ||
+                             iname == QString::fromUtf8("Mujica镜面舞台票") || iname == QString::fromUtf8("灯的歌词本"))
+                        { fill = QColor(150, 90, 190); label = iname.left(4); }
                     else
                         { label = iname.left(4); }
                 }

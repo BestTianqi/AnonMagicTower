@@ -209,6 +209,42 @@ void MainWindow::loadAssets()
         {"抹茶芭菲",      ":/images/runtime/items/matcha_parfait.png"},
         {"幸运金币",      ":/images/runtime/items/lucky_coin.png"},
         {"圣水",          ":/images/runtime/items/holy_water.png"},
+        {"红色Live票",    ":/images/runtime/items/key_red.png"},
+        {"蓝色Live票",    ":/images/runtime/items/key_blue.png"},
+        {"黄色Live票",    ":/images/runtime/items/key_yellow.png"},
+        {"后台万能通行证", ":/images/runtime/items/key_magic.png"},
+        {"现场补给",      ":/images/runtime/items/potion.png"},
+        {"灯的热牛奶",    ":/images/runtime/items/potion_small.png"},
+        {"爱音能量饮",    ":/images/runtime/items/potion_large.png"},
+        {"MyGO应援红章",  ":/images/runtime/items/ruby_gem.png"},
+        {"Mujica应援蓝章", ":/images/runtime/items/sapphire_gem.png"},
+        {"爱音拨片",      ":/images/runtime/items/weapon.png"},
+        {"立希鼓棒",      ":/images/runtime/items/weapon.png"},
+        {"乐奈猫爪",      ":/images/runtime/items/weapon.png"},
+        {"灯的麦克风",    ":/images/runtime/items/weapon.png"},
+        {"睦的贝斯",      ":/images/runtime/items/weapon.png"},
+        {"素世谱架",      ":/images/runtime/items/armor.png"},
+        {"海铃节拍器",    ":/images/runtime/items/armor.png"},
+        {"初华舞台耳返",  ":/images/runtime/items/armor.png"},
+        {"祥子黑色乐谱",  ":/images/runtime/items/armor.png"},
+        {"Mujica终幕面具", ":/images/runtime/items/armor.png"},
+        {"爱音手机",      ":/images/runtime/items/artifact.png"},
+        {"Mujica镜面舞台票", ":/images/runtime/items/artifact.png"},
+        {"灯的歌词本",    ":/images/runtime/items/artifact.png"},
+        {"立希水壶",      ":/images/runtime/items/holy_water.png"},
+        {"爱音自拍眼镜",  ":/images/runtime/items/glasses.png"},
+        {"乐奈幸运硬币",  ":/images/runtime/items/lucky_coin.png"},
+        {"睦的镐子",      ":/images/runtime/items/wall_breaker.png"},
+        {"Mujica烟雾弹",  ":/images/runtime/items/artifact.png"},
+        {"Mujica舞台震响卷", ":/images/runtime/items/artifact.png"},
+        {"MyGO和解徽章",  ":/images/runtime/items/artifact.png"},
+        {"祥子指挥棒",    ":/images/runtime/items/artifact.png"},
+        {"海铃冷静指令",  ":/images/runtime/items/artifact.png"},
+        {"乐队护盾贴",    ":/images/runtime/items/temp_shield.png"},
+        {"立希企鹅挂件",  ":/images/runtime/items/penguin_doll.png"},
+        {"乐奈抹茶芭菲",  ":/images/runtime/items/matcha_parfait.png"},
+        {"舞台升降卡",    ":/images/runtime/items/stairs_up.png"},
+        {"撤场通行卡",    ":/images/runtime/items/stairs_down.png"},
         {"ClassicArtifact", ":/images/runtime/items/artifact.png"}
     };
     for (const auto& [name, path] : itemImages)
@@ -620,13 +656,13 @@ void MainWindow::showShopDialog(int x, int y)
     FixedOffer offer;
     bool fixed = true;
     switch (classicId) {
-    case 7:  offer = {QString::fromUtf8("蓝钥匙 ×1"), 50, [&] { p.AddKey(KeyType::Blue); }}; break;
-    case 8:  offer = {QString::fromUtf8("黄钥匙 ×5"), 50, [&] { p.AddKey(KeyType::Green, 5); }}; break;
-    case 9:  offer = {QString::fromUtf8("红钥匙 ×5"), 800, [&] { p.AddKey(KeyType::Red, 5); }}; break;
-    case 11: offer = {QString::fromUtf8("蓝钥匙 ×1"), 200, [&] { p.AddKey(KeyType::Blue); }}; break;
-    case 27: offer = {QString::fromUtf8("黄钥匙 ×4、蓝钥匙 ×1"), 1000, [&] { p.AddKey(KeyType::Green, 4); p.AddKey(KeyType::Blue); }}; break;
-    case 36: offer = {QString::fromUtf8("黄钥匙 ×3"), 200, [&] { p.AddKey(KeyType::Green, 3); }}; break;
-    case 38: offer = {QString::fromUtf8("蓝钥匙 ×3"), 2000, [&] { p.AddKey(KeyType::Blue, 3); }}; break;
+    case 7:  offer = {QString::fromUtf8("蓝色Live票 ×1"), 50, [&] { p.AddKey(KeyType::Blue); }}; break;
+    case 8:  offer = {QString::fromUtf8("黄色Live票 ×5"), 50, [&] { p.AddKey(KeyType::Green, 5); }}; break;
+    case 9:  offer = {QString::fromUtf8("红色Live票 ×5"), 800, [&] { p.AddKey(KeyType::Red, 5); }}; break;
+    case 11: offer = {QString::fromUtf8("蓝色Live票 ×1"), 200, [&] { p.AddKey(KeyType::Blue); }}; break;
+    case 27: offer = {QString::fromUtf8("黄色Live票 ×4、蓝色Live票 ×1"), 1000, [&] { p.AddKey(KeyType::Green, 4); p.AddKey(KeyType::Blue); }}; break;
+    case 36: offer = {QString::fromUtf8("黄色Live票 ×3"), 200, [&] { p.AddKey(KeyType::Green, 3); }}; break;
+    case 38: offer = {QString::fromUtf8("蓝色Live票 ×3"), 2000, [&] { p.AddKey(KeyType::Blue, 3); }}; break;
     case 41: offer = {QString::fromUtf8("生命值 +2000"), 1000, [&] { p.hp += 2000; }}; break;
     case 44: offer = {QString::fromUtf8("地震卷轴"), 4000, [&] { p.AddItem(std::make_unique<EarthquakeScroll>()); }}; break;
     default: fixed = false; break;
@@ -1178,9 +1214,9 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
     case Game::Move_DoorLocked: {
         int tile = m_game->tileAt(nx, ny);
         QString keyName;
-        if (tile == Tile_DoorRed) keyName = QString::fromUtf8("红钥匙");
-        else if (tile == Tile_DoorBlue) keyName = QString::fromUtf8("蓝钥匙");
-        else if (tile == Tile_DoorGreen) keyName = QString::fromUtf8("黄钥匙");
+        if (tile == Tile_DoorRed) keyName = QString::fromUtf8("红色Live票");
+        else if (tile == Tile_DoorBlue) keyName = QString::fromUtf8("蓝色Live票");
+        else if (tile == Tile_DoorGreen) keyName = QString::fromUtf8("黄色Live票");
         QMessageBox::information(this, QString::fromUtf8("门已锁"),
             QString::fromUtf8("需要 %1 才能打开这扇门。").arg(keyName));
         break;

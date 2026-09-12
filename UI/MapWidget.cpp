@@ -592,15 +592,15 @@ static void itemAppearance(const std::string& name, int value, QColor& fill, QCo
         qname == QString::fromUtf8("小血瓶") || qname == QString::fromUtf8("大血瓶") ||
         qname == QString::fromUtf8("现场补给") || qname == QString::fromUtf8("灯的热牛奶") || qname == QString::fromUtf8("爱音能量饮"))
         { fill = QColor(200, 60, 60); border = QColor(150, 30, 30);
-          label = QString::fromUtf8("生命药"); textColor = Qt::white;
+          label = (qname == QString::fromUtf8("现场补给")) ? QString::fromUtf8("补给") : qname; textColor = Qt::white;
           desc = QString("+%1HP").arg(value); return; }
     if (qname == QString::fromUtf8("红宝石") || qname == QString::fromUtf8("Ruby Gem") || qname == QString::fromUtf8("MyGO应援红章"))
         { fill = QColor(220, 40, 55); border = QColor(125, 15, 25);
-          label = QString::fromUtf8("红宝石"); textColor = Qt::white;
+          label = (qname == QString::fromUtf8("MyGO应援红章")) ? QString::fromUtf8("红章") : QString::fromUtf8("红宝石"); textColor = Qt::white;
           desc = QString("ATK+%1").arg(value); return; }
     if (qname == QString::fromUtf8("蓝宝石") || qname == QString::fromUtf8("Sapphire Gem") || qname == QString::fromUtf8("Mujica应援蓝章"))
         { fill = QColor(50, 100, 220); border = QColor(20, 50, 145);
-          label = QString::fromUtf8("蓝宝石"); textColor = Qt::white;
+          label = (qname == QString::fromUtf8("Mujica应援蓝章")) ? QString::fromUtf8("蓝章") : QString::fromUtf8("蓝宝石"); textColor = Qt::white;
           desc = QString("DEF+%1").arg(value); return; }
     if (qname == QString::fromUtf8("Weapon") || qname == QString::fromUtf8("武器"))
         { fill = QColor(210, 140, 40); border = QColor(160, 100, 20);
