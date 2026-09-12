@@ -233,7 +233,6 @@ void MainWindow::loadAssets()
         {"灯的歌词本",    ":/images/runtime/items/mygo/tomori_lyric_notebook.png"},
         {"立希水壶",      ":/images/runtime/items/mygo/rikki_water_kettle.png"},
         {"爱音自拍眼镜",  ":/images/runtime/items/mygo/anon_selfie_glasses.png"},
-        {"乐奈幸运硬币",  ":/images/runtime/items/lucky_coin.png"},
         {"睦的镐子",      ":/images/runtime/items/mygo/mutsumi_pickaxe_toolbox.png"},
         {"Mujica烟雾弹",  ":/images/runtime/items/mygo/mujica_smoke_bomb.png"},
         {"Mujica舞台震响卷", ":/images/runtime/items/mygo/mujica_stage_quake_scroll.png"},
