@@ -349,7 +349,7 @@ bool Game::breakWall(int x, int y)
 {
     if (x < 0 || y < 0 || x >= m_width || y >= m_height) return false;
     int idx = y * m_width + x;
-    if (m_currentFloor->map[idx] == Tile_Wall) {
+    if (m_currentFloor->map[idx] == Tile_Wall || m_currentFloor->map[idx] == Tile_DarkWall) {
         m_currentFloor->map[idx] = m_currentFloor->items.count(idx) ? Tile_Item : Tile_Floor;
         return true;
     }
@@ -507,9 +507,13 @@ Game::MoveResult Game::tryMovePlayer(int nx, int ny)
         return Move_Ok;
 
     case Tile_DarkWall:
-        setTile(nx, ny, m_currentFloor->items.count(posKey(nx, ny)) ? Tile_Item : Tile_Floor);
-        m_player.x = nx; m_player.y = ny;
-        return Move_Ok;
+        // 暗墙与普通墙一样不可直接穿过；破墙道具可将其打开。
+        if (m_player.wallBreakerUsed && breakWall(nx, ny)) {
+            m_player.wallBreakerUsed = false;
+            m_player.x = nx; m_player.y = ny;
+            return Move_Ok;
+        }
+        return Move_Block;
 
     case Tile_Floor:
         m_player.x = nx; m_player.y = ny;

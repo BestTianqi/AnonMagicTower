@@ -159,6 +159,14 @@ int main() {
     assert(lava.tileAt(3, 3) == Tile_Floor);
     assert(!lava.player().freezeMagicUsed);
 
+    // 暗墙是不可直接穿过的墙体；只有破墙道具才能打开。
+    Game hiddenWall;
+    hiddenWall.player().x = 3;
+    hiddenWall.player().y = 3;
+    hiddenWall.setTile(4, 3, Tile_DarkWall);
+    assert(hiddenWall.tryMovePlayer(4, 3) == Game::Move_Block);
+    assert(hiddenWall.player().x == 3 && hiddenWall.player().y == 3);
+
     Game bombGame;
     bombGame.player().x = 5;
     bombGame.player().y = 5;
