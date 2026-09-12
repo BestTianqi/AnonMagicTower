@@ -613,7 +613,7 @@ static bool hasCustomShape(const std::string& name)
            name == "素世谱架" || name == "海铃节拍器" || name == "初华舞台耳返" || name == "祥子黑色乐谱" || name == "Mujica终幕面具" ||
            name == "立希水壶" || name == "灯的热牛奶" || name == "爱音能量饮" || name == "红色Live票" || name == "蓝色Live票" || name == "黄色Live票" ||
            name == "爱音自拍眼镜" || name == "睦的镐子" || name == "Mujica烟雾弹" || name == "Mujica舞台震响卷" || name == "MyGO和解徽章" ||
-           name == "祥子指挥棒" || name == "海铃冷静指令" || name == "爱音手机" || name == "Mujica镜面舞台票" || name == "灯的歌词本" ||
+           name == "祥子指挥棒" || name == "海铃冷静指令" || name == "爱音手机" || name == "楼层传送器" || name == "Mujica镜面舞台票" || name == "灯的歌词本" ||
            name == "后台万能通行证" || name == "舞台升降卡" || name == "撤场通行卡" || name == "乐队护盾贴" || name == "立希企鹅挂件" ||
            name == "乐奈抹茶芭菲" || name == "乐奈幸运硬币" ||
            name == "匿名眼镜" ||
@@ -697,7 +697,7 @@ static void itemAppearance(const std::string& name, int value, QColor& fill, QCo
         { fill = QColor(140, 100, 70); border = QColor(100, 70, 40);
           label = qname; textColor = Qt::white; return; }
     if (qname == QString::fromUtf8("MyGO和解徽章") || qname == QString::fromUtf8("祥子指挥棒") ||
-        qname == QString::fromUtf8("海铃冷静指令") || qname == QString::fromUtf8("爱音手机") ||
+        qname == QString::fromUtf8("海铃冷静指令") || qname == QString::fromUtf8("爱音手机") || qname == QString::fromUtf8("楼层传送器") ||
         qname == QString::fromUtf8("Mujica镜面舞台票") || qname == QString::fromUtf8("灯的歌词本") ||
         qname == QString::fromUtf8("十字架") || qname == QString::fromUtf8("屠龙匕") ||
         qname == QString::fromUtf8("冰冻魔法") || qname == QString::fromUtf8("飞行魔杖") ||

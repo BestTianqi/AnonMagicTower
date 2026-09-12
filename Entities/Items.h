@@ -84,6 +84,7 @@ enum class ItemType {
     DragonSlayer,
     FreezeMagic,
     FlyingWand,
+    FloorTeleporter,
     SymmetryFlyer,
     NoteBook,
     HolyShield,
@@ -283,6 +284,14 @@ public:
 class FlyingWand : public Item {
 public:
     FlyingWand();
+    void Apply(Player& player) const override;
+    bool IsUseItem() const override { return true; }
+};
+
+// 楼层传送器：本地化的飞行魔杖变体，使用时由界面选择目标楼层。
+class FloorTeleporter : public Item {
+public:
+    FloorTeleporter();
     void Apply(Player& player) const override;
     bool IsUseItem() const override { return true; }
 };

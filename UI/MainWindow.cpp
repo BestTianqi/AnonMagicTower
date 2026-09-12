@@ -246,6 +246,7 @@ void MainWindow::loadAssets()
         {"祥子黑色乐谱",  ":/images/runtime/items/mygo/sakiko_sheet_music.png"},
         {"Mujica终幕面具", ":/images/runtime/items/mygo/mujica_finale_mask.png"},
         {"爱音手机",      ":/images/runtime/items/mygo/anon_smartphone.png"},
+        {"楼层传送器",    ":/images/runtime/items/mygo/anon_smartphone.png"},
         {"Mujica镜面舞台票", ":/images/runtime/items/mygo/mujica_mirror_ticket.png"},
         {"灯的歌词本",    ":/images/runtime/items/mygo/tomori_lyric_notebook.png"},
         {"立希水壶",      ":/images/runtime/items/mygo/rikki_water_kettle.png"},
@@ -380,6 +381,8 @@ QString MainWindow::getItemDescription(const Item* item) const
         return QString::fromUtf8("点击使用，冻结下一格岩浆");
     if (name == QString::fromUtf8("爱音手机"))
         return QString::fromUtf8("点击使用，传送到指定楼层");
+    if (name == QString::fromUtf8("楼层传送器"))
+        return QString::fromUtf8("点击使用，传送到指定楼层");
     if (name == QString::fromUtf8("Mujica镜面舞台票"))
         return QString::fromUtf8("点击使用，剩余 %1 次").arg(item->GetValue());
     if (name == QString::fromUtf8("灯的歌词本"))
@@ -460,6 +463,7 @@ void MainWindow::showInventory()
                             getItemDescription(item)));
                 } else {
                     const bool isFlyingWand = dynamic_cast<const FlyingWand*>(item) != nullptr;
+                    const bool isFloorTeleporter = dynamic_cast<const FloorTeleporter*>(item) != nullptr;
                     const bool isSymmetryFlyer = dynamic_cast<const SymmetryFlyer*>(item) != nullptr;
                     const bool isBomb = dynamic_cast<const Bomb*>(item) != nullptr;
                     const bool isEarthquake = dynamic_cast<const EarthquakeScroll*>(item) != nullptr;
@@ -467,9 +471,10 @@ void MainWindow::showInventory()
                     QString msg = QString::fromUtf8("使用了 %1: %2")
                         .arg(QString::fromStdString(item->GetName()))
                         .arg(getItemDescription(item));
-                    if (isFlyingWand) {
+                    if (isFlyingWand || isFloorTeleporter) {
                         bool ok = false;
-                        const int target = QInputDialog::getInt(&dlg, QString::fromUtf8("飞行魔杖"),
+                        const int target = QInputDialog::getInt(&dlg,
+                            item->GetName() == "楼层传送器" ? QString::fromUtf8("楼层传送器") : QString::fromUtf8("飞行魔杖"),
                             QString::fromUtf8("选择目标楼层（1-50）:"), m_game->currentFloor(), 1, 50, 1, &ok);
                         if (!ok) return;
                         m_game->player().UseItem(idx);

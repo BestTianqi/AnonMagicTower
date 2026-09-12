@@ -75,6 +75,7 @@ static QString editorItemAsset(const std::string& name)
     if (item == QString::fromUtf8("祥子黑色乐谱")) return ":/images/runtime/items/mygo/sakiko_sheet_music.png";
     if (item == QString::fromUtf8("Mujica终幕面具")) return ":/images/runtime/items/mygo/mujica_finale_mask.png";
     if (item == QString::fromUtf8("爱音手机")) return ":/images/runtime/items/mygo/anon_smartphone.png";
+    if (item == QString::fromUtf8("楼层传送器")) return ":/images/runtime/items/mygo/anon_smartphone.png";
     if (item == QString::fromUtf8("Mujica镜面舞台票")) return ":/images/runtime/items/mygo/mujica_mirror_ticket.png";
     if (item == QString::fromUtf8("灯的歌词本")) return ":/images/runtime/items/mygo/tomori_lyric_notebook.png";
     if (item == QString::fromUtf8("立希水壶")) return ":/images/runtime/items/mygo/rikki_water_kettle.png";
@@ -557,7 +558,7 @@ static const char* g_specialItems[] = {
     "后台万能通行证", "爱音自拍眼镜", "破墙锤", "舞台升降卡", "撤场通行卡",
     "乐队护盾贴", "立希企鹅挂件", "乐奈抹茶芭菲", "乐奈幸运硬币", "立希水壶",
     "睦的镐子", "Mujica烟雾弹", "Mujica舞台震响卷", "MyGO和解徽章", "祥子指挥棒", "海铃冷静指令",
-    "爱音手机", "Mujica镜面舞台票", "灯的歌词本", nullptr
+    "爱音手机", "楼层传送器", "Mujica镜面舞台票", "灯的歌词本", nullptr
 };
 
 MapEditor::MapEditor(QWidget* parent)
@@ -765,6 +766,7 @@ MapEditor::MapEditor(QWidget* parent)
         { QString::fromUtf8("祥子指挥棒"), 0, "#f88", false, QString::fromUtf8("对魔龙攻击翻倍") },
         { QString::fromUtf8("海铃冷静指令"), 0, "#8df", false, QString::fromUtf8("冻结岩浆") },
         { QString::fromUtf8("爱音手机"), 0, "#c8f", false, QString::fromUtf8("传送到指定楼层") },
+        { QString::fromUtf8("楼层传送器"), 0, "#b8f", false, QString::fromUtf8("传送到指定楼层") },
         { QString::fromUtf8("Mujica镜面舞台票"), 3, "#f8c", false, QString::fromUtf8("可使用3次") },
         { QString::fromUtf8("灯的歌词本"), 0, "#dda", false, QString::fromUtf8("记录魔塔提示") },
     };

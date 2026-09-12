@@ -33,6 +33,8 @@ int main() {
     assert(Game::canonicalItemName("Dragon Slayer") == "祥子指挥棒");
     assert(Game::canonicalItemName("Freeze Magic") == "海铃冷静指令");
     assert(Game::canonicalItemName("Flying Wand") == "爱音手机");
+    assert(Game::canonicalItemName("Floor Teleporter") == "楼层传送器");
+    assert(Game::isKnownItemName("楼层传送器"));
     assert(Game::canonicalItemName("Earthquake Scroll") == "Mujica舞台震响卷");
     assert(Game::isKnownItemName("Mujica镜面舞台票"));
     assert(Game::isKnownItemName("小血瓶")); // 旧存档别名继续可读
@@ -93,6 +95,11 @@ int main() {
     FlyingWand flying;
     flying.Apply(player);
     assert(player.flyWandUses == 1);
+    auto floorTeleporter = Game::createItemByName("楼层传送器", 0);
+    assert(floorTeleporter && floorTeleporter->GetName() == "楼层传送器");
+    assert(floorTeleporter->IsUseItem());
+    floorTeleporter->Apply(player);
+    assert(player.flyWandUses == 2);
     SymmetryFlyer symmetry;
     symmetry.Apply(player);
     assert(player.symmetryFlyerUses == 3);

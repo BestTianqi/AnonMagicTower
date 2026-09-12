@@ -861,6 +861,7 @@ std::string Game::canonicalItemName(const std::string& iname)
         {"Earthquake Scroll", "Mujica舞台震响卷"}, {"地震卷轴", "Mujica舞台震响卷"},
         {"Cross", "MyGO和解徽章"}, {"十字架", "MyGO和解徽章"}, {"Dragon Slayer", "祥子指挥棒"}, {"屠龙匕", "祥子指挥棒"},
         {"Freeze Magic", "海铃冷静指令"}, {"冰冻魔法", "海铃冷静指令"}, {"Flying Wand", "爱音手机"}, {"飞行魔杖", "爱音手机"},
+        {"Floor Teleporter", "楼层传送器"},
         {"Symmetry Flyer", "Mujica镜面舞台票"}, {"对称飞行器", "Mujica镜面舞台票"}, {"Note Book", "灯的歌词本"}, {"记事本", "灯的歌词本"},
         {"Magic Key", "后台万能通行证"}, {"万能钥匙", "后台万能通行证"}, {"Holy Water", "立希水壶"}, {"圣水", "立希水壶"},
         {"Lucky Coin", "乐奈幸运硬币"}, {"幸运金币", "乐奈幸运硬币"}, {"Anon Glasses", "爱音自拍眼镜"}, {"匿名眼镜", "爱音自拍眼镜"},
@@ -882,6 +883,7 @@ std::string Game::canonicalItemName(const std::string& iname)
         QString::fromUtf8("圣盾"), QString::fromUtf8("神圣盾"), QString::fromUtf8("镐"),
         QString::fromUtf8("炸弹"), QString::fromUtf8("地震卷轴"), QString::fromUtf8("十字架"),
         QString::fromUtf8("屠龙匕"), QString::fromUtf8("冰冻魔法"), QString::fromUtf8("飞行魔杖"),
+        QString::fromUtf8("楼层传送器"),
         QString::fromUtf8("对称飞行器"), QString::fromUtf8("记事本")
     };
     for (const auto& name : specials)
@@ -935,6 +937,7 @@ std::unique_ptr<Item> Game::createItemByName(const std::string& iname, int ival)
     if (iname == "Dragon Slayer" || iname == "屠龙匕" || iname == "祥子指挥棒") return std::make_unique<DragonSlayer>();
     if (iname == "Freeze Magic" || iname == "冰冻魔法" || iname == "海铃冷静指令") return std::make_unique<FreezeMagic>();
     if (iname == "Flying Wand" || iname == "飞行魔杖" || iname == "爱音手机") return std::make_unique<FlyingWand>();
+    if (iname == "Floor Teleporter" || iname == "楼层传送器") return std::make_unique<FloorTeleporter>();
     if (iname == "Symmetry Flyer" || iname == "对称飞行器" || iname == "Mujica镜面舞台票") return std::make_unique<SymmetryFlyer>();
     if (iname == "Note Book" || iname == "记事本" || iname == "灯的歌词本") return std::make_unique<NoteBook>();
     if (iname == "Magic Key" || iname == "万能钥匙" || iname == "后台万能通行证")

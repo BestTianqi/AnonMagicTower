@@ -259,6 +259,13 @@ void FlyingWand::Apply(Player& player) const {
     ++player.flyWandUses;
 }
 
+FloorTeleporter::FloorTeleporter()
+    : Item(QString::fromUtf8("楼层传送器").toStdString(), 0) {}
+
+void FloorTeleporter::Apply(Player& player) const {
+    ++player.flyWandUses;
+}
+
 SymmetryFlyer::SymmetryFlyer()
     : Item(QString::fromUtf8("Mujica镜面舞台票").toStdString(), 3) {}
 
