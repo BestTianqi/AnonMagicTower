@@ -33,8 +33,10 @@ target_link_libraries(mota PRIVATE Qt6::Widgets)
 
 add_executable(mota_classic_tests
     tests/test_classic_items.cpp
+    Game/Game.cpp
     Entities/Player.cpp
     Entities/Items.cpp
+    Entities/Monster.cpp
     Entities/NPC.cpp
 )
 target_include_directories(mota_classic_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})

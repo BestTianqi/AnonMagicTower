@@ -42,12 +42,12 @@ public:
         // === 侧边栏 ===
         sidePanel = new QWidget(parent);
         sidePanel->setObjectName("sidePanel");
-        sidePanel->setFixedWidth(280);
+        sidePanel->setFixedWidth(300);
 
         auto* vbox = new QVBoxLayout(sidePanel);
         vbox->setObjectName("verticalLayout");
         vbox->setContentsMargins(16, 16, 16, 16);
-        vbox->setSpacing(10);
+        vbox->setSpacing(7);
 
         QFont titleFont;
         titleFont.setPointSize(18);
@@ -69,10 +69,16 @@ public:
         sep1->setStyleSheet("color: #555;");
         vbox->addWidget(sep1);
 
+        auto* statusTitle = new QLabel(QString::fromUtf8("角色状态"), sidePanel);
+        statusTitle->setStyleSheet("color: #f1cf7a; font-size: 13px; font-weight: 700; padding: 2px 0;");
+        vbox->addWidget(statusTitle);
+
         hpLabel = new QLabel(sidePanel);
         hpLabel->setObjectName("hpLabel");
         hpLabel->setText(QString::fromUtf8("❤ 生命: 100"));
         hpLabel->setFont(statFont);
+        hpLabel->setMinimumHeight(30);
+        hpLabel->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
         hpLabel->setStyleSheet("color: #e05555;");
         vbox->addWidget(hpLabel);
 
@@ -80,6 +86,8 @@ public:
         atkLabel->setObjectName("atkLabel");
         atkLabel->setText(QString::fromUtf8("⚔ 攻击: 10"));
         atkLabel->setFont(statFont);
+        atkLabel->setMinimumHeight(30);
+        atkLabel->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
         atkLabel->setStyleSheet("color: #d4952a;");
         vbox->addWidget(atkLabel);
 
@@ -87,6 +95,8 @@ public:
         defLabel->setObjectName("defLabel");
         defLabel->setText(QString::fromUtf8("🛡 防御: 5"));
         defLabel->setFont(statFont);
+        defLabel->setMinimumHeight(30);
+        defLabel->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
         defLabel->setStyleSheet("color: #3b8bc2;");
         vbox->addWidget(defLabel);
 
@@ -99,6 +109,8 @@ public:
         goldLabel->setObjectName("goldLabel");
         goldLabel->setText(QString::fromUtf8("💰 金币: 0"));
         goldLabel->setFont(statFont);
+        goldLabel->setMinimumHeight(30);
+        goldLabel->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
         goldLabel->setStyleSheet("color: #c8a23b;");
         vbox->addWidget(goldLabel);
 
@@ -106,6 +118,8 @@ public:
         keysLabel->setObjectName("keysLabel");
         keysLabel->setText(QString::fromUtf8("🔑 钥匙: 红0 蓝0 绿0"));
         keysLabel->setFont(statFont);
+        keysLabel->setMinimumHeight(30);
+        keysLabel->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
         keysLabel->setStyleSheet("color: #aaccaa;");
         vbox->addWidget(keysLabel);
 
@@ -113,7 +127,7 @@ public:
         invItemsLabel->setObjectName("invItemsLabel");
         invItemsLabel->setText("");
         invItemsLabel->setWordWrap(true);
-        invItemsLabel->setStyleSheet("color: #8899aa; font-size: 12px; padding: 4px;");
+        invItemsLabel->setStyleSheet("color: #c2c8df; font-size: 12px; padding: 6px 4px; background: rgba(10,11,20,120); border: 1px solid #45465d; border-radius: 4px;");
         vbox->addWidget(invItemsLabel);
 
         auto* spacer = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);

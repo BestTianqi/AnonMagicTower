@@ -1,6 +1,7 @@
 #include "Game.h"
 #include "Entities/MonsterDB.h"
 #include <QString>
+#include <QStringList>
 #include <QFile>
 #include <QDir>
 #include <QTextStream>
@@ -749,6 +750,37 @@ bool Game::saveToFile(const std::string& path) const
     }
 
     return true;
+}
+
+std::string Game::canonicalItemName(const std::string& iname)
+{
+    if (iname == "Red Key" || iname == QString::fromUtf8("红钥匙").toStdString()) return QString::fromUtf8("红钥匙").toStdString();
+    if (iname == "Blue Key" || iname == QString::fromUtf8("蓝钥匙").toStdString()) return QString::fromUtf8("蓝钥匙").toStdString();
+    if (iname == "Green Key" || iname == "Yellow Key" ||
+        iname == QString::fromUtf8("绿钥匙").toStdString() || iname == QString::fromUtf8("黄钥匙").toStdString()) return QString::fromUtf8("黄钥匙").toStdString();
+    if (iname == "Potion" || iname == QString::fromUtf8("生命药").toStdString() || iname == QString::fromUtf8("药水").toStdString()) return QString::fromUtf8("生命药").toStdString();
+    if (iname == "Small Potion" || iname == QString::fromUtf8("小血瓶").toStdString()) return QString::fromUtf8("小血瓶").toStdString();
+    if (iname == "Large Potion" || iname == QString::fromUtf8("大血瓶").toStdString()) return QString::fromUtf8("大血瓶").toStdString();
+    if (iname == "Ruby Gem" || iname == QString::fromUtf8("红宝石").toStdString()) return QString::fromUtf8("红宝石").toStdString();
+    if (iname == "Sapphire Gem" || iname == QString::fromUtf8("蓝宝石").toStdString()) return QString::fromUtf8("蓝宝石").toStdString();
+    if (iname == "Weapon" || iname == QString::fromUtf8("武器").toStdString()) return "Weapon";
+    if (iname == "Armor" || iname == QString::fromUtf8("防具").toStdString()) return "Armor";
+    if (iname == "Treasure" || iname == QString::fromUtf8("金币").toStdString()) return "Treasure";
+    const QString special = QString::fromStdString(iname);
+    static const QStringList specials = {
+        QString::fromUtf8("万能钥匙"), QString::fromUtf8("匿名眼镜"), QString::fromUtf8("破墙锤"),
+        QString::fromUtf8("上楼器"), QString::fromUtf8("下楼器"), QString::fromUtf8("临时护盾"),
+        QString::fromUtf8("企鹅玩偶"), QString::fromUtf8("抹茶芭菲"), QString::fromUtf8("幸运金币"),
+        QString::fromUtf8("圣水")
+    };
+    for (const auto& name : specials)
+        if (special == name) return name.toStdString();
+    return {};
+}
+
+bool Game::isKnownItemName(const std::string& iname)
+{
+    return !canonicalItemName(iname).empty();
 }
 
 std::unique_ptr<Item> Game::createItemByName(const std::string& iname, int ival) {

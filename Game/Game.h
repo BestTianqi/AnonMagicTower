@@ -102,6 +102,9 @@ public:
     bool loadFromFile(const std::string& path);
 
     static std::unique_ptr<Item> createItemByName(const std::string& iname, int ival);
+    // 将存档/编辑器中的中英文别名统一为游戏显示名；未知名称返回空字符串。
+    static std::string canonicalItemName(const std::string& iname);
+    static bool isKnownItemName(const std::string& iname);
 
     FloorData& currentFloorData() { return *m_currentFloor; }
     const FloorData& currentFloorData() const { return *m_currentFloor; }

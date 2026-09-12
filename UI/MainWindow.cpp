@@ -22,7 +22,31 @@
 #include <QTabWidget>
 #include <QIcon>
 #include <QRandomGenerator>
+#include <QLocale>
+#include <QMap>
 #include <algorithm>
+
+static QString formatNumber(int value)
+{
+    return QLocale(QLocale::Chinese, QLocale::China).toString(value);
+}
+
+static QString monsterPortraitPath(const std::string& name)
+{
+    const QString n = QString::fromStdString(name);
+    if (n.contains(QString::fromUtf8("长崎素世"))) return QStringLiteral(":/images/characters/portraits/soyo.png");
+    if (n.contains(QString::fromUtf8("高松灯"))) return QStringLiteral(":/images/characters/portraits/tomori.png");
+    if (n.contains(QString::fromUtf8("椎名立希"))) return QStringLiteral(":/images/characters/portraits/taki.png");
+    if (n.contains(QString::fromUtf8("要乐奈"))) return QStringLiteral(":/images/characters/portraits/rana.png");
+    if (n.contains(QString::fromUtf8("八幡海铃"))) return QStringLiteral(":/images/characters/portraits/umiri.png");
+    if (n.contains(QString::fromUtf8("祐天寺若麦"))) return QStringLiteral(":/images/characters/portraits/nyamu.png");
+    if (n.contains(QString::fromUtf8("若叶睦"))) return QStringLiteral(":/images/characters/portraits/mutsumi.png");
+    if (n.contains(QString::fromUtf8("三角初华"))) return QStringLiteral(":/images/characters/portraits/uika.png");
+    if (n.contains(QString::fromUtf8("丰川祥子"))) return QStringLiteral(":/images/characters/portraits/sakiko.png");
+    if (n.contains(QString::fromUtf8("薇欧拉"))) return QStringLiteral(":/images/characters/portraits/viola.png");
+    if (n.contains(QString::fromUtf8("仲町"))) return QStringLiteral(":/images/characters/portraits/arale.png");
+    return {};
+}
 
 static void applyRuntimeArtSkin(QWidget& widget)
 {
@@ -56,7 +80,7 @@ MainWindow::MainWindow(Game* game, QWidget* parent)
         "QLabel#hpLabel { color: #ff7188; font-size: 16px; font-weight: 700; }"
         "QLabel#atkLabel, QLabel#defLabel { color: #9fc5ff; font-size: 14px; font-weight: 600; }"
         "QLabel#goldLabel { color: #ffd66b; font-size: 14px; font-weight: 600; }"
-        "QLabel#keysLabel, QLabel#inventoryLabel { color: #c2c8df; font-size: 13px; }"
+        "QLabel#keysLabel, QLabel#invItemsLabel { color: #c2c8df; font-size: 13px; }"
         "QPushButton { color: #fff7d0; border-image: url(:/images/runtime/ui/button_texture.png) 18 24 18 24 stretch stretch; padding: 8px 14px; font-size: 14px; font-weight: 700; }"
         "QPushButton:hover { color: white; }"
     );
@@ -226,7 +250,10 @@ QString MainWindow::getItemDescription(const Item* item) const
 {
     if (!item) return QString::fromUtf8("(空)");
 
-    QString name = QString::fromStdString(item->GetName());
+    const std::string canonical = Game::canonicalItemName(item->GetName());
+    if (canonical.empty())
+        return QString::fromUtf8("未知道具（名称无效）");
+    QString name = QString::fromStdString(canonical);
     int val = item->GetValue();
 
     if (name == "Potion" || name == QString::fromUtf8("生命药"))
@@ -311,7 +338,11 @@ void MainWindow::showInventory()
         for (int i = 0; i < count; ++i) {
             auto* item = m_game->player().GetItem(i);
             if (item) {
-                QString text = QString::fromStdString(item->GetName()) + " — " + getItemDescription(item);
+                const std::string canonical = Game::canonicalItemName(item->GetName());
+                const QString displayName = canonical.empty()
+                    ? QString::fromUtf8("未知道具")
+                    : QString::fromStdString(canonical);
+                QString text = displayName + " — " + getItemDescription(item);
                 auto* listItem = new QListWidgetItem(text, list);
                 listItem->setData(Qt::UserRole, i);
                 listItem->setToolTip(item->IsPassiveEffect()
@@ -955,24 +986,32 @@ void MainWindow::updateMonsterPanel()
 
         // 怪物小图
         auto* imgLabel = new QLabel(row);
-        imgLabel->setFixedSize(40, 40);
-        imgLabel->setStyleSheet("border: 1px solid #444; border-radius: 3px; background: #2a2a3e;");
+        imgLabel->setFixedSize(52, 52);
+        imgLabel->setAlignment(Qt::AlignCenter);
+        imgLabel->setStyleSheet("border: 1px solid #665f78; border-radius: 4px; background: rgba(24,25,43,210);");
 
-        QString imgPath = QString(":/images/monster_%1.png")
-            .arg(MonsterDB::indexOf(mon.GetName()) + 1, 2, 10, QChar('0'));
+        QString imgPath = monsterPortraitPath(mon.GetName());
+        if (imgPath.isEmpty())
+            imgPath = QString(":/images/monster_%1.png")
+                .arg(MonsterDB::indexOf(mon.GetName()) + 1, 2, 10, QChar('0'));
         QPixmap px(imgPath);
         if (!px.isNull()) {
-            imgLabel->setPixmap(px.scaled(40, 40, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+            imgLabel->setPixmap(px.scaled(48, 48, Qt::KeepAspectRatio, Qt::FastTransformation));
         }
         rowLayout->addWidget(imgLabel);
 
         // 怪物信息
         QString info = QString::fromUtf8(
-            "<b style='color:#e05555;'>%1</b><br>"
-            "<span style='color:#aaa; font-size:11px;'>"
-            "HP:%2 ATK:%3 DEF:%4 G:%5</span>")
+            "<b style='color:#f1cf7a;'>%1</b><br>"
+            "<span style='color:#ff8b9d;'>生命 %2</span>  "
+            "<span style='color:#ffb86b;'>攻击 %3</span><br>"
+            "<span style='color:#9fc5ff;'>防御 %4</span>  "
+            "<span style='color:#b8df9b;'>金币 %5</span><br>"
+            "<span style='color:#8e91ab; font-size:10px;'>位置 (%6,%7)</span>")
             .arg(QString::fromStdString(mon.GetName()))
-            .arg(mon.GetHP()).arg(mon.GetATK()).arg(mon.GetDEF()).arg(mon.GetGold());
+            .arg(formatNumber(mon.GetHP())).arg(formatNumber(mon.GetATK()))
+            .arg(formatNumber(mon.GetDEF())).arg(formatNumber(mon.GetGold()))
+            .arg(x).arg(y);
 
         auto* infoLabel = new QLabel(info, row);
         infoLabel->setStyleSheet("color: #d0d0d0; font-size: 12px;");
@@ -988,16 +1027,16 @@ void MainWindow::updateHUD()
 {
     int floor = m_game->currentFloor();
     ui.floorLabel->setText(QString::fromUtf8("第 %1 层").arg(floor));
-    ui.hpLabel->setText(QString::fromUtf8("❤ 生命: %1").arg(m_game->player().hp));
-    ui.atkLabel->setText(QString::fromUtf8("⚔ 攻击: %1").arg(m_game->player().atk));
-    ui.defLabel->setText(QString::fromUtf8("🛡 防御: %1").arg(m_game->player().def));
-    ui.goldLabel->setText(QString::fromUtf8("💰 金币: %1").arg(m_game->player().gold));
-    QString keyText = QString::fromUtf8("🔑 钥匙: 红%1 蓝%2 绿%3")
-        .arg(m_game->player().KeyCount(KeyType::Red))
-        .arg(m_game->player().KeyCount(KeyType::Blue))
-        .arg(m_game->player().KeyCount(KeyType::Green));
+    ui.hpLabel->setText(QString::fromUtf8("生命值    %1").arg(formatNumber(m_game->player().hp)));
+    ui.atkLabel->setText(QString::fromUtf8("攻击力    %1").arg(formatNumber(m_game->player().atk)));
+    ui.defLabel->setText(QString::fromUtf8("防御力    %1").arg(formatNumber(m_game->player().def)));
+    ui.goldLabel->setText(QString::fromUtf8("金币      %1").arg(formatNumber(m_game->player().gold)));
+    QString keyText = QString::fromUtf8("钥匙  红 %1   蓝 %2   黄 %3")
+        .arg(formatNumber(m_game->player().KeyCount(KeyType::Red)))
+        .arg(formatNumber(m_game->player().KeyCount(KeyType::Blue)))
+        .arg(formatNumber(m_game->player().KeyCount(KeyType::Green)));
     if (m_game->player().magicKeyUses > 0)
-        keyText += QString::fromUtf8("  🔮×%1").arg(m_game->player().magicKeyUses);
+        keyText += QString::fromUtf8("   万能 ×%1").arg(formatNumber(m_game->player().magicKeyUses));
     ui.keysLabel->setText(keyText);
 
     // 显示背包物品
@@ -1007,11 +1046,15 @@ void MainWindow::updateHUD()
         for (int i = 0; i < invCount; ++i) {
             auto* item = m_game->player().GetItem(i);
             if (item) {
-                if (!items.isEmpty()) items += " ";
-                items += QString::fromStdString(item->GetName());
+                const std::string canonical = Game::canonicalItemName(item->GetName());
+                const QString displayName = canonical.empty()
+                    ? QString::fromUtf8("未知道具")
+                    : QString::fromStdString(canonical);
+                if (!items.isEmpty()) items += QString::fromUtf8("、");
+                items += displayName;
             }
         }
-        ui.invItemsLabel->setText(QString::fromUtf8("🎒 物品: %1").arg(items));
+        ui.invItemsLabel->setText(QString::fromUtf8("物品\n%1").arg(items));
         ui.invItemsLabel->setVisible(true);
     } else {
         ui.invItemsLabel->setVisible(false);

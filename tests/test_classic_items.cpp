@@ -3,6 +3,7 @@
 #include "Entities/Items.h"
 #include "Entities/NPC.h"
 #include "Entities/Player.h"
+#include "Game/Game.h"
 
 int main() {
     assert(classicItemTierForFloor(1).rubyAttack == 1);
@@ -18,6 +19,14 @@ int main() {
     assert(shop12.hp == 100 && shop12.atk == 4 && shop12.def == 8 && shop12.price == 40);
     const auto shop46 = classicShopOfferForFloor(46, 3);
     assert(shop46.atk == 10 && shop46.def == 20 && shop46.price == 80);
+
+    // 道具名称校验：中英文别名归一到游戏内显示名，未知名称必须被拒绝。
+    assert(Game::isKnownItemName("Red Key"));
+    assert(Game::canonicalItemName("Red Key") == "红钥匙");
+    assert(Game::canonicalItemName("Yellow Key") == "黄钥匙");
+    assert(Game::canonicalItemName("Small Potion") == "小血瓶");
+    assert(!Game::isKnownItemName("未知道具"));
+    assert(Game::canonicalItemName("未知道具").empty());
 
     Player player;
     player.hp = 100;
