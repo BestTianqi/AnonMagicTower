@@ -33,16 +33,17 @@ void Game::generateClassicTower()
         return;
     }
 
-    auto makeClassicItem = [](int id) -> std::unique_ptr<Item> {
+    auto makeClassicItem = [](int floor, int id) -> std::unique_ptr<Item> {
+        const ClassicItemTier tier = classicItemTierForFloor(floor);
         switch (id) {
         case 1:  return std::make_unique<Key>(KeyType::Green); // 内部第三钥匙槽即黄钥匙
         case 2:  return std::make_unique<Key>(KeyType::Blue);
         case 3:  return std::make_unique<Key>(KeyType::Red);
         case 4:  return std::make_unique<MagicKey>();
-        case 5:  return std::make_unique<SmallPotion>();
-        case 6:  return std::make_unique<LargePotion>();
-        case 7:  return std::make_unique<RubyGem>();
-        case 8:  return std::make_unique<SapphireGem>();
+        case 5:  return std::make_unique<SmallPotion>(tier.smallPotionHp);
+        case 6:  return std::make_unique<LargePotion>(tier.largePotionHp);
+        case 7:  return std::make_unique<RubyGem>(tier.rubyAttack);
+        case 8:  return std::make_unique<SapphireGem>(tier.sapphireDefense);
         case 10: return std::make_unique<AnonGlasses>();
         case 13: return std::make_unique<WallBreaker>();
         case 17: return std::make_unique<HolyWater>();
@@ -100,7 +101,7 @@ void Game::generateClassicTower()
             else if (id == 9 || id == 11) tile = Tile_DoorIron;
             fd.map[key] = tile;
         } else if (type == 1) {
-            fd.items[key] = makeClassicItem(id);
+            fd.items[key] = makeClassicItem(level, id);
             fd.map[key] = Tile_Item;
         } else if (type == 2) {
             if (id == 1) continue; // 原版玩家出生标记
@@ -744,13 +745,13 @@ std::unique_ptr<Item> Game::createItemByName(const std::string& iname, int ival)
     if (iname == "Potion" || iname == QString::fromUtf8("生命药").toStdString())
         return std::make_unique<Potion>(ival);
     if (iname == "Small Potion" || iname == QString::fromUtf8("小血瓶").toStdString())
-        return std::make_unique<SmallPotion>();
+        return std::make_unique<SmallPotion>(ival);
     if (iname == "Large Potion" || iname == QString::fromUtf8("大血瓶").toStdString())
-        return std::make_unique<LargePotion>();
+        return std::make_unique<LargePotion>(ival);
     if (iname == "Ruby Gem" || iname == QString::fromUtf8("红宝石").toStdString())
-        return std::make_unique<RubyGem>();
+        return std::make_unique<RubyGem>(ival);
     if (iname == "Sapphire Gem" || iname == QString::fromUtf8("蓝宝石").toStdString())
-        return std::make_unique<SapphireGem>();
+        return std::make_unique<SapphireGem>(ival);
     if (iname == "Weapon" || iname == QString::fromUtf8("武器").toStdString())
         return std::make_unique<Weapon>(ival);
     if (iname == "Armor" || iname == QString::fromUtf8("防具").toStdString())

@@ -1173,10 +1173,10 @@ static std::unique_ptr<Item> createItem(const std::string& name, int value)
 {
     // English names (from save files)
     if (name == "Potion")   return std::make_unique<Potion>(value);
-    if (name == "Small Potion") return std::make_unique<SmallPotion>();
-    if (name == "Large Potion") return std::make_unique<LargePotion>();
-    if (name == "Ruby Gem") return std::make_unique<RubyGem>();
-    if (name == "Sapphire Gem") return std::make_unique<SapphireGem>();
+    if (name == "Small Potion") return std::make_unique<SmallPotion>(value);
+    if (name == "Large Potion") return std::make_unique<LargePotion>(value);
+    if (name == "Ruby Gem") return std::make_unique<RubyGem>(value);
+    if (name == "Sapphire Gem") return std::make_unique<SapphireGem>(value);
     if (name == "Weapon")   return std::make_unique<Weapon>(value);
     if (name == "Armor")    return std::make_unique<Armor>(value);
     if (name == "Treasure") return std::make_unique<Treasure>(value);
@@ -1185,10 +1185,10 @@ static std::unique_ptr<Item> createItem(const std::string& name, int value)
     if (name == "Green Key") return std::make_unique<Key>(KeyType::Green);
     // Chinese names (from editor buttons)
     if (name == QString::fromUtf8("生命药").toStdString())   return std::make_unique<Potion>(value);
-    if (name == QString::fromUtf8("小血瓶").toStdString())   return std::make_unique<SmallPotion>();
-    if (name == QString::fromUtf8("大血瓶").toStdString())   return std::make_unique<LargePotion>();
-    if (name == QString::fromUtf8("红宝石").toStdString())   return std::make_unique<RubyGem>();
-    if (name == QString::fromUtf8("蓝宝石").toStdString())   return std::make_unique<SapphireGem>();
+    if (name == QString::fromUtf8("小血瓶").toStdString())   return std::make_unique<SmallPotion>(value);
+    if (name == QString::fromUtf8("大血瓶").toStdString())   return std::make_unique<LargePotion>(value);
+    if (name == QString::fromUtf8("红宝石").toStdString())   return std::make_unique<RubyGem>(value);
+    if (name == QString::fromUtf8("蓝宝石").toStdString())   return std::make_unique<SapphireGem>(value);
     if (name == QString::fromUtf8("武器").toStdString())     return std::make_unique<Weapon>(value);
     if (name == QString::fromUtf8("防具").toStdString())     return std::make_unique<Armor>(value);
     if (name == QString::fromUtf8("金币").toStdString())     return std::make_unique<Treasure>(value);

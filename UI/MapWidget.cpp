@@ -583,11 +583,11 @@ static void itemAppearance(const std::string& name, int value, QColor& fill, QCo
     if (qname == QString::fromUtf8("红宝石") || qname == QString::fromUtf8("Ruby Gem"))
         { fill = QColor(220, 40, 55); border = QColor(125, 15, 25);
           label = QString::fromUtf8("红宝石"); textColor = Qt::white;
-          desc = QString("ATK+3"); return; }
+          desc = QString("ATK+%1").arg(value); return; }
     if (qname == QString::fromUtf8("蓝宝石") || qname == QString::fromUtf8("Sapphire Gem"))
         { fill = QColor(50, 100, 220); border = QColor(20, 50, 145);
           label = QString::fromUtf8("蓝宝石"); textColor = Qt::white;
-          desc = QString("DEF+3"); return; }
+          desc = QString("DEF+%1").arg(value); return; }
     if (qname == QString::fromUtf8("Weapon") || qname == QString::fromUtf8("武器"))
         { fill = QColor(210, 140, 40); border = QColor(160, 100, 20);
           label = QString::fromUtf8("武器"); textColor = Qt::white;

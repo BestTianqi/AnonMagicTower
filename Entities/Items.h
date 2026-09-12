@@ -4,6 +4,16 @@
 
 class Player; // 前向声明，避免循环包含
 
+struct ClassicItemTier {
+    int rubyAttack;
+    int sapphireDefense;
+    int smallPotionHp;
+    int largePotionHp;
+};
+
+// 按原版楼层段落计算四种基础道具的数值。
+ClassicItemTier classicItemTierForFloor(int floor);
+
 class Item {
 public:
     Item(const std::string& name, int value);
@@ -60,24 +70,24 @@ private:
 // 原版50层魔塔固定数值药水：小血瓶+200，大血瓶+500。
 class SmallPotion : public Potion {
 public:
-    SmallPotion();
+    explicit SmallPotion(int healAmount = 50);
 };
 
 class LargePotion : public Potion {
 public:
-    LargePotion();
+    explicit LargePotion(int healAmount = 200);
 };
 
 // 原版宝石拾取即生效：红宝石+3攻击，蓝宝石+3防御。
 class RubyGem : public Item {
 public:
-    RubyGem();
+    explicit RubyGem(int attackBonus = 1);
     void Apply(Player& player) const override;
 };
 
 class SapphireGem : public Item {
 public:
-    SapphireGem();
+    explicit SapphireGem(int defenseBonus = 1);
     void Apply(Player& player) const override;
 };
 

@@ -231,15 +231,15 @@ QString MainWindow::getItemDescription(const Item* item) const
     if (name == "Potion" || name == QString::fromUtf8("生命药"))
         return QString::fromUtf8("恢复 %1 点生命值").arg(val);
     if (name == QString::fromUtf8("小血瓶"))
-        return QString::fromUtf8("恢复 200 点生命值");
+        return QString::fromUtf8("恢复 %1 点生命值").arg(val);
     if (name == QString::fromUtf8("大血瓶"))
-        return QString::fromUtf8("恢复 500 点生命值");
+        return QString::fromUtf8("恢复 %1 点生命值").arg(val);
     if (name == QString::fromUtf8("红宝石"))
-        return QString::fromUtf8("攻击力 +3（拾取即生效）");
+        return QString::fromUtf8("攻击力 +%1（拾取即生效）").arg(val);
     if (name == QString::fromUtf8("蓝宝石"))
-        return QString::fromUtf8("防御力 +3（拾取即生效）");
-    if (name == "Ruby Gem") return QString::fromUtf8("攻击力 +3（拾取即生效）");
-    if (name == "Sapphire Gem") return QString::fromUtf8("防御力 +3（拾取即生效）");
+        return QString::fromUtf8("防御力 +%1（拾取即生效）").arg(val);
+    if (name == "Ruby Gem") return QString::fromUtf8("攻击力 +%1（拾取即生效）").arg(val);
+    if (name == "Sapphire Gem") return QString::fromUtf8("防御力 +%1（拾取即生效）").arg(val);
     if (name == "Weapon" || name == QString::fromUtf8("武器"))
         return QString::fromUtf8("攻击力 +%1").arg(val);
     if (name == "Armor" || name == QString::fromUtf8("防具"))
@@ -538,13 +538,34 @@ void MainWindow::showShopDialog(int x, int y)
     }
     if (classicId == 15 || classicId == 16 || classicId == 28 || classicId == 43) {
         const int cost = classicId == 15 ? 25 : classicId == 16 ? 50 : classicId == 28 ? 100 : 200;
-        auto reply = QMessageBox::question(this, QString::fromUtf8("属性罐"),
-            QString::fromUtf8("支付 %1 金币，随机获得一项属性提升？").arg(cost), QMessageBox::Yes | QMessageBox::No);
-        if (reply == QMessageBox::Yes && p.gold >= cost) {
-            p.gold -= cost;
-            const int stat = QRandomGenerator::global()->bounded(3);
-            if (stat == 0) p.hp += 100; else if (stat == 1) p.atk += 2; else p.def += 4;
+        const ClassicItemTier tier = classicItemTierForFloor(m_game->currentFloor());
+        QDialog dlg(this);
+        dlg.setWindowTitle(QString::fromUtf8("属性商店"));
+        dlg.setFixedSize(400, 300);
+        auto* layout = new QVBoxLayout(&dlg);
+        layout->addWidget(new QLabel(QString::fromUtf8("每次购买 %1 金币；数值随楼层段提升").arg(cost), &dlg));
+        struct Offer { QString name; QString effect; std::function<void()> apply; };
+        const Offer offers[] = {
+            {QString::fromUtf8("红宝石"), QString::fromUtf8("攻击 +%1").arg(tier.rubyAttack), [&]{ p.atk += tier.rubyAttack; }},
+            {QString::fromUtf8("蓝宝石"), QString::fromUtf8("防御 +%1").arg(tier.sapphireDefense), [&]{ p.def += tier.sapphireDefense; }},
+            {QString::fromUtf8("小血瓶"), QString::fromUtf8("生命 +%1").arg(tier.smallPotionHp), [&]{ p.hp += tier.smallPotionHp; }},
+            {QString::fromUtf8("大血瓶"), QString::fromUtf8("生命 +%1").arg(tier.largePotionHp), [&]{ p.hp += tier.largePotionHp; }}
+        };
+        for (const auto& item : offers) {
+            auto* button = new QPushButton(QString::fromUtf8("购买 %1（%2）").arg(item.name, item.effect), &dlg);
+            button->setEnabled(p.gold >= cost);
+            QObject::connect(button, &QPushButton::clicked, &dlg, [&dlg, &p, cost, item] {
+                p.gold -= cost;
+                item.apply();
+                dlg.accept();
+            });
+            layout->addWidget(button);
         }
+        auto* leave = new QPushButton(QString::fromUtf8("离开"), &dlg);
+        QObject::connect(leave, &QPushButton::clicked, &dlg, &QDialog::reject);
+        layout->addWidget(leave);
+        applyRuntimeArtSkin(dlg);
+        dlg.exec();
         updateHUD();
         return;
     }

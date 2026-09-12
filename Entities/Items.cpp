@@ -1,6 +1,14 @@
 #include "Items.h"
 #include "Player.h"
 #include <QString>
+#include <algorithm>
+
+ClassicItemTier classicItemTierForFloor(int floor)
+{
+    const int clamped = std::max(1, std::min(50, floor));
+    const int tier = clamped <= 10 ? 1 : ((clamped - 11) / 5 + 2);
+    return {tier, tier, tier * 50, tier * 200};
+}
 
 // Item
 Item::Item(const std::string& name, int value)
@@ -26,34 +34,34 @@ void Potion::Apply(Player& player) const
     player.hp += m_heal;
 }
 
-SmallPotion::SmallPotion()
-    : Potion(200, QString::fromUtf8("小血瓶").toStdString())
+SmallPotion::SmallPotion(int healAmount)
+    : Potion(healAmount, QString::fromUtf8("小血瓶").toStdString())
 {
 }
 
-LargePotion::LargePotion()
-    : Potion(500, QString::fromUtf8("大血瓶").toStdString())
+LargePotion::LargePotion(int healAmount)
+    : Potion(healAmount, QString::fromUtf8("大血瓶").toStdString())
 {
 }
 
-RubyGem::RubyGem()
-    : Item(QString::fromUtf8("红宝石").toStdString(), 3)
+RubyGem::RubyGem(int attackBonus)
+    : Item(QString::fromUtf8("红宝石").toStdString(), attackBonus)
 {
 }
 
 void RubyGem::Apply(Player& player) const
 {
-    player.atk += 3;
+    player.atk += GetValue();
 }
 
-SapphireGem::SapphireGem()
-    : Item(QString::fromUtf8("蓝宝石").toStdString(), 3)
+SapphireGem::SapphireGem(int defenseBonus)
+    : Item(QString::fromUtf8("蓝宝石").toStdString(), defenseBonus)
 {
 }
 
 void SapphireGem::Apply(Player& player) const
 {
-    player.def += 3;
+    player.def += GetValue();
 }
 
 HolyWater::HolyWater()
