@@ -789,7 +789,7 @@ void MapWidget::paintEvent(QPaintEvent*)
         const int ox = (m_backgroundScaled.width() - width()) / 2;
         const int oy = (m_backgroundScaled.height() - height()) / 2;
         painter.save();
-        painter.setOpacity(0.24);
+        painter.setOpacity(0.34);
         painter.drawPixmap(0, 0, m_backgroundScaled, ox, oy, width(), height());
         painter.restore();
     }

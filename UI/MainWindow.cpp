@@ -76,7 +76,9 @@ MainWindow::MainWindow(Game* game, QWidget* parent)
     setMinimumSize(1100, 760);
     setStyleSheet(
         "QWidget#MainWindow { background: #111322; color: #e8e9f2; }"
-        "QWidget#sidePanel { background-color: rgba(17,19,34,220); background-image: url(:/images/runtime/ui/panel_texture.png); border-left: 2px solid #777080; }"
+        "QWidget#sidePanel { background-color: rgba(10,12,28,238); background-image: url(:/images/runtime/ui/panel_texture.png); border-left: 2px solid #d35d9b; }"
+        "QLabel#gameTitle { color: #ff76b6; font-size: 21px; font-weight: 900; letter-spacing: 1px; }"
+        "QLabel#gameSubtitle { color: #9fd8ff; font-size: 11px; font-weight: 700; letter-spacing: 2px; }"
         "QLabel { color: #dfe3f5; }"
         "QLabel#floorLabel { color: #f5c96a; font-size: 20px; font-weight: 700; padding: 8px 4px; }"
         "QLabel#hpLabel { color: #ff7188; font-size: 16px; font-weight: 700; }"
@@ -170,7 +172,7 @@ void MainWindow::loadAssets()
     // 加载玩家图片
     mw->loadPlayerImage(":/images/characters/portraits/anon.png");
     mw->loadPlayerSpriteSheet(":/images/characters/pilot/anon_casual.png");
-    mw->loadBackgroundImage(":/images/backgrounds/tower_hub.png");
+    mw->loadBackgroundImage(":/images/backgrounds/bangdream_gbp_cover.jpg");
 
     // 运行时地图图块全部来自已生成图集的裁切素材。
     mw->loadTileImage(Tile_Floor,       ":/images/runtime/tiles/floor.png");

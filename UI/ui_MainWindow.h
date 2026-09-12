@@ -21,6 +21,8 @@ public:
     QWidget*     monsterPanel  = nullptr;
     QVBoxLayout* monsterLayout = nullptr;
     QLabel*      floorLabel    = nullptr;
+    QLabel*      gameTitle     = nullptr;
+    QLabel*      gameSubtitle  = nullptr;
     QLabel*      hpLabel      = nullptr;
     QLabel*      atkLabel     = nullptr;
     QLabel*      defLabel     = nullptr;
@@ -47,8 +49,8 @@ public:
 
         auto* vbox = new QVBoxLayout(sidePanel);
         vbox->setObjectName("verticalLayout");
-        vbox->setContentsMargins(16, 16, 16, 16);
-        vbox->setSpacing(7);
+        vbox->setContentsMargins(14, 14, 14, 14);
+        vbox->setSpacing(6);
 
         QFont titleFont;
         titleFont.setPointSize(18);
@@ -57,12 +59,24 @@ public:
         QFont statFont;
         statFont.setPointSize(14);
 
+        gameTitle = new QLabel(QString::fromUtf8("邦多利魔塔"), sidePanel);
+        gameTitle->setObjectName("gameTitle");
+        gameTitle->setAlignment(Qt::AlignCenter);
+        gameTitle->setStyleSheet("color: #ff76b6; font-size: 21px; font-weight: 900; padding: 0 0 2px;");
+        vbox->addWidget(gameTitle);
+
+        gameSubtitle = new QLabel(QString::fromUtf8("GIRLS BAND PARTY  ·  LIVE TOWER"), sidePanel);
+        gameSubtitle->setObjectName("gameSubtitle");
+        gameSubtitle->setAlignment(Qt::AlignCenter);
+        gameSubtitle->setStyleSheet("color: #9fd8ff; font-size: 10px; font-weight: 700; padding: 0 0 5px;");
+        vbox->addWidget(gameSubtitle);
+
         floorLabel = new QLabel(sidePanel);
         floorLabel->setObjectName("floorLabel");
         floorLabel->setText(QString::fromUtf8("第 1 层"));
         floorLabel->setFont(titleFont);
         floorLabel->setAlignment(Qt::AlignCenter);
-        floorLabel->setStyleSheet("color: #c8a23b; padding: 6px;");
+        floorLabel->setStyleSheet("color: #ffd66b; padding: 5px; background: rgba(52,28,70,150); border: 1px solid #7f558e; border-radius: 5px;");
         vbox->addWidget(floorLabel);
 
         auto* sep1 = new QFrame(sidePanel);
@@ -139,6 +153,12 @@ public:
         battleLabel->setStyleSheet("color: #ffd98a; font-size: 12px; padding: 7px; background: rgba(42,30,55,190); border: 1px solid #8c6ba8; border-radius: 4px;");
         battleLabel->setVisible(false);
         vbox->addWidget(battleLabel);
+
+        auto* controlsHint = new QLabel(QString::fromUtf8("方向键移动  ·  走到怪物前自动战斗"), sidePanel);
+        controlsHint->setObjectName("controlsHint");
+        controlsHint->setAlignment(Qt::AlignCenter);
+        controlsHint->setStyleSheet("color: #8490b8; font-size: 11px; padding: 3px 0;");
+        vbox->addWidget(controlsHint);
 
         auto* spacer = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
         vbox->addSpacerItem(spacer);
