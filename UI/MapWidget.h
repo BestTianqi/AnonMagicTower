@@ -17,6 +17,7 @@ public:
     void loadTileImage(int tileType, const QString& path);
     void loadMonsterImage(const std::string& name, const QString& path);
     void loadPlayerImage(const QString& path);
+    void loadBackgroundImage(const QString& path);
 
     QSize sizeHint() const override;
 
@@ -37,4 +38,7 @@ private:
     QPixmap m_defaultMonsterPix;
     QPixmap m_defaultItemPix;
     QPixmap m_darkWallRevealed;
+    QPixmap m_backgroundPix;
+    QPixmap m_backgroundScaled;
+    QSize m_backgroundViewport;
 };

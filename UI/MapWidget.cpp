@@ -146,6 +146,13 @@ void MapWidget::loadPlayerImage(const QString& path)
     }
 }
 
+void MapWidget::loadBackgroundImage(const QString& path)
+{
+    QPixmap px(path);
+    if (!px.isNull())
+        m_backgroundPix = px;
+}
+
 QSize MapWidget::sizeHint() const
 {
     return QSize(900, 900);
@@ -625,6 +632,18 @@ void MapWidget::paintEvent(QPaintEvent*)
     // Keep sprite edges sharp and reduce per-frame filtering overhead.
     painter.setRenderHint(QPainter::SmoothPixmapTransform, false);
     if (!m_game) return;
+
+    if (!m_backgroundPix.isNull()) {
+        // Cover the map viewport while preserving the scene's aspect ratio.
+        if (m_backgroundViewport != size()) {
+            m_backgroundScaled = m_backgroundPix.scaled(size(), Qt::KeepAspectRatioByExpanding,
+                                                         Qt::FastTransformation);
+            m_backgroundViewport = size();
+        }
+        const int ox = (m_backgroundScaled.width() - width()) / 2;
+        const int oy = (m_backgroundScaled.height() - height()) / 2;
+        painter.drawPixmap(0, 0, m_backgroundScaled, ox, oy, width(), height());
+    }
 
     int w = m_game->width();
     int h = m_game->height();

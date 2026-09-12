@@ -87,6 +87,7 @@ void MainWindow::loadAssets()
 
     // 加载玩家图片
     mw->loadPlayerImage(":/images/player.png");
+    mw->loadBackgroundImage(":/images/backgrounds/tower_hub.png");
 
     // 加载NPC图片
     mw->loadTileImage(Tile_NPC, ":/images/npc.png");

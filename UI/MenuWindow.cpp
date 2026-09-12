@@ -14,7 +14,7 @@ MenuWindow::MenuWindow(QWidget* parent)
     setWindowTitle(QString::fromUtf8("魔塔"));
     setMinimumSize(520, 420);
     setStyleSheet(
-        "QWidget#MenuWindow { background: #111322; color: #e8e9f2; }"
+        "QWidget#MenuWindow { background-color: #111322; background-image: url(:/images/backgrounds/tower_hub.png); background-position: center; background-repeat: no-repeat; color: #e8e9f2; }"
         "QPushButton { background: #2d3150; color: #f2f4ff; border: 1px solid #525a88; border-radius: 8px; padding: 10px 18px; font-size: 15px; }"
         "QPushButton:hover { background: #414875; border-color: #7f8bce; }"
         "QPushButton:pressed { background: #232640; }"
