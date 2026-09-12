@@ -56,16 +56,16 @@ void Game::generateClassicTower()
         case 18: return std::make_unique<LuckyCoin>();
         case 21: return std::make_unique<StairUpper>();
         case 22: return std::make_unique<StairLower>();
-        case 24: return std::make_unique<Weapon>(10, "铁剑");
-        case 25: return std::make_unique<Armor>(10, "铁盾");
-        case 26: return std::make_unique<Weapon>(20, "银剑");
-        case 27: return std::make_unique<Armor>(20, "银盾");
-        case 28: return std::make_unique<Weapon>(40, "骑士剑");
-        case 29: return std::make_unique<Armor>(40, "骑士盾");
-        case 30: return std::make_unique<Weapon>(50, "圣剑");
-        case 31: return std::make_unique<HolyShield>(50, "圣盾");
-        case 32: return std::make_unique<Weapon>(100, "神圣剑");
-        case 33: return std::make_unique<DivineShield>(100, "神圣盾");
+        case 24: return std::make_unique<Weapon>(10, "爱音拨片");
+        case 25: return std::make_unique<Armor>(10, "素世谱架");
+        case 26: return std::make_unique<Weapon>(20, "立希鼓棒");
+        case 27: return std::make_unique<Armor>(20, "海铃节拍器");
+        case 28: return std::make_unique<Weapon>(40, "乐奈猫爪");
+        case 29: return std::make_unique<Armor>(40, "初华舞台耳返");
+        case 30: return std::make_unique<Weapon>(50, "灯的麦克风");
+        case 31: return std::make_unique<HolyShield>(50, "祥子黑色乐谱");
+        case 32: return std::make_unique<Weapon>(100, "睦的贝斯");
+        case 33: return std::make_unique<DivineShield>(100, "Mujica终幕面具");
         default: return std::make_unique<Item>("ClassicArtifact", id);
         }
     };
@@ -839,29 +839,34 @@ bool Game::saveToFile(const std::string& path) const
 
 std::string Game::canonicalItemName(const std::string& iname)
 {
-    if (iname == "Red Key" || iname == QString::fromUtf8("红钥匙").toStdString()) return QString::fromUtf8("红钥匙").toStdString();
-    if (iname == "Blue Key" || iname == QString::fromUtf8("蓝钥匙").toStdString()) return QString::fromUtf8("蓝钥匙").toStdString();
-    if (iname == "Green Key" || iname == "Yellow Key" ||
-        iname == QString::fromUtf8("绿钥匙").toStdString() || iname == QString::fromUtf8("黄钥匙").toStdString()) return QString::fromUtf8("黄钥匙").toStdString();
-    if (iname == "Potion" || iname == QString::fromUtf8("生命药").toStdString() || iname == QString::fromUtf8("药水").toStdString()) return QString::fromUtf8("生命药").toStdString();
-    if (iname == "Small Potion" || iname == QString::fromUtf8("小血瓶").toStdString()) return QString::fromUtf8("小血瓶").toStdString();
-    if (iname == "Large Potion" || iname == QString::fromUtf8("大血瓶").toStdString()) return QString::fromUtf8("大血瓶").toStdString();
-    if (iname == "Ruby Gem" || iname == QString::fromUtf8("红宝石").toStdString()) return QString::fromUtf8("红宝石").toStdString();
-    if (iname == "Sapphire Gem" || iname == QString::fromUtf8("蓝宝石").toStdString()) return QString::fromUtf8("蓝宝石").toStdString();
+    if (iname == "Red Key" || iname == "红钥匙" || iname == "红色Live票") return "红色Live票";
+    if (iname == "Blue Key" || iname == "蓝钥匙" || iname == "蓝色Live票") return "蓝色Live票";
+    if (iname == "Green Key" || iname == "Yellow Key" || iname == "绿钥匙" || iname == "黄钥匙" || iname == "黄色Live票") return "黄色Live票";
+    if (iname == "Potion" || iname == "生命药" || iname == "药水" || iname == "现场补给") return "现场补给";
+    if (iname == "Small Potion" || iname == "小血瓶" || iname == "灯的热牛奶") return "灯的热牛奶";
+    if (iname == "Large Potion" || iname == "大血瓶" || iname == "爱音能量饮") return "爱音能量饮";
+    if (iname == "Ruby Gem" || iname == "红宝石" || iname == "MyGO应援红章") return "MyGO应援红章";
+    if (iname == "Sapphire Gem" || iname == "蓝宝石" || iname == "Mujica应援蓝章") return "Mujica应援蓝章";
     if (iname == "Weapon" || iname == QString::fromUtf8("武器").toStdString()) return "Weapon";
     if (iname == "Armor" || iname == QString::fromUtf8("防具").toStdString()) return "Armor";
     if (iname == "Treasure" || iname == QString::fromUtf8("金币").toStdString()) return "Treasure";
     const std::pair<const char*, const char*> originalItems[] = {
-        {"Iron Sword", "铁剑"}, {"Silver Sword", "银剑"}, {"Knight Sword", "骑士剑"},
-        {"Holy Sword", "圣剑"}, {"Divine Sword", "神圣剑"},
-        {"Iron Shield", "铁盾"}, {"Silver Shield", "银盾"}, {"Knight Shield", "骑士盾"},
-        {"Holy Shield", "圣盾"}, {"Divine Shield", "神圣盾"},
-        {"Pickaxe", "镐"}, {"Bomb", "炸弹"}, {"Earthquake Scroll", "地震卷轴"},
-        {"Cross", "十字架"}, {"Dragon Slayer", "屠龙匕"}, {"Freeze Magic", "冰冻魔法"},
-        {"Flying Wand", "飞行魔杖"}, {"Symmetry Flyer", "对称飞行器"}, {"Note Book", "记事本"},
-        {"Magic Key", "万能钥匙"}, {"Holy Water", "圣水"}, {"Lucky Coin", "幸运金币"},
-        {"Anon Glasses", "匿名眼镜"}, {"Wall Breaker", "破墙锤"}, {"Up Flyer", "上楼器"},
-        {"Down Flyer", "下楼器"}
+        {"Iron Sword", "爱音拨片"}, {"铁剑", "爱音拨片"}, {"Silver Sword", "立希鼓棒"}, {"银剑", "立希鼓棒"},
+        {"Knight Sword", "乐奈猫爪"}, {"骑士剑", "乐奈猫爪"}, {"Holy Sword", "灯的麦克风"}, {"圣剑", "灯的麦克风"},
+        {"Divine Sword", "睦的贝斯"}, {"神圣剑", "睦的贝斯"},
+        {"Iron Shield", "素世谱架"}, {"铁盾", "素世谱架"}, {"Silver Shield", "海铃节拍器"}, {"银盾", "海铃节拍器"},
+        {"Knight Shield", "初华舞台耳返"}, {"骑士盾", "初华舞台耳返"}, {"Holy Shield", "祥子黑色乐谱"}, {"圣盾", "祥子黑色乐谱"},
+        {"Divine Shield", "Mujica终幕面具"}, {"神圣盾", "Mujica终幕面具"},
+        {"Pickaxe", "睦的镐子"}, {"镐", "睦的镐子"}, {"Bomb", "Mujica烟雾弹"}, {"炸弹", "Mujica烟雾弹"},
+        {"Earthquake Scroll", "Mujica舞台震响卷"}, {"地震卷轴", "Mujica舞台震响卷"},
+        {"Cross", "MyGO和解徽章"}, {"十字架", "MyGO和解徽章"}, {"Dragon Slayer", "祥子指挥棒"}, {"屠龙匕", "祥子指挥棒"},
+        {"Freeze Magic", "海铃冷静指令"}, {"冰冻魔法", "海铃冷静指令"}, {"Flying Wand", "爱音手机"}, {"飞行魔杖", "爱音手机"},
+        {"Symmetry Flyer", "Mujica镜面舞台票"}, {"对称飞行器", "Mujica镜面舞台票"}, {"Note Book", "灯的歌词本"}, {"记事本", "灯的歌词本"},
+        {"Magic Key", "后台万能通行证"}, {"万能钥匙", "后台万能通行证"}, {"Holy Water", "立希水壶"}, {"圣水", "立希水壶"},
+        {"Lucky Coin", "乐奈幸运硬币"}, {"幸运金币", "乐奈幸运硬币"}, {"Anon Glasses", "爱音自拍眼镜"}, {"匿名眼镜", "爱音自拍眼镜"},
+        {"Wall Breaker", "破墙锤"}, {"破墙锤", "破墙锤"}, {"Up Flyer", "舞台升降卡"}, {"上楼器", "舞台升降卡"},
+        {"Down Flyer", "撤场通行卡"}, {"下楼器", "撤场通行卡"}, {"临时护盾", "乐队护盾贴"},
+        {"企鹅玩偶", "立希企鹅挂件"}, {"抹茶芭菲", "乐奈抹茶芭菲"}
     };
     for (const auto& pair : originalItems) {
         if (iname == pair.first || iname == pair.second) return pair.second;
@@ -890,63 +895,63 @@ bool Game::isKnownItemName(const std::string& iname)
 }
 
 std::unique_ptr<Item> Game::createItemByName(const std::string& iname, int ival) {
-    if (iname == "Red Key" || iname == QString::fromUtf8("红钥匙").toStdString())
+    if (iname == "Red Key" || iname == "红钥匙" || iname == "红色Live票")
         return std::make_unique<Key>(KeyType::Red);
-    if (iname == "Blue Key" || iname == QString::fromUtf8("蓝钥匙").toStdString())
+    if (iname == "Blue Key" || iname == "蓝钥匙" || iname == "蓝色Live票")
         return std::make_unique<Key>(KeyType::Blue);
     if (iname == "Green Key" || iname == QString::fromUtf8("绿钥匙").toStdString() ||
-        iname == "Yellow Key" || iname == QString::fromUtf8("黄钥匙").toStdString())
+        iname == "Yellow Key" || iname == "黄钥匙" || iname == "黄色Live票")
         return std::make_unique<Key>(KeyType::Green);
-    if (iname == "Potion" || iname == QString::fromUtf8("生命药").toStdString())
-        return std::make_unique<Potion>(ival);
-    if (iname == "Small Potion" || iname == QString::fromUtf8("小血瓶").toStdString())
-        return std::make_unique<SmallPotion>(ival);
-    if (iname == "Large Potion" || iname == QString::fromUtf8("大血瓶").toStdString())
-        return std::make_unique<LargePotion>(ival);
-    if (iname == "Ruby Gem" || iname == QString::fromUtf8("红宝石").toStdString())
-        return std::make_unique<RubyGem>(ival);
-    if (iname == "Sapphire Gem" || iname == QString::fromUtf8("蓝宝石").toStdString())
-        return std::make_unique<SapphireGem>(ival);
+    if (iname == "Potion" || iname == "生命药" || iname == "现场补给")
+        return std::make_unique<Potion>(ival, "现场补给");
+    if (iname == "Small Potion" || iname == "小血瓶" || iname == "灯的热牛奶")
+        return std::make_unique<SmallPotion>(ival, "灯的热牛奶");
+    if (iname == "Large Potion" || iname == "大血瓶" || iname == "爱音能量饮")
+        return std::make_unique<LargePotion>(ival, "爱音能量饮");
+    if (iname == "Ruby Gem" || iname == "红宝石" || iname == "MyGO应援红章")
+        return std::make_unique<RubyGem>(ival, "MyGO应援红章");
+    if (iname == "Sapphire Gem" || iname == "蓝宝石" || iname == "Mujica应援蓝章")
+        return std::make_unique<SapphireGem>(ival, "Mujica应援蓝章");
     if (iname == "Weapon" || iname == QString::fromUtf8("武器").toStdString())
         return std::make_unique<Weapon>(ival);
     if (iname == "Armor" || iname == QString::fromUtf8("防具").toStdString())
         return std::make_unique<Armor>(ival);
     if (iname == "Treasure" || iname == QString::fromUtf8("金币").toStdString())
         return std::make_unique<Treasure>(ival);
-    if (iname == "Iron Sword" || iname == QString::fromUtf8("铁剑").toStdString()) return std::make_unique<Weapon>(ival, "铁剑");
-    if (iname == "Silver Sword" || iname == QString::fromUtf8("银剑").toStdString()) return std::make_unique<Weapon>(ival, "银剑");
-    if (iname == "Knight Sword" || iname == QString::fromUtf8("骑士剑").toStdString()) return std::make_unique<Weapon>(ival, "骑士剑");
-    if (iname == "Holy Sword" || iname == QString::fromUtf8("圣剑").toStdString()) return std::make_unique<Weapon>(ival, "圣剑");
-    if (iname == "Divine Sword" || iname == QString::fromUtf8("神圣剑").toStdString()) return std::make_unique<Weapon>(ival, "神圣剑");
-    if (iname == "Iron Shield" || iname == QString::fromUtf8("铁盾").toStdString()) return std::make_unique<Armor>(ival, "铁盾");
-    if (iname == "Silver Shield" || iname == QString::fromUtf8("银盾").toStdString()) return std::make_unique<Armor>(ival, "银盾");
-    if (iname == "Knight Shield" || iname == QString::fromUtf8("骑士盾").toStdString()) return std::make_unique<Armor>(ival, "骑士盾");
-    if (iname == "Holy Shield" || iname == QString::fromUtf8("圣盾").toStdString()) return std::make_unique<HolyShield>(ival, "圣盾");
-    if (iname == "Divine Shield" || iname == QString::fromUtf8("神圣盾").toStdString()) return std::make_unique<DivineShield>(ival, "神圣盾");
-    if (iname == "Pickaxe" || iname == QString::fromUtf8("镐").toStdString()) return std::make_unique<Pickaxe>();
-    if (iname == "Bomb" || iname == QString::fromUtf8("炸弹").toStdString()) return std::make_unique<Bomb>();
-    if (iname == "Earthquake Scroll" || iname == QString::fromUtf8("地震卷轴").toStdString()) return std::make_unique<EarthquakeScroll>();
-    if (iname == "Cross" || iname == QString::fromUtf8("十字架").toStdString()) return std::make_unique<Cross>();
-    if (iname == "Dragon Slayer" || iname == QString::fromUtf8("屠龙匕").toStdString()) return std::make_unique<DragonSlayer>();
-    if (iname == "Freeze Magic" || iname == QString::fromUtf8("冰冻魔法").toStdString()) return std::make_unique<FreezeMagic>();
-    if (iname == "Flying Wand" || iname == QString::fromUtf8("飞行魔杖").toStdString()) return std::make_unique<FlyingWand>();
-    if (iname == "Symmetry Flyer" || iname == QString::fromUtf8("对称飞行器").toStdString()) return std::make_unique<SymmetryFlyer>();
-    if (iname == "Note Book" || iname == QString::fromUtf8("记事本").toStdString()) return std::make_unique<NoteBook>();
-    if (iname == "Magic Key" || iname == QString::fromUtf8("万能钥匙").toStdString())
+    if (iname == "Iron Sword" || iname == "铁剑" || iname == "爱音拨片") return std::make_unique<Weapon>(ival, "爱音拨片");
+    if (iname == "Silver Sword" || iname == "银剑" || iname == "立希鼓棒") return std::make_unique<Weapon>(ival, "立希鼓棒");
+    if (iname == "Knight Sword" || iname == "骑士剑" || iname == "乐奈猫爪") return std::make_unique<Weapon>(ival, "乐奈猫爪");
+    if (iname == "Holy Sword" || iname == "圣剑" || iname == "灯的麦克风") return std::make_unique<Weapon>(ival, "灯的麦克风");
+    if (iname == "Divine Sword" || iname == "神圣剑" || iname == "睦的贝斯") return std::make_unique<Weapon>(ival, "睦的贝斯");
+    if (iname == "Iron Shield" || iname == "铁盾" || iname == "素世谱架") return std::make_unique<Armor>(ival, "素世谱架");
+    if (iname == "Silver Shield" || iname == "银盾" || iname == "海铃节拍器") return std::make_unique<Armor>(ival, "海铃节拍器");
+    if (iname == "Knight Shield" || iname == "骑士盾" || iname == "初华舞台耳返") return std::make_unique<Armor>(ival, "初华舞台耳返");
+    if (iname == "Holy Shield" || iname == "圣盾" || iname == "祥子黑色乐谱") return std::make_unique<HolyShield>(ival, "祥子黑色乐谱");
+    if (iname == "Divine Shield" || iname == "神圣盾" || iname == "Mujica终幕面具") return std::make_unique<DivineShield>(ival, "Mujica终幕面具");
+    if (iname == "Pickaxe" || iname == "镐" || iname == "睦的镐子") return std::make_unique<Pickaxe>();
+    if (iname == "Bomb" || iname == "炸弹" || iname == "Mujica烟雾弹") return std::make_unique<Bomb>();
+    if (iname == "Earthquake Scroll" || iname == "地震卷轴" || iname == "Mujica舞台震响卷") return std::make_unique<EarthquakeScroll>();
+    if (iname == "Cross" || iname == "十字架" || iname == "MyGO和解徽章") return std::make_unique<Cross>();
+    if (iname == "Dragon Slayer" || iname == "屠龙匕" || iname == "祥子指挥棒") return std::make_unique<DragonSlayer>();
+    if (iname == "Freeze Magic" || iname == "冰冻魔法" || iname == "海铃冷静指令") return std::make_unique<FreezeMagic>();
+    if (iname == "Flying Wand" || iname == "飞行魔杖" || iname == "爱音手机") return std::make_unique<FlyingWand>();
+    if (iname == "Symmetry Flyer" || iname == "对称飞行器" || iname == "Mujica镜面舞台票") return std::make_unique<SymmetryFlyer>();
+    if (iname == "Note Book" || iname == "记事本" || iname == "灯的歌词本") return std::make_unique<NoteBook>();
+    if (iname == "Magic Key" || iname == "万能钥匙" || iname == "后台万能通行证")
         return std::make_unique<MagicKey>();
-    if (iname == "Anon Glasses" || iname == QString::fromUtf8("匿名眼镜").toStdString())
+    if (iname == "Anon Glasses" || iname == "匿名眼镜" || iname == "爱音自拍眼镜")
         return std::make_unique<AnonGlasses>();
-    if (iname == "Wall Breaker" || iname == QString::fromUtf8("破墙锤").toStdString())
+    if (iname == "Wall Breaker" || iname == "破墙锤")
         return std::make_unique<WallBreaker>();
-    if (iname == "Up Flyer" || iname == QString::fromUtf8("上楼器").toStdString())
+    if (iname == "Up Flyer" || iname == "上楼器" || iname == "舞台升降卡")
         return std::make_unique<StairUpper>();
-    if (iname == "Down Flyer" || iname == QString::fromUtf8("下楼器").toStdString())
+    if (iname == "Down Flyer" || iname == "下楼器" || iname == "撤场通行卡")
         return std::make_unique<StairLower>();
-    if (iname == QString::fromUtf8("临时护盾").toStdString())
+    if (iname == "临时护盾" || iname == "乐队护盾贴")
         return std::make_unique<TempShield>();
-    if (iname == QString::fromUtf8("企鹅玩偶").toStdString())
+    if (iname == "企鹅玩偶" || iname == "立希企鹅挂件")
         return std::make_unique<PenguinDoll>();
-    if (iname == QString::fromUtf8("抹茶芭菲").toStdString())
+    if (iname == "抹茶芭菲" || iname == "乐奈抹茶芭菲")
         return std::make_unique<MatchaParfait>();
     if (iname == "Lucky Coin" || iname == QString::fromUtf8("幸运金币").toStdString())
         return std::make_unique<LuckyCoin>();

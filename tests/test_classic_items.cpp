@@ -24,17 +24,18 @@ int main() {
 
     // 道具名称校验：中英文别名归一到游戏内显示名，未知名称必须被拒绝。
     assert(Game::isKnownItemName("Red Key"));
-    assert(Game::canonicalItemName("Red Key") == "红钥匙");
-    assert(Game::canonicalItemName("Yellow Key") == "黄钥匙");
-    assert(Game::canonicalItemName("Small Potion") == "小血瓶");
-    assert(Game::canonicalItemName("Iron Sword") == "铁剑");
-    assert(Game::canonicalItemName("Divine Shield") == "神圣盾");
-    assert(Game::canonicalItemName("Cross") == "十字架");
-    assert(Game::canonicalItemName("Dragon Slayer") == "屠龙匕");
-    assert(Game::canonicalItemName("Freeze Magic") == "冰冻魔法");
-    assert(Game::canonicalItemName("Flying Wand") == "飞行魔杖");
-    assert(Game::canonicalItemName("Earthquake Scroll") == "地震卷轴");
-    assert(Game::isKnownItemName("对称飞行器"));
+    assert(Game::canonicalItemName("Red Key") == "红色Live票");
+    assert(Game::canonicalItemName("Yellow Key") == "黄色Live票");
+    assert(Game::canonicalItemName("Small Potion") == "灯的热牛奶");
+    assert(Game::canonicalItemName("Iron Sword") == "爱音拨片");
+    assert(Game::canonicalItemName("Divine Shield") == "Mujica终幕面具");
+    assert(Game::canonicalItemName("Cross") == "MyGO和解徽章");
+    assert(Game::canonicalItemName("Dragon Slayer") == "祥子指挥棒");
+    assert(Game::canonicalItemName("Freeze Magic") == "海铃冷静指令");
+    assert(Game::canonicalItemName("Flying Wand") == "爱音手机");
+    assert(Game::canonicalItemName("Earthquake Scroll") == "Mujica舞台震响卷");
+    assert(Game::isKnownItemName("Mujica镜面舞台票"));
+    assert(Game::isKnownItemName("小血瓶")); // 旧存档别名继续可读
     assert(!Game::isKnownItemName("未知道具"));
     assert(Game::canonicalItemName("未知道具").empty());
     auto unknown = Game::createItemByName("Mystery Relic", 42);
@@ -44,10 +45,10 @@ int main() {
     assert(dynamic_cast<UnknownItem*>(unknown.get())->SourceName() == "Mystery Relic");
 
     auto ironSword = Game::createItemByName("Iron Sword", 10);
-    assert(ironSword && ironSword->GetName() == "铁剑");
+    assert(ironSword && ironSword->GetName() == "爱音拨片");
     assert(dynamic_cast<Weapon*>(ironSword.get())->AtkBonus() == 10);
     auto divineShield = Game::createItemByName("神圣盾", 100);
-    assert(divineShield && divineShield->GetName() == "神圣盾");
+    assert(divineShield && divineShield->GetName() == "Mujica终幕面具");
     assert(dynamic_cast<Armor*>(divineShield.get())->DefBonus() == 100);
 
     Player player;
@@ -64,16 +65,25 @@ int main() {
     assert(player.def == 11);
 
     SmallPotion small;
+    assert(small.GetName() == "灯的热牛奶");
     small.Apply(player);
     assert(player.hp == 150);
 
     LargePotion large;
+    assert(large.GetName() == "爱音能量饮");
     large.Apply(player);
     assert(player.hp == 350);
 
+    Key redKey(KeyType::Red);
+    assert(redKey.GetName() == "红色Live票");
+    MagicKey backstagePass;
+    assert(backstagePass.GetName() == "后台万能通行证");
+    HolyWater kettle;
+    assert(kettle.GetName() == "立希水壶");
+
     Cross cross;
     cross.Apply(player);
-    assert(player.hasCross);
+    assert(player.hasCross && cross.GetName() == "MyGO和解徽章");
     DragonSlayer dragonSlayer;
     dragonSlayer.Apply(player);
     assert(player.hasDragonSlayer);

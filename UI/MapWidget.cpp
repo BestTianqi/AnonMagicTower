@@ -548,6 +548,14 @@ static bool hasCustomShape(const std::string& name)
            name == "圣水" || name == "镐" || name == "炸弹" || name == "地震卷轴" ||
            name == "十字架" || name == "屠龙匕" || name == "冰冻魔法" || name == "飞行魔杖" ||
            name == "对称飞行器" || name == "记事本" ||
+           name == "MyGO应援红章" || name == "Mujica应援蓝章" ||
+           name == "爱音拨片" || name == "立希鼓棒" || name == "乐奈猫爪" || name == "灯的麦克风" || name == "睦的贝斯" ||
+           name == "素世谱架" || name == "海铃节拍器" || name == "初华舞台耳返" || name == "祥子黑色乐谱" || name == "Mujica终幕面具" ||
+           name == "立希水壶" || name == "灯的热牛奶" || name == "爱音能量饮" || name == "红色Live票" || name == "蓝色Live票" || name == "黄色Live票" ||
+           name == "爱音自拍眼镜" || name == "睦的镐子" || name == "Mujica烟雾弹" || name == "Mujica舞台震响卷" || name == "MyGO和解徽章" ||
+           name == "祥子指挥棒" || name == "海铃冷静指令" || name == "爱音手机" || name == "Mujica镜面舞台票" || name == "灯的歌词本" ||
+           name == "后台万能通行证" || name == "舞台升降卡" || name == "撤场通行卡" || name == "乐队护盾贴" || name == "立希企鹅挂件" ||
+           name == "乐奈抹茶芭菲" || name == "乐奈幸运硬币" ||
            name == "匿名眼镜" ||
            name == "破墙锤" ||
            name == "上楼器" ||
@@ -565,31 +573,32 @@ static void itemAppearance(const std::string& name, int value, QColor& fill, QCo
     QString qname = QString::fromStdString(name);
 
     // 钥匙类
-    if (qname == QString::fromUtf8("Red Key") || qname == QString::fromUtf8("红钥匙"))
+    if (qname == QString::fromUtf8("Red Key") || qname == QString::fromUtf8("红钥匙") || qname == QString::fromUtf8("红色Live票"))
         { fill = QColor(200, 45, 45); border = QColor(160, 20, 20);
           label = QString::fromUtf8("红钥"); textColor = QColor(255, 220, 100); return; }
-    if (qname == QString::fromUtf8("Blue Key") || qname == QString::fromUtf8("蓝钥匙"))
+    if (qname == QString::fromUtf8("Blue Key") || qname == QString::fromUtf8("蓝钥匙") || qname == QString::fromUtf8("蓝色Live票"))
         { fill = QColor(45, 60, 200); border = QColor(20, 30, 160);
           label = QString::fromUtf8("蓝钥"); textColor = QColor(255, 220, 100); return; }
     if (qname == QString::fromUtf8("Green Key") || qname == QString::fromUtf8("绿钥匙") ||
-        qname == QString::fromUtf8("Yellow Key") || qname == QString::fromUtf8("黄钥匙"))
+        qname == QString::fromUtf8("Yellow Key") || qname == QString::fromUtf8("黄钥匙") || qname == QString::fromUtf8("黄色Live票"))
         { fill = QColor(225, 185, 40); border = QColor(155, 110, 20);
           label = QString::fromUtf8("黄钥"); textColor = QColor(70, 35, 0); return; }
-    if (qname == QString::fromUtf8("万能钥匙"))
+    if (qname == QString::fromUtf8("万能钥匙") || qname == QString::fromUtf8("后台万能通行证"))
         { fill = QColor(130, 60, 200); border = QColor(90, 30, 160);
           label = QString::fromUtf8("万能钥"); textColor = QColor(255, 220, 100); return; }
 
     // 属性类
     if (qname == QString::fromUtf8("Potion") || qname == QString::fromUtf8("生命药") ||
-        qname == QString::fromUtf8("小血瓶") || qname == QString::fromUtf8("大血瓶"))
+        qname == QString::fromUtf8("小血瓶") || qname == QString::fromUtf8("大血瓶") ||
+        qname == QString::fromUtf8("现场补给") || qname == QString::fromUtf8("灯的热牛奶") || qname == QString::fromUtf8("爱音能量饮"))
         { fill = QColor(200, 60, 60); border = QColor(150, 30, 30);
           label = QString::fromUtf8("生命药"); textColor = Qt::white;
           desc = QString("+%1HP").arg(value); return; }
-    if (qname == QString::fromUtf8("红宝石") || qname == QString::fromUtf8("Ruby Gem"))
+    if (qname == QString::fromUtf8("红宝石") || qname == QString::fromUtf8("Ruby Gem") || qname == QString::fromUtf8("MyGO应援红章"))
         { fill = QColor(220, 40, 55); border = QColor(125, 15, 25);
           label = QString::fromUtf8("红宝石"); textColor = Qt::white;
           desc = QString("ATK+%1").arg(value); return; }
-    if (qname == QString::fromUtf8("蓝宝石") || qname == QString::fromUtf8("Sapphire Gem"))
+    if (qname == QString::fromUtf8("蓝宝石") || qname == QString::fromUtf8("Sapphire Gem") || qname == QString::fromUtf8("Mujica应援蓝章"))
         { fill = QColor(50, 100, 220); border = QColor(20, 50, 145);
           label = QString::fromUtf8("蓝宝石"); textColor = Qt::white;
           desc = QString("DEF+%1").arg(value); return; }
@@ -605,52 +614,60 @@ static void itemAppearance(const std::string& name, int value, QColor& fill, QCo
         { fill = QColor(220, 180, 40); border = QColor(170, 130, 20);
           label = QString::fromUtf8("金币"); textColor = QColor(100, 60, 0);
           desc = QString("%1G").arg(value); return; }
-    if (qname == QString::fromUtf8("铁剑") || qname == QString::fromUtf8("银剑") ||
+    if (qname == QString::fromUtf8("爱音拨片") || qname == QString::fromUtf8("立希鼓棒") ||
+        qname == QString::fromUtf8("乐奈猫爪") || qname == QString::fromUtf8("灯的麦克风") || qname == QString::fromUtf8("睦的贝斯") ||
+        qname == QString::fromUtf8("铁剑") || qname == QString::fromUtf8("银剑") ||
         qname == QString::fromUtf8("骑士剑") || qname == QString::fromUtf8("圣剑") ||
         qname == QString::fromUtf8("神圣剑"))
         { fill = QColor(210, 140, 40); border = QColor(160, 100, 20);
           label = qname; textColor = Qt::white; desc = QString("ATK+%1").arg(value); return; }
-    if (qname == QString::fromUtf8("铁盾") || qname == QString::fromUtf8("银盾") ||
+    if (qname == QString::fromUtf8("素世谱架") || qname == QString::fromUtf8("海铃节拍器") || qname == QString::fromUtf8("初华舞台耳返") ||
+        qname == QString::fromUtf8("祥子黑色乐谱") || qname == QString::fromUtf8("Mujica终幕面具") ||
+        qname == QString::fromUtf8("铁盾") || qname == QString::fromUtf8("银盾") ||
         qname == QString::fromUtf8("骑士盾") || qname == QString::fromUtf8("圣盾") ||
         qname == QString::fromUtf8("神圣盾"))
         { fill = QColor(60, 120, 200); border = QColor(30, 80, 160);
           label = qname; textColor = Qt::white; desc = QString("DEF+%1").arg(value); return; }
-    if (qname == QString::fromUtf8("圣水"))
+    if (qname == QString::fromUtf8("立希水壶") || qname == QString::fromUtf8("圣水"))
         { fill = QColor(80, 180, 240); border = QColor(30, 120, 190);
           label = qname; textColor = Qt::white; return; }
-    if (qname == QString::fromUtf8("镐") || qname == QString::fromUtf8("炸弹") ||
+    if (qname == QString::fromUtf8("睦的镐子") || qname == QString::fromUtf8("Mujica烟雾弹") || qname == QString::fromUtf8("Mujica舞台震响卷") ||
+        qname == QString::fromUtf8("镐") || qname == QString::fromUtf8("炸弹") ||
         qname == QString::fromUtf8("地震卷轴"))
         { fill = QColor(140, 100, 70); border = QColor(100, 70, 40);
           label = qname; textColor = Qt::white; return; }
-    if (qname == QString::fromUtf8("十字架") || qname == QString::fromUtf8("屠龙匕") ||
+    if (qname == QString::fromUtf8("MyGO和解徽章") || qname == QString::fromUtf8("祥子指挥棒") ||
+        qname == QString::fromUtf8("海铃冷静指令") || qname == QString::fromUtf8("爱音手机") ||
+        qname == QString::fromUtf8("Mujica镜面舞台票") || qname == QString::fromUtf8("灯的歌词本") ||
+        qname == QString::fromUtf8("十字架") || qname == QString::fromUtf8("屠龙匕") ||
         qname == QString::fromUtf8("冰冻魔法") || qname == QString::fromUtf8("飞行魔杖") ||
         qname == QString::fromUtf8("对称飞行器") || qname == QString::fromUtf8("记事本"))
         { fill = QColor(150, 90, 190); border = QColor(100, 50, 140);
           label = qname; textColor = Qt::white; return; }
 
     // 特殊道具
-    if (qname == QString::fromUtf8("匿名眼镜"))
+    if (qname == QString::fromUtf8("匿名眼镜") || qname == QString::fromUtf8("爱音自拍眼镜"))
         { fill = QColor(40, 180, 180); border = QColor(20, 130, 130);
           label = QString::fromUtf8("眼镜"); textColor = Qt::white; return; }
     if (qname == QString::fromUtf8("破墙锤"))
         { fill = QColor(140, 100, 70); border = QColor(100, 70, 40);
           label = QString::fromUtf8("破墙锤"); textColor = Qt::white; return; }
-    if (qname == QString::fromUtf8("上楼器"))
+    if (qname == QString::fromUtf8("上楼器") || qname == QString::fromUtf8("舞台升降卡"))
         { fill = QColor(180, 170, 60); border = QColor(140, 130, 30);
           label = QString::fromUtf8("上楼器"); textColor = Qt::black; return; }
-    if (qname == QString::fromUtf8("下楼器"))
+    if (qname == QString::fromUtf8("下楼器") || qname == QString::fromUtf8("撤场通行卡"))
         { fill = QColor(160, 110, 180); border = QColor(120, 80, 140);
           label = QString::fromUtf8("下楼器"); textColor = Qt::white; return; }
-    if (qname == QString::fromUtf8("临时护盾"))
+    if (qname == QString::fromUtf8("临时护盾") || qname == QString::fromUtf8("乐队护盾贴"))
         { fill = QColor(80, 160, 220); border = QColor(50, 120, 180);
           label = QString::fromUtf8("护盾"); textColor = Qt::white; return; }
-    if (qname == QString::fromUtf8("企鹅玩偶"))
+    if (qname == QString::fromUtf8("企鹅玩偶") || qname == QString::fromUtf8("立希企鹅挂件"))
         { fill = QColor(220, 130, 170); border = QColor(170, 80, 120);
           label = QString::fromUtf8("企鹅"); textColor = Qt::white; return; }
-    if (qname == QString::fromUtf8("抹茶芭菲"))
+    if (qname == QString::fromUtf8("抹茶芭菲") || qname == QString::fromUtf8("乐奈抹茶芭菲"))
         { fill = QColor(140, 200, 100); border = QColor(90, 150, 50);
           label = QString::fromUtf8("芭菲"); textColor = Qt::white; return; }
-    if (qname == QString::fromUtf8("幸运金币"))
+    if (qname == QString::fromUtf8("幸运金币") || qname == QString::fromUtf8("乐奈幸运硬币"))
         { fill = QColor(240, 200, 20); border = QColor(200, 150, 10);
           label = QString::fromUtf8("幸运币"); textColor = QColor(80, 40, 0); return; }
 

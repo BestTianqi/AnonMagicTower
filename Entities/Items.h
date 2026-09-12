@@ -102,24 +102,24 @@ private:
 // 原版50层魔塔固定数值药水：小血瓶+200，大血瓶+500。
 class SmallPotion : public Potion {
 public:
-    explicit SmallPotion(int healAmount = 50);
+    explicit SmallPotion(int healAmount = 50, const std::string& displayName = "灯的热牛奶");
 };
 
 class LargePotion : public Potion {
 public:
-    explicit LargePotion(int healAmount = 200);
+    explicit LargePotion(int healAmount = 200, const std::string& displayName = "爱音能量饮");
 };
 
 // 原版宝石拾取即生效：红宝石+3攻击，蓝宝石+3防御。
 class RubyGem : public Item {
 public:
-    explicit RubyGem(int attackBonus = 1);
+    explicit RubyGem(int attackBonus = 1, const std::string& displayName = "MyGO应援红章");
     void Apply(Player& player) const override;
 };
 
 class SapphireGem : public Item {
 public:
-    explicit SapphireGem(int defenseBonus = 1);
+    explicit SapphireGem(int defenseBonus = 1, const std::string& displayName = "Mujica应援蓝章");
     void Apply(Player& player) const override;
 };
 
@@ -302,11 +302,11 @@ public:
 
 class HolyShield : public Armor {
 public:
-    HolyShield(int defBonus = 50, const std::string& displayName = "圣盾");
+    HolyShield(int defBonus = 50, const std::string& displayName = "祥子黑色乐谱");
     void Apply(Player& player) const override;
 };
 
 class DivineShield : public HolyShield {
 public:
-    DivineShield(int defBonus = 100, const std::string& displayName = "神圣盾");
+    DivineShield(int defBonus = 100, const std::string& displayName = "Mujica终幕面具");
 };

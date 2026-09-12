@@ -45,18 +45,18 @@ void Potion::Apply(Player& player) const
     player.hp += m_heal;
 }
 
-SmallPotion::SmallPotion(int healAmount)
-    : Potion(healAmount, QString::fromUtf8("小血瓶").toStdString())
+SmallPotion::SmallPotion(int healAmount, const std::string& displayName)
+    : Potion(healAmount, displayName)
 {
 }
 
-LargePotion::LargePotion(int healAmount)
-    : Potion(healAmount, QString::fromUtf8("大血瓶").toStdString())
+LargePotion::LargePotion(int healAmount, const std::string& displayName)
+    : Potion(healAmount, displayName)
 {
 }
 
-RubyGem::RubyGem(int attackBonus)
-    : Item(QString::fromUtf8("红宝石").toStdString(), attackBonus)
+RubyGem::RubyGem(int attackBonus, const std::string& displayName)
+    : Item(displayName, attackBonus)
 {
 }
 
@@ -65,8 +65,8 @@ void RubyGem::Apply(Player& player) const
     player.atk += GetValue();
 }
 
-SapphireGem::SapphireGem(int defenseBonus)
-    : Item(QString::fromUtf8("蓝宝石").toStdString(), defenseBonus)
+SapphireGem::SapphireGem(int defenseBonus, const std::string& displayName)
+    : Item(displayName, defenseBonus)
 {
 }
 
@@ -76,7 +76,7 @@ void SapphireGem::Apply(Player& player) const
 }
 
 HolyWater::HolyWater()
-    : Item(QString::fromUtf8("圣水").toStdString(), 0)
+    : Item(QString::fromUtf8("立希水壶").toStdString(), 0)
 {
 }
 
@@ -139,9 +139,9 @@ void Key::Apply(Player& player) const
 
 std::string Key::nameForType(KeyType t) {
     switch (t) {
-    case KeyType::Red: return QString::fromUtf8("红钥匙").toStdString();
-    case KeyType::Blue: return QString::fromUtf8("蓝钥匙").toStdString();
-    case KeyType::Green: return QString::fromUtf8("黄钥匙").toStdString();
+    case KeyType::Red: return QString::fromUtf8("红色Live票").toStdString();
+    case KeyType::Blue: return QString::fromUtf8("蓝色Live票").toStdString();
+    case KeyType::Green: return QString::fromUtf8("黄色Live票").toStdString();
     default: return "Key";
     }
 }
@@ -156,42 +156,42 @@ int Key::valueForType(KeyType t) {
 }
 
 PenguinDoll::PenguinDoll()
-    : Item(QString::fromUtf8("企鹅玩偶").toStdString(), 0) {}
+    : Item(QString::fromUtf8("立希企鹅挂件").toStdString(), 0) {}
 
 void PenguinDoll::Apply(Player& player) const {
     player.hasPenguinDoll = true;
 }
 
 MatchaParfait::MatchaParfait()
-    : Item(QString::fromUtf8("抹茶芭菲").toStdString(), 0) {}
+    : Item(QString::fromUtf8("乐奈抹茶芭菲").toStdString(), 0) {}
 
 void MatchaParfait::Apply(Player& player) const {
     player.hasMatchaParfait = true;
 }
 
 AnonGlasses::AnonGlasses()
-    : Item(QString::fromUtf8("匿名眼镜").toStdString(), 0) {}
+    : Item(QString::fromUtf8("爱音自拍眼镜").toStdString(), 0) {}
 
 void AnonGlasses::Apply(Player& player) const {
     player.hasGlasses = true;
 }
 
 TempShield::TempShield()
-    : Item(QString::fromUtf8("临时护盾").toStdString(), 0) {}
+    : Item(QString::fromUtf8("乐队护盾贴").toStdString(), 0) {}
 
 void TempShield::Apply(Player& player) const {
     player.tempShieldCharges = 1;
 }
 
 StairUpper::StairUpper()
-    : Item(QString::fromUtf8("上楼器").toStdString(), 0) {}
+    : Item(QString::fromUtf8("舞台升降卡").toStdString(), 0) {}
 
 void StairUpper::Apply(Player& player) const {
     player.stairUpUsed = true;
 }
 
 StairLower::StairLower()
-    : Item(QString::fromUtf8("下楼器").toStdString(), 0) {}
+    : Item(QString::fromUtf8("撤场通行卡").toStdString(), 0) {}
 
 void StairLower::Apply(Player& player) const {
     player.stairDownUsed = true;
@@ -205,29 +205,29 @@ void WallBreaker::Apply(Player& player) const {
 }
 
 MagicKey::MagicKey()
-    : Item(QString::fromUtf8("万能钥匙").toStdString(), 0) {}
+    : Item(QString::fromUtf8("后台万能通行证").toStdString(), 0) {}
 
 void MagicKey::Apply(Player& player) const {
     player.magicKeyUses += 3;
 }
 
 LuckyCoin::LuckyCoin()
-    : Item(QString::fromUtf8("幸运金币").toStdString(), 0) {}
+    : Item(QString::fromUtf8("乐奈幸运硬币").toStdString(), 0) {}
 
 void LuckyCoin::Apply(Player& player) const {
     player.hasLuckyCoin = true;
 }
 
 Pickaxe::Pickaxe()
-    : WallBreaker(QString::fromUtf8("镐").toStdString()) {}
+    : WallBreaker(QString::fromUtf8("睦的镐子").toStdString()) {}
 
 Bomb::Bomb()
-    : WallBreaker(QString::fromUtf8("炸弹").toStdString()) {}
+    : WallBreaker(QString::fromUtf8("Mujica烟雾弹").toStdString()) {}
 
 void Bomb::Apply(Player& /*player*/) const {}
 
 EarthquakeScroll::EarthquakeScroll()
-    : WallBreaker(QString::fromUtf8("地震卷轴").toStdString()) {}
+    : WallBreaker(QString::fromUtf8("Mujica舞台震响卷").toStdString()) {}
 
 void EarthquakeScroll::Apply(Player& /*player*/) const {}
 
@@ -236,38 +236,38 @@ void Cross::Apply(Player& player) const {
 }
 
 Cross::Cross()
-    : Item(QString::fromUtf8("十字架").toStdString(), 0) {}
+    : Item(QString::fromUtf8("MyGO和解徽章").toStdString(), 0) {}
 
 DragonSlayer::DragonSlayer()
-    : Item(QString::fromUtf8("屠龙匕").toStdString(), 0) {}
+    : Item(QString::fromUtf8("祥子指挥棒").toStdString(), 0) {}
 
 void DragonSlayer::Apply(Player& player) const {
     player.hasDragonSlayer = true;
 }
 
 FreezeMagic::FreezeMagic()
-    : Item(QString::fromUtf8("冰冻魔法").toStdString(), 0) {}
+    : Item(QString::fromUtf8("海铃冷静指令").toStdString(), 0) {}
 
 void FreezeMagic::Apply(Player& player) const {
     player.freezeMagicUsed = true;
 }
 
 FlyingWand::FlyingWand()
-    : Item(QString::fromUtf8("飞行魔杖").toStdString(), 0) {}
+    : Item(QString::fromUtf8("爱音手机").toStdString(), 0) {}
 
 void FlyingWand::Apply(Player& player) const {
     ++player.flyWandUses;
 }
 
 SymmetryFlyer::SymmetryFlyer()
-    : Item(QString::fromUtf8("对称飞行器").toStdString(), 3) {}
+    : Item(QString::fromUtf8("Mujica镜面舞台票").toStdString(), 3) {}
 
 void SymmetryFlyer::Apply(Player& player) const {
     player.symmetryFlyerUses += 3;
 }
 
 NoteBook::NoteBook()
-    : Item(QString::fromUtf8("记事本").toStdString(), 0) {}
+    : Item(QString::fromUtf8("灯的歌词本").toStdString(), 0) {}
 
 HolyShield::HolyShield(int defBonus, const std::string& displayName)
     : Armor(defBonus, displayName) {}

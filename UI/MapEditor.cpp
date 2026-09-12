@@ -54,15 +54,15 @@ static QString editorTileAsset(int type)
 static QString editorItemAsset(const std::string& name)
 {
     const QString item = QString::fromStdString(name);
-    if (item == "Red Key" || item == QString::fromUtf8("红钥匙")) return ":/images/runtime/items/key_red.png";
-    if (item == "Blue Key" || item == QString::fromUtf8("蓝钥匙")) return ":/images/runtime/items/key_blue.png";
-    if (item == "Green Key" || item == "Yellow Key" || item == QString::fromUtf8("绿钥匙") || item == QString::fromUtf8("黄钥匙")) return ":/images/runtime/items/key_yellow.png";
-    if (item == QString::fromUtf8("万能钥匙")) return ":/images/runtime/items/key_magic.png";
-    if (item == "Potion" || item == QString::fromUtf8("生命药") || item == QString::fromUtf8("药水")) return ":/images/runtime/items/potion.png";
-    if (item == QString::fromUtf8("小血瓶")) return ":/images/runtime/items/potion_small.png";
-    if (item == QString::fromUtf8("大血瓶")) return ":/images/runtime/items/potion_large.png";
-    if (item == QString::fromUtf8("红宝石")) return ":/images/runtime/items/ruby_gem.png";
-    if (item == QString::fromUtf8("蓝宝石")) return ":/images/runtime/items/sapphire_gem.png";
+    if (item == "Red Key" || item == QString::fromUtf8("红钥匙") || item == QString::fromUtf8("红色Live票")) return ":/images/runtime/items/key_red.png";
+    if (item == "Blue Key" || item == QString::fromUtf8("蓝钥匙") || item == QString::fromUtf8("蓝色Live票")) return ":/images/runtime/items/key_blue.png";
+    if (item == "Green Key" || item == "Yellow Key" || item == QString::fromUtf8("绿钥匙") || item == QString::fromUtf8("黄钥匙") || item == QString::fromUtf8("黄色Live票")) return ":/images/runtime/items/key_yellow.png";
+    if (item == QString::fromUtf8("万能钥匙") || item == QString::fromUtf8("后台万能通行证")) return ":/images/runtime/items/key_magic.png";
+    if (item == "Potion" || item == QString::fromUtf8("生命药") || item == QString::fromUtf8("药水") || item == QString::fromUtf8("现场补给")) return ":/images/runtime/items/potion.png";
+    if (item == QString::fromUtf8("小血瓶") || item == QString::fromUtf8("灯的热牛奶")) return ":/images/runtime/items/potion_small.png";
+    if (item == QString::fromUtf8("大血瓶") || item == QString::fromUtf8("爱音能量饮")) return ":/images/runtime/items/potion_large.png";
+    if (item == QString::fromUtf8("红宝石") || item == QString::fromUtf8("MyGO应援红章")) return ":/images/runtime/items/ruby_gem.png";
+    if (item == QString::fromUtf8("蓝宝石") || item == QString::fromUtf8("Mujica应援蓝章")) return ":/images/runtime/items/sapphire_gem.png";
     if (item == "Small Potion") return ":/images/runtime/items/potion_small.png";
     if (item == "Large Potion") return ":/images/runtime/items/potion_large.png";
     if (item == "Ruby Gem") return ":/images/runtime/items/ruby_gem.png";
@@ -71,10 +71,14 @@ static QString editorItemAsset(const std::string& name)
     if (item == "Armor" || item == QString::fromUtf8("防具")) return ":/images/runtime/items/armor.png";
     if (item == QString::fromUtf8("铁剑") || item == QString::fromUtf8("银剑") ||
         item == QString::fromUtf8("骑士剑") || item == QString::fromUtf8("圣剑") ||
-        item == QString::fromUtf8("神圣剑")) return ":/images/runtime/items/weapon.png";
+        item == QString::fromUtf8("神圣剑") || item == QString::fromUtf8("爱音拨片") ||
+        item == QString::fromUtf8("立希鼓棒") || item == QString::fromUtf8("乐奈猫爪") ||
+        item == QString::fromUtf8("灯的麦克风") || item == QString::fromUtf8("睦的贝斯")) return ":/images/runtime/items/weapon.png";
     if (item == QString::fromUtf8("铁盾") || item == QString::fromUtf8("银盾") ||
         item == QString::fromUtf8("骑士盾") || item == QString::fromUtf8("圣盾") ||
-        item == QString::fromUtf8("神圣盾")) return ":/images/runtime/items/armor.png";
+        item == QString::fromUtf8("神圣盾") || item == QString::fromUtf8("素世谱架") ||
+        item == QString::fromUtf8("海铃节拍器") || item == QString::fromUtf8("初华舞台耳返") ||
+        item == QString::fromUtf8("祥子黑色乐谱") || item == QString::fromUtf8("Mujica终幕面具")) return ":/images/runtime/items/armor.png";
     if (item == "Treasure" || item == QString::fromUtf8("金币")) return ":/images/runtime/items/treasure.png";
     if (item == QString::fromUtf8("匿名眼镜")) return ":/images/runtime/items/glasses.png";
     if (item == QString::fromUtf8("破墙锤")) return ":/images/runtime/items/wall_breaker.png";
@@ -86,10 +90,14 @@ static QString editorItemAsset(const std::string& name)
     if (item == QString::fromUtf8("幸运金币")) return ":/images/runtime/items/lucky_coin.png";
     if (item == QString::fromUtf8("圣水")) return ":/images/runtime/items/holy_water.png";
     if (item == QString::fromUtf8("镐") || item == QString::fromUtf8("炸弹") ||
-        item == QString::fromUtf8("地震卷轴")) return ":/images/runtime/items/wall_breaker.png";
+        item == QString::fromUtf8("地震卷轴") || item == QString::fromUtf8("睦的镐子") ||
+        item == QString::fromUtf8("Mujica烟雾弹") || item == QString::fromUtf8("Mujica舞台震响卷")) return ":/images/runtime/items/wall_breaker.png";
     if (item == QString::fromUtf8("十字架") || item == QString::fromUtf8("屠龙匕") ||
         item == QString::fromUtf8("冰冻魔法") || item == QString::fromUtf8("飞行魔杖") ||
-        item == QString::fromUtf8("对称飞行器") || item == QString::fromUtf8("记事本"))
+        item == QString::fromUtf8("对称飞行器") || item == QString::fromUtf8("记事本") ||
+        item == QString::fromUtf8("MyGO和解徽章") || item == QString::fromUtf8("祥子指挥棒") ||
+        item == QString::fromUtf8("海铃冷静指令") || item == QString::fromUtf8("爱音手机") ||
+        item == QString::fromUtf8("Mujica镜面舞台票") || item == QString::fromUtf8("灯的歌词本"))
         return ":/images/runtime/items/artifact.png";
     return ":/images/runtime/items/artifact.png";
 }
@@ -461,43 +469,43 @@ void MapEditWidget::leaveEvent(QEvent*)
 // 物品列表定义
 struct ItemDef { QString name; int defaultValue; const char* desc; };
 static const ItemDef g_itemDefs[] = {
-    {QString::fromUtf8("生命药"), 50, "恢复生命"},
-    {QString::fromUtf8("小血瓶"), 200, "恢复200生命"},
-    {QString::fromUtf8("大血瓶"), 500, "恢复500生命"},
-    {QString::fromUtf8("红宝石"), 3, "攻击+3"},
-    {QString::fromUtf8("蓝宝石"), 3, "防御+3"},
+    {QString::fromUtf8("现场补给"), 50, "恢复生命"},
+    {QString::fromUtf8("灯的热牛奶"), 200, "恢复生命"},
+    {QString::fromUtf8("爱音能量饮"), 500, "恢复生命"},
+    {QString::fromUtf8("MyGO应援红章"), 3, "攻击+3"},
+    {QString::fromUtf8("Mujica应援蓝章"), 3, "防御+3"},
     {QString::fromUtf8("武器"), 5, "攻击力+"},
     {QString::fromUtf8("防具"), 3, "防御力+"},
     {QString::fromUtf8("金币"), 10, "金币"},
-    {QString::fromUtf8("铁剑"), 10, "攻击+10"},
-    {QString::fromUtf8("银剑"), 20, "攻击+20"},
-    {QString::fromUtf8("骑士剑"), 40, "攻击+40"},
-    {QString::fromUtf8("圣剑"), 50, "攻击+50"},
-    {QString::fromUtf8("神圣剑"), 100, "攻击+100"},
-    {QString::fromUtf8("铁盾"), 10, "防御+10"},
-    {QString::fromUtf8("银盾"), 20, "防御+20"},
-    {QString::fromUtf8("骑士盾"), 40, "防御+40"},
-    {QString::fromUtf8("圣盾"), 50, "防御+50，免疫魔法"},
-    {QString::fromUtf8("神圣盾"), 100, "防御+100，免疫魔法"},
-    {QString::fromUtf8("镐"), 0, "摧毁墙壁"},
-    {QString::fromUtf8("炸弹"), 0, "摧毁墙壁"},
-    {QString::fromUtf8("地震卷轴"), 0, "摧毁墙壁"},
-    {QString::fromUtf8("十字架"), 0, "对吸血鬼和兽人攻击翻倍"},
-    {QString::fromUtf8("屠龙匕"), 0, "对魔龙攻击翻倍"},
-    {QString::fromUtf8("冰冻魔法"), 0, "冻结岩浆"},
-    {QString::fromUtf8("飞行魔杖"), 0, "传送到指定楼层"},
-    {QString::fromUtf8("对称飞行器"), 3, "可使用3次"},
-    {QString::fromUtf8("记事本"), 0, "记录魔塔提示"},
-    {QString::fromUtf8("红钥匙"), 1, "红钥匙"},
-    {QString::fromUtf8("蓝钥匙"), 2, "蓝钥匙"},
-    {QString::fromUtf8("绿钥匙"), 3, "绿钥匙"},
+    {QString::fromUtf8("爱音拨片"), 10, "攻击+10"},
+    {QString::fromUtf8("立希鼓棒"), 20, "攻击+20"},
+    {QString::fromUtf8("乐奈猫爪"), 40, "攻击+40"},
+    {QString::fromUtf8("灯的麦克风"), 50, "攻击+50"},
+    {QString::fromUtf8("睦的贝斯"), 100, "攻击+100"},
+    {QString::fromUtf8("素世谱架"), 10, "防御+10"},
+    {QString::fromUtf8("海铃节拍器"), 20, "防御+20"},
+    {QString::fromUtf8("初华舞台耳返"), 40, "防御+40"},
+    {QString::fromUtf8("祥子黑色乐谱"), 50, "防御+50，免疫魔法"},
+    {QString::fromUtf8("Mujica终幕面具"), 100, "防御+100，免疫魔法"},
+    {QString::fromUtf8("睦的镐子"), 0, "摧毁墙壁"},
+    {QString::fromUtf8("Mujica烟雾弹"), 0, "摧毁周围敌人"},
+    {QString::fromUtf8("Mujica舞台震响卷"), 0, "摧毁本层墙壁"},
+    {QString::fromUtf8("MyGO和解徽章"), 0, "对吸血鬼和兽人攻击翻倍"},
+    {QString::fromUtf8("祥子指挥棒"), 0, "对魔龙攻击翻倍"},
+    {QString::fromUtf8("海铃冷静指令"), 0, "冻结岩浆"},
+    {QString::fromUtf8("爱音手机"), 0, "传送到指定楼层"},
+    {QString::fromUtf8("Mujica镜面舞台票"), 3, "可使用3次"},
+    {QString::fromUtf8("灯的歌词本"), 0, "记录魔塔提示"},
+    {QString::fromUtf8("红色Live票"), 1, "红色Live票"},
+    {QString::fromUtf8("蓝色Live票"), 2, "蓝色Live票"},
+    {QString::fromUtf8("黄色Live票"), 3, "黄色Live票"},
     {QString(), 0, nullptr}  // sentinel = 特殊物品分界线
 };
 static const char* g_specialItems[] = {
-    "万能钥匙", "匿名眼镜", "破墙锤", "上楼器", "下楼器",
-    "临时护盾", "企鹅玩偶", "抹茶芭菲", "幸运金币", "圣水",
-    "镐", "炸弹", "地震卷轴", "十字架", "屠龙匕", "冰冻魔法",
-    "飞行魔杖", "对称飞行器", "记事本", nullptr
+    "后台万能通行证", "爱音自拍眼镜", "破墙锤", "舞台升降卡", "撤场通行卡",
+    "乐队护盾贴", "立希企鹅挂件", "乐奈抹茶芭菲", "乐奈幸运硬币", "立希水壶",
+    "睦的镐子", "Mujica烟雾弹", "Mujica舞台震响卷", "MyGO和解徽章", "祥子指挥棒", "海铃冷静指令",
+    "爱音手机", "Mujica镜面舞台票", "灯的歌词本", nullptr
 };
 
 MapEditor::MapEditor(QWidget* parent)
@@ -667,46 +675,46 @@ MapEditor::MapEditor(QWidget* parent)
 
     struct ItemBtn { QString name; int val; QString color; bool hasValue; QString tip; };
     ItemBtn itemBtns[] = {
-        { QString::fromUtf8("生命药"), 50, "#d44", true,  QString::fromUtf8("恢复生命值") },
-        { QString::fromUtf8("小血瓶"), 200, "#e44", false, QString::fromUtf8("恢复200生命值") },
-        { QString::fromUtf8("大血瓶"), 500, "#f66", false, QString::fromUtf8("恢复500生命值") },
-        { QString::fromUtf8("红宝石"), 3, "#d22", false, QString::fromUtf8("攻击力+3") },
-        { QString::fromUtf8("蓝宝石"), 3, "#26d", false, QString::fromUtf8("防御力+3") },
+        { QString::fromUtf8("现场补给"), 50, "#d44", true,  QString::fromUtf8("恢复生命值") },
+        { QString::fromUtf8("灯的热牛奶"), 200, "#e44", false, QString::fromUtf8("恢复生命值") },
+        { QString::fromUtf8("爱音能量饮"), 500, "#f66", false, QString::fromUtf8("恢复生命值") },
+        { QString::fromUtf8("MyGO应援红章"), 3, "#d22", false, QString::fromUtf8("攻击力+3") },
+        { QString::fromUtf8("Mujica应援蓝章"), 3, "#26d", false, QString::fromUtf8("防御力+3") },
         { QString::fromUtf8("武器"),   5,  "#d82", true,  QString::fromUtf8("攻击力+") },
         { QString::fromUtf8("防具"),   3,  "#48d", true,  QString::fromUtf8("防御力+") },
         { QString::fromUtf8("金币"),   10, "#da0", true,  QString::fromUtf8("获得金币") },
-        { QString::fromUtf8("红钥匙"), 0,  "#d33", false, QString::fromUtf8("红钥匙 x1") },
-        { QString::fromUtf8("蓝钥匙"), 0,  "#33d", false, QString::fromUtf8("蓝钥匙 x1") },
-        { QString::fromUtf8("绿钥匙"), 0,  "#3a3", false, QString::fromUtf8("绿钥匙 x1") },
-        { QString::fromUtf8("万能钥匙"), 0, "#84d", false, QString::fromUtf8("红蓝绿钥匙各+1") },
-        { QString::fromUtf8("匿名眼镜"), 0, "#4aa", false, QString::fromUtf8("可查看怪物属性") },
+        { QString::fromUtf8("红色Live票"), 0,  "#d33", false, QString::fromUtf8("红色Live票 x1") },
+        { QString::fromUtf8("蓝色Live票"), 0,  "#33d", false, QString::fromUtf8("蓝色Live票 x1") },
+        { QString::fromUtf8("黄色Live票"), 0,  "#3a3", false, QString::fromUtf8("黄色Live票 x1") },
+        { QString::fromUtf8("后台万能通行证"), 0, "#84d", false, QString::fromUtf8("任意门3次") },
+        { QString::fromUtf8("爱音自拍眼镜"), 0, "#4aa", false, QString::fromUtf8("可查看怪物属性") },
         { QString::fromUtf8("破墙锤"),   0, "#864", false, QString::fromUtf8("摧毁墙壁") },
-        { QString::fromUtf8("上楼器"),   0, "#aa0", false, QString::fromUtf8("从当前位置上楼") },
-        { QString::fromUtf8("下楼器"),   0, "#a6a", false, QString::fromUtf8("从当前位置下楼") },
-        { QString::fromUtf8("临时护盾"), 0, "#68d", false, QString::fromUtf8("防御力+10") },
-        { QString::fromUtf8("企鹅玩偶"), 0, "#d6a", false, QString::fromUtf8("神秘的企鹅玩偶") },
-        { QString::fromUtf8("抹茶芭菲"), 0, "#8c6", false, QString::fromUtf8("美味的抹茶芭菲") },
-        { QString::fromUtf8("幸运金币"), 0, "#da0", false, QString::fromUtf8("打怪和拾取金币翻倍") },
-        { QString::fromUtf8("圣水"), 0, "#8cf", false, QString::fromUtf8("生命值增加攻击力与防御力之和") },
-        { QString::fromUtf8("铁剑"), 10, "#c86", false, QString::fromUtf8("攻击力+10") },
-        { QString::fromUtf8("银剑"), 20, "#ccc", false, QString::fromUtf8("攻击力+20") },
-        { QString::fromUtf8("骑士剑"), 40, "#e8c", false, QString::fromUtf8("攻击力+40") },
-        { QString::fromUtf8("圣剑"), 50, "#fd6", false, QString::fromUtf8("攻击力+50") },
-        { QString::fromUtf8("神圣剑"), 100, "#fff", false, QString::fromUtf8("攻击力+100") },
-        { QString::fromUtf8("铁盾"), 10, "#78a", false, QString::fromUtf8("防御力+10") },
-        { QString::fromUtf8("银盾"), 20, "#9bd", false, QString::fromUtf8("防御力+20") },
-        { QString::fromUtf8("骑士盾"), 40, "#68c", false, QString::fromUtf8("防御力+40") },
-        { QString::fromUtf8("圣盾"), 50, "#6df", false, QString::fromUtf8("防御力+50，免疫魔法") },
-        { QString::fromUtf8("神圣盾"), 100, "#aff", false, QString::fromUtf8("防御力+100，免疫魔法") },
-        { QString::fromUtf8("镐"), 0, "#864", false, QString::fromUtf8("摧毁墙壁") },
-        { QString::fromUtf8("炸弹"), 0, "#a44", false, QString::fromUtf8("摧毁墙壁") },
-        { QString::fromUtf8("地震卷轴"), 0, "#a84", false, QString::fromUtf8("摧毁墙壁") },
-        { QString::fromUtf8("十字架"), 0, "#ff8", false, QString::fromUtf8("对吸血鬼和兽人攻击翻倍") },
-        { QString::fromUtf8("屠龙匕"), 0, "#f88", false, QString::fromUtf8("对魔龙攻击翻倍") },
-        { QString::fromUtf8("冰冻魔法"), 0, "#8df", false, QString::fromUtf8("冻结岩浆") },
-        { QString::fromUtf8("飞行魔杖"), 0, "#c8f", false, QString::fromUtf8("传送到指定楼层") },
-        { QString::fromUtf8("对称飞行器"), 3, "#f8c", false, QString::fromUtf8("可使用3次") },
-        { QString::fromUtf8("记事本"), 0, "#dda", false, QString::fromUtf8("记录魔塔提示") },
+        { QString::fromUtf8("舞台升降卡"), 0, "#aa0", false, QString::fromUtf8("从当前位置上楼") },
+        { QString::fromUtf8("撤场通行卡"), 0, "#a6a", false, QString::fromUtf8("从当前位置下楼") },
+        { QString::fromUtf8("乐队护盾贴"), 0, "#68d", false, QString::fromUtf8("防御力+10") },
+        { QString::fromUtf8("立希企鹅挂件"), 0, "#d6a", false, QString::fromUtf8("神秘的企鹅挂件") },
+        { QString::fromUtf8("乐奈抹茶芭菲"), 0, "#8c6", false, QString::fromUtf8("美味的抹茶芭菲") },
+        { QString::fromUtf8("乐奈幸运硬币"), 0, "#da0", false, QString::fromUtf8("打怪和拾取金币翻倍") },
+        { QString::fromUtf8("立希水壶"), 0, "#8cf", false, QString::fromUtf8("生命值增加攻击力与防御力之和") },
+        { QString::fromUtf8("爱音拨片"), 10, "#c86", false, QString::fromUtf8("攻击力+10") },
+        { QString::fromUtf8("立希鼓棒"), 20, "#ccc", false, QString::fromUtf8("攻击力+20") },
+        { QString::fromUtf8("乐奈猫爪"), 40, "#e8c", false, QString::fromUtf8("攻击力+40") },
+        { QString::fromUtf8("灯的麦克风"), 50, "#fd6", false, QString::fromUtf8("攻击力+50") },
+        { QString::fromUtf8("睦的贝斯"), 100, "#fff", false, QString::fromUtf8("攻击力+100") },
+        { QString::fromUtf8("素世谱架"), 10, "#78a", false, QString::fromUtf8("防御力+10") },
+        { QString::fromUtf8("海铃节拍器"), 20, "#9bd", false, QString::fromUtf8("防御力+20") },
+        { QString::fromUtf8("初华舞台耳返"), 40, "#68c", false, QString::fromUtf8("防御力+40") },
+        { QString::fromUtf8("祥子黑色乐谱"), 50, "#6df", false, QString::fromUtf8("防御力+50，免疫魔法") },
+        { QString::fromUtf8("Mujica终幕面具"), 100, "#aff", false, QString::fromUtf8("防御力+100，免疫魔法") },
+        { QString::fromUtf8("睦的镐子"), 0, "#864", false, QString::fromUtf8("摧毁墙壁") },
+        { QString::fromUtf8("Mujica烟雾弹"), 0, "#a44", false, QString::fromUtf8("摧毁周围敌人") },
+        { QString::fromUtf8("Mujica舞台震响卷"), 0, "#a84", false, QString::fromUtf8("摧毁本层墙壁") },
+        { QString::fromUtf8("MyGO和解徽章"), 0, "#ff8", false, QString::fromUtf8("对吸血鬼和兽人攻击翻倍") },
+        { QString::fromUtf8("祥子指挥棒"), 0, "#f88", false, QString::fromUtf8("对魔龙攻击翻倍") },
+        { QString::fromUtf8("海铃冷静指令"), 0, "#8df", false, QString::fromUtf8("冻结岩浆") },
+        { QString::fromUtf8("爱音手机"), 0, "#c8f", false, QString::fromUtf8("传送到指定楼层") },
+        { QString::fromUtf8("Mujica镜面舞台票"), 3, "#f8c", false, QString::fromUtf8("可使用3次") },
+        { QString::fromUtf8("灯的歌词本"), 0, "#dda", false, QString::fromUtf8("记录魔塔提示") },
     };
     const int itemBtnCount = sizeof(itemBtns) / sizeof(itemBtns[0]);
 

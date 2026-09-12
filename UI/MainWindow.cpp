@@ -264,75 +264,72 @@ QString MainWindow::getItemDescription(const Item* item) const
     QString name = QString::fromStdString(canonical);
     int val = item->GetValue();
 
-    if (name == "Potion" || name == QString::fromUtf8("生命药"))
+    if (name == "Potion" || name == QString::fromUtf8("现场补给"))
         return QString::fromUtf8("恢复 %1 点生命值").arg(val);
-    if (name == QString::fromUtf8("小血瓶"))
+    if (name == QString::fromUtf8("灯的热牛奶"))
         return QString::fromUtf8("恢复 %1 点生命值").arg(val);
-    if (name == QString::fromUtf8("大血瓶"))
+    if (name == QString::fromUtf8("爱音能量饮"))
         return QString::fromUtf8("恢复 %1 点生命值").arg(val);
-    if (name == QString::fromUtf8("红宝石"))
+    if (name == QString::fromUtf8("MyGO应援红章"))
         return QString::fromUtf8("攻击力 +%1（拾取即生效）").arg(val);
-    if (name == QString::fromUtf8("蓝宝石"))
+    if (name == QString::fromUtf8("Mujica应援蓝章"))
         return QString::fromUtf8("防御力 +%1（拾取即生效）").arg(val);
     if (name == "Ruby Gem") return QString::fromUtf8("攻击力 +%1（拾取即生效）").arg(val);
     if (name == "Sapphire Gem") return QString::fromUtf8("防御力 +%1（拾取即生效）").arg(val);
-    if (name == "Weapon" || name == QString::fromUtf8("武器"))
+    if (name == "Weapon" || name == QString::fromUtf8("武器") ||
+        name == QString::fromUtf8("爱音拨片") || name == QString::fromUtf8("立希鼓棒") ||
+        name == QString::fromUtf8("乐奈猫爪") || name == QString::fromUtf8("灯的麦克风") ||
+        name == QString::fromUtf8("睦的贝斯"))
         return QString::fromUtf8("攻击力 +%1").arg(val);
-    if (name == "Armor" || name == QString::fromUtf8("防具"))
+    if (name == "Armor" || name == QString::fromUtf8("防具") ||
+        name == QString::fromUtf8("素世谱架") || name == QString::fromUtf8("海铃节拍器") ||
+        name == QString::fromUtf8("初华舞台耳返"))
         return QString::fromUtf8("防御力 +%1").arg(val);
-    if (name == QString::fromUtf8("铁剑") || name == QString::fromUtf8("银剑") ||
-        name == QString::fromUtf8("骑士剑") || name == QString::fromUtf8("圣剑") ||
-        name == QString::fromUtf8("神圣剑"))
-        return QString::fromUtf8("攻击力 +%1").arg(val);
-    if (name == QString::fromUtf8("铁盾") || name == QString::fromUtf8("银盾") ||
-        name == QString::fromUtf8("骑士盾"))
-        return QString::fromUtf8("防御力 +%1").arg(val);
-    if (name == QString::fromUtf8("圣盾") || name == QString::fromUtf8("神圣盾"))
+    if (name == QString::fromUtf8("祥子黑色乐谱") || name == QString::fromUtf8("Mujica终幕面具"))
         return QString::fromUtf8("防御力 +%1，并免疫魔法攻击").arg(val);
     if (name == "Treasure" || name == QString::fromUtf8("金币"))
         return QString::fromUtf8("获得 %1 金币").arg(val);
-    if (name == "Red Key" || name == QString::fromUtf8("红钥匙"))
-        return QString::fromUtf8("红钥匙 ×1");
-    if (name == "Blue Key" || name == QString::fromUtf8("蓝钥匙"))
-        return QString::fromUtf8("蓝钥匙 ×1");
-    if (name == "Green Key" || name == QString::fromUtf8("绿钥匙") ||
-        name == "Yellow Key" || name == QString::fromUtf8("黄钥匙"))
-        return QString::fromUtf8("黄钥匙 ×1");
-    if (name == QString::fromUtf8("圣水"))
+    if (name == "Red Key" || name == QString::fromUtf8("红色Live票"))
+        return QString::fromUtf8("红色Live票 ×1");
+    if (name == "Blue Key" || name == QString::fromUtf8("蓝色Live票"))
+        return QString::fromUtf8("蓝色Live票 ×1");
+    if (name == "Green Key" || name == "Yellow Key" || name == QString::fromUtf8("黄色Live票"))
+        return QString::fromUtf8("黄色Live票 ×1");
+    if (name == QString::fromUtf8("立希水壶"))
         return QString::fromUtf8("生命值增加当前攻击力与防御力之和");
-    if (name == QString::fromUtf8("万能钥匙"))
+    if (name == QString::fromUtf8("后台万能通行证"))
         return QString::fromUtf8("可开任何门3次（优先使用普通钥匙）");
-    if (name == QString::fromUtf8("匿名眼镜"))
+    if (name == QString::fromUtf8("爱音自拍眼镜"))
         return QString::fromUtf8("可以查看怪物属性");
-    if (name == QString::fromUtf8("破墙锤"))
+    if (name == QString::fromUtf8("破墙锤") || name == QString::fromUtf8("睦的镐子"))
         return QString::fromUtf8("点击使用，下一次移动可摧毁墙壁");
-    if (name == QString::fromUtf8("上楼器"))
+    if (name == QString::fromUtf8("舞台升降卡"))
         return QString::fromUtf8("点击使用，从当前位置上楼");
-    if (name == QString::fromUtf8("下楼器"))
+    if (name == QString::fromUtf8("撤场通行卡"))
         return QString::fromUtf8("点击使用，从当前位置下楼");
-    if (name == QString::fromUtf8("临时护盾"))
+    if (name == QString::fromUtf8("乐队护盾贴"))
         return QString::fromUtf8("点击使用，下次战斗防御 +50");
-    if (name == QString::fromUtf8("企鹅玩偶"))
+    if (name == QString::fromUtf8("立希企鹅挂件"))
         return QString::fromUtf8("面对高松灯和企鹅时伤害减半");
-    if (name == QString::fromUtf8("抹茶芭菲"))
+    if (name == QString::fromUtf8("乐奈抹茶芭菲"))
         return QString::fromUtf8("面对要乐奈和小猫时伤害减半");
-    if (name == QString::fromUtf8("幸运金币"))
+    if (name == QString::fromUtf8("乐奈幸运硬币"))
         return QString::fromUtf8("打怪和拾取金币翻倍");
-    if (name == QString::fromUtf8("镐"))
+    if (name == QString::fromUtf8("睦的镐子"))
         return QString::fromUtf8("点击使用，下一次移动可摧毁墙壁");
-    if (name == QString::fromUtf8("炸弹") || name == QString::fromUtf8("地震卷轴"))
+    if (name == QString::fromUtf8("Mujica烟雾弹") || name == QString::fromUtf8("Mujica舞台震响卷"))
         return QString::fromUtf8("点击使用，摧毁墙壁");
-    if (name == QString::fromUtf8("十字架"))
+    if (name == QString::fromUtf8("MyGO和解徽章"))
         return QString::fromUtf8("对吸血鬼和兽人攻击翻倍");
-    if (name == QString::fromUtf8("屠龙匕"))
+    if (name == QString::fromUtf8("祥子指挥棒"))
         return QString::fromUtf8("对魔龙攻击翻倍");
-    if (name == QString::fromUtf8("冰冻魔法"))
+    if (name == QString::fromUtf8("海铃冷静指令"))
         return QString::fromUtf8("点击使用，冻结下一格岩浆");
-    if (name == QString::fromUtf8("飞行魔杖"))
+    if (name == QString::fromUtf8("爱音手机"))
         return QString::fromUtf8("点击使用，传送到指定楼层");
-    if (name == QString::fromUtf8("对称飞行器"))
+    if (name == QString::fromUtf8("Mujica镜面舞台票"))
         return QString::fromUtf8("点击使用，剩余 %1 次").arg(item->GetValue());
-    if (name == QString::fromUtf8("记事本"))
+    if (name == QString::fromUtf8("灯的歌词本"))
         return QString::fromUtf8("记录魔塔提示");
 
     return name;
@@ -857,9 +854,9 @@ void MainWindow::showModifier()
     keyLabel->setStyleSheet("color: #aaccaa; font-size: 13px; font-weight: bold;");
     statLayout->addWidget(keyLabel);
 
-    makeStatRow(QString::fromUtf8("红钥匙"), redKeySpin);
-    makeStatRow(QString::fromUtf8("蓝钥匙"), blueKeySpin);
-    makeStatRow(QString::fromUtf8("黄钥匙"), greenKeySpin);
+    makeStatRow(QString::fromUtf8("红色Live票"), redKeySpin);
+    makeStatRow(QString::fromUtf8("蓝色Live票"), blueKeySpin);
+    makeStatRow(QString::fromUtf8("黄色Live票"), greenKeySpin);
 
     statLayout->addStretch();
     tab->addTab(statTab, QString::fromUtf8("属性"));
@@ -880,20 +877,23 @@ void MainWindow::showModifier()
         QString color;
     };
     TestItem testItems[] = {
-        {QString::fromUtf8("生命药"), 200, "#d44"},
-        {QString::fromUtf8("武器"), 10, "#d82"},
-        {QString::fromUtf8("防具"), 5, "#48d"},
+        {QString::fromUtf8("灯的热牛奶"), 200, "#d44"},
+        {QString::fromUtf8("爱音拨片"), 10, "#d82"},
+        {QString::fromUtf8("素世谱架"), 5, "#48d"},
         {QString::fromUtf8("金币"), 100, "#da0"},
-        {QString::fromUtf8("红钥匙"), 1, "#d33"},
-        {QString::fromUtf8("蓝钥匙"), 1, "#33d"},
-        {QString::fromUtf8("黄钥匙"), 1, "#db3"},
-        {QString::fromUtf8("万能钥匙"), 3, "#84d"},
-        {QString::fromUtf8("上楼器"), 0, "#aa0"},
-        {QString::fromUtf8("下楼器"), 0, "#a6a"},
+        {QString::fromUtf8("红色Live票"), 1, "#d33"},
+        {QString::fromUtf8("蓝色Live票"), 1, "#33d"},
+        {QString::fromUtf8("黄色Live票"), 1, "#db3"},
+        {QString::fromUtf8("后台万能通行证"), 3, "#84d"},
+        {QString::fromUtf8("舞台升降卡"), 0, "#aa0"},
+        {QString::fromUtf8("撤场通行卡"), 0, "#a6a"},
         {QString::fromUtf8("破墙锤"), 0, "#864"},
-        {QString::fromUtf8("临时护盾"), 3, "#68d"},
-        {QString::fromUtf8("匿名眼镜"), 0, "#4aa"},
-        {QString::fromUtf8("幸运金币"), 0, "#da0"},
+        {QString::fromUtf8("乐队护盾贴"), 3, "#68d"},
+        {QString::fromUtf8("爱音自拍眼镜"), 0, "#4aa"},
+        {QString::fromUtf8("乐奈幸运硬币"), 0, "#da0"},
+        {QString::fromUtf8("MyGO和解徽章"), 0, "#ff8"},
+        {QString::fromUtf8("祥子指挥棒"), 0, "#f88"},
+        {QString::fromUtf8("Mujica终幕面具"), 100, "#aff"},
     };
 
     auto* itemGrid = new QGridLayout();
