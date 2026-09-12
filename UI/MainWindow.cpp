@@ -155,6 +155,7 @@ void MainWindow::loadAssets()
 
     // 加载玩家图片
     mw->loadPlayerImage(":/images/characters/portraits/anon.png");
+    mw->loadPlayerSpriteSheet(":/images/characters/pilot/anon_casual.png");
     mw->loadBackgroundImage(":/images/backgrounds/tower_hub.png");
 
     // 运行时地图图块全部来自已生成图集的裁切素材。
@@ -1206,6 +1207,7 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
 
     int nx = m_game->player().x + dx;
     int ny = m_game->player().y + dy;
+    ui.mapWidget->setPlayerDirection(dx, dy);
     auto result = m_game->tryMovePlayer(nx, ny);
 
     switch (result) {

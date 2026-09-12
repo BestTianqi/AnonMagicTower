@@ -3,12 +3,16 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QFont>
+#include <QtMath>
 
 MapWidget::MapWidget(Game* game, QWidget* parent)
     : QWidget(parent), m_game(game)
 {
     setFixedSize(900, 900);
     generatePlaceholders();
+    m_motionTimer.setInterval(16);
+    connect(&m_motionTimer, &QTimer::timeout, this, &MapWidget::advancePlayerMotion);
+    m_motionTimer.start();
 }
 
 static QPixmap makePixmap(const QColor& fill, const QColor& border,
@@ -151,6 +155,62 @@ void MapWidget::loadPlayerImage(const QString& path)
     if (!px.isNull()) {
         m_playerPix = px.scaled(TILE_SIZE, TILE_SIZE, Qt::IgnoreAspectRatio, Qt::FastTransformation);
         m_hasPlayerImage = true;
+    }
+}
+
+void MapWidget::loadPlayerSpriteSheet(const QString& path)
+{
+    const QPixmap sheet(path);
+    if (sheet.isNull() || sheet.width() < TILE_SIZE * 4 || sheet.height() < TILE_SIZE * 4)
+        return;
+    for (int row = 0; row < 4; ++row) {
+        for (int col = 0; col < 4; ++col)
+            m_playerFrames[row * 4 + col] = sheet.copy(col * TILE_SIZE, row * TILE_SIZE,
+                                                        TILE_SIZE, TILE_SIZE);
+    }
+    m_hasPlayerSheet = true;
+    update();
+}
+
+void MapWidget::setPlayerDirection(int dx, int dy)
+{
+    if (dx < 0) m_playerDirectionRow = 1;
+    else if (dx > 0) m_playerDirectionRow = 2;
+    else if (dy < 0) m_playerDirectionRow = 3;
+    else if (dy > 0) m_playerDirectionRow = 0;
+}
+
+void MapWidget::syncPlayerMotionTarget()
+{
+    if (!m_game) return;
+    const int tileX = m_game->player().x;
+    const int tileY = m_game->player().y;
+    if (!m_motionInitialized) {
+        m_playerMotion.snapTo(tileX, tileY);
+        m_lastPlayerTileX = tileX;
+        m_lastPlayerTileY = tileY;
+        m_motionInitialized = true;
+    } else if (tileX != m_lastPlayerTileX || tileY != m_lastPlayerTileY) {
+        m_playerMotion.begin(tileX, tileY, 180.0f);
+        m_lastPlayerTileX = tileX;
+        m_lastPlayerTileY = tileY;
+        m_frameElapsedMs = 0;
+    }
+}
+
+void MapWidget::advancePlayerMotion()
+{
+    syncPlayerMotionTarget();
+    if (!m_motionInitialized) return;
+    if (m_playerMotion.isMoving()) {
+        m_playerMotion.advance(16.0f);
+        m_frameElapsedMs += 16;
+        if (m_frameElapsedMs >= 80) {
+            m_frameElapsedMs = 0;
+            m_playerFrame = (m_playerFrame + 1) % 4;
+        }
+        if (!m_playerMotion.isMoving()) m_playerFrame = 1;
+        update();
     }
 }
 
@@ -717,6 +777,7 @@ void MapWidget::paintEvent(QPaintEvent*)
     // Keep sprite edges sharp and reduce per-frame filtering overhead.
     painter.setRenderHint(QPainter::SmoothPixmapTransform, false);
     if (!m_game) return;
+    syncPlayerMotionTarget();
 
     if (!m_backgroundPix.isNull()) {
         // Cover the map viewport while preserving the scene's aspect ratio.
@@ -796,11 +857,13 @@ void MapWidget::paintEvent(QPaintEvent*)
     }
 
     // 玩家
-    int px = m_game->player().x;
-    int py = m_game->player().y;
-    QRect pr(px * TILE_SIZE, py * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+    const int px = qRound(m_playerMotion.x() * TILE_SIZE);
+    const int py = qRound(m_playerMotion.y() * TILE_SIZE);
+    QRect pr(px, py, TILE_SIZE, TILE_SIZE);
 
-    if (!m_playerPix.isNull()) {
+    if (m_hasPlayerSheet && !m_playerFrames[m_playerDirectionRow * 4 + m_playerFrame].isNull()) {
+        painter.drawPixmap(pr, m_playerFrames[m_playerDirectionRow * 4 + m_playerFrame]);
+    } else if (!m_playerPix.isNull()) {
         painter.drawPixmap(pr, m_playerPix);
     }
 }

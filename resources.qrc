@@ -162,5 +162,7 @@
         <file>images/characters/portraits/sakiko.png</file>
         <file>images/characters/portraits/arale.png</file>
         <file>images/characters/portraits/viola.png</file>
+        <file>images/characters/pilot/anon_casual.png</file>
+        <file>images/characters/pilot/anon_stage.png</file>
     </qresource>
 </RCC>

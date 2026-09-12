@@ -41,3 +41,8 @@ add_executable(mota_classic_tests
 )
 target_include_directories(mota_classic_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(mota_classic_tests PRIVATE Qt6::Widgets)
+
+add_executable(mota_motion_tests
+    tests/test_player_motion.cpp
+)
+target_include_directories(mota_motion_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
