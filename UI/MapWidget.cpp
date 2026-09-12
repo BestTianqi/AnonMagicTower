@@ -121,7 +121,9 @@ void MapWidget::loadTileImage(int tileType, const QString& path)
 {
     QPixmap px(path);
     if (!px.isNull()) {
-        m_tilePix[tileType] = px.scaled(TILE_SIZE, TILE_SIZE, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        // Pixel-art assets must remain crisp; nearest-neighbor scaling also avoids
+        // filtering work on every custom tile during startup.
+        m_tilePix[tileType] = px.scaled(TILE_SIZE, TILE_SIZE, Qt::IgnoreAspectRatio, Qt::FastTransformation);
         m_hasTileImage.insert(tileType);
     }
 }
@@ -130,7 +132,7 @@ void MapWidget::loadMonsterImage(const std::string& name, const QString& path)
 {
     QPixmap px(path);
     if (!px.isNull()) {
-        m_monsterPix[name] = px.scaled(TILE_SIZE, TILE_SIZE, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        m_monsterPix[name] = px.scaled(TILE_SIZE, TILE_SIZE, Qt::IgnoreAspectRatio, Qt::FastTransformation);
         m_hasMonsterImage.insert(name);
     }
 }
@@ -139,7 +141,7 @@ void MapWidget::loadPlayerImage(const QString& path)
 {
     QPixmap px(path);
     if (!px.isNull()) {
-        m_playerPix = px.scaled(TILE_SIZE, TILE_SIZE, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        m_playerPix = px.scaled(TILE_SIZE, TILE_SIZE, Qt::IgnoreAspectRatio, Qt::FastTransformation);
         m_hasPlayerImage = true;
     }
 }
@@ -620,7 +622,8 @@ static void drawOverlayText(QPainter& painter, const QRect& r, const QString& te
 void MapWidget::paintEvent(QPaintEvent*)
 {
     QPainter painter(this);
-    painter.setRenderHint(QPainter::SmoothPixmapTransform);
+    // Keep sprite edges sharp and reduce per-frame filtering overhead.
+    painter.setRenderHint(QPainter::SmoothPixmapTransform, false);
     if (!m_game) return;
 
     int w = m_game->width();
