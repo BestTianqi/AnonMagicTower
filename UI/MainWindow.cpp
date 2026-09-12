@@ -505,7 +505,7 @@ void MainWindow::showNPCDialog(int x, int y)
 
 void MainWindow::showShopDialog(int x, int y)
 {
-    const ShopData* shop = m_game->shopAt(x, y);
+    ShopData* shop = m_game->shopAt(x, y);
     if (!shop) return;
 
     Player& p = m_game->player();
@@ -536,27 +536,26 @@ void MainWindow::showShopDialog(int x, int y)
         updateHUD();
         return;
     }
-    if (classicId == 15 || classicId == 16 || classicId == 28 || classicId == 43) {
-        const int cost = classicId == 15 ? 25 : classicId == 16 ? 50 : classicId == 28 ? 100 : 200;
-        const ClassicItemTier tier = classicItemTierForFloor(m_game->currentFloor());
+    if (shop->classicShopFloor > 0) {
+        const ClassicShopOffer offer = classicShopOfferForFloor(shop->classicShopFloor, shop->classicPurchaseCount);
         QDialog dlg(this);
         dlg.setWindowTitle(QString::fromUtf8("属性商店"));
         dlg.setFixedSize(400, 300);
         auto* layout = new QVBoxLayout(&dlg);
-        layout->addWidget(new QLabel(QString::fromUtf8("每次购买 %1 金币；数值随楼层段提升").arg(cost), &dlg));
+        layout->addWidget(new QLabel(QString::fromUtf8("原版商店：第 %1 次购买价格 %2 金币").arg(shop->classicPurchaseCount + 1).arg(offer.price), &dlg));
         struct Offer { QString name; QString effect; std::function<void()> apply; };
         const Offer offers[] = {
-            {QString::fromUtf8("红宝石"), QString::fromUtf8("攻击 +%1").arg(tier.rubyAttack), [&]{ p.atk += tier.rubyAttack; }},
-            {QString::fromUtf8("蓝宝石"), QString::fromUtf8("防御 +%1").arg(tier.sapphireDefense), [&]{ p.def += tier.sapphireDefense; }},
-            {QString::fromUtf8("小血瓶"), QString::fromUtf8("生命 +%1").arg(tier.smallPotionHp), [&]{ p.hp += tier.smallPotionHp; }},
-            {QString::fromUtf8("大血瓶"), QString::fromUtf8("生命 +%1").arg(tier.largePotionHp), [&]{ p.hp += tier.largePotionHp; }}
+            {QString::fromUtf8("生命值"), QString::fromUtf8("+%1").arg(offer.hp), [&]{ p.hp += offer.hp; }},
+            {QString::fromUtf8("攻击力"), QString::fromUtf8("+%1").arg(offer.atk), [&]{ p.atk += offer.atk; }},
+            {QString::fromUtf8("防御力"), QString::fromUtf8("+%1").arg(offer.def), [&]{ p.def += offer.def; }}
         };
         for (const auto& item : offers) {
             auto* button = new QPushButton(QString::fromUtf8("购买 %1（%2）").arg(item.name, item.effect), &dlg);
-            button->setEnabled(p.gold >= cost);
-            QObject::connect(button, &QPushButton::clicked, &dlg, [&dlg, &p, cost, item] {
-                p.gold -= cost;
+            button->setEnabled(p.gold >= offer.price);
+            QObject::connect(button, &QPushButton::clicked, &dlg, [&dlg, &p, shop, offer, item] {
+                p.gold -= offer.price;
                 item.apply();
+                ++shop->classicPurchaseCount;
                 dlg.accept();
             });
             layout->addWidget(button);

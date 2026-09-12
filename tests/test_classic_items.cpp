@@ -12,6 +12,12 @@ int main() {
     assert(classicItemTierForFloor(20).sapphireDefense == 2);
     assert(classicItemTierForFloor(21).rubyAttack == 3);
     assert(classicItemTierForFloor(50).largePotionHp == 1000);
+    const auto shop4 = classicShopOfferForFloor(4, 0);
+    assert(shop4.hp == 100 && shop4.atk == 2 && shop4.def == 4 && shop4.price == 20);
+    const auto shop12 = classicShopOfferForFloor(12, 2);
+    assert(shop12.hp == 100 && shop12.atk == 4 && shop12.def == 8 && shop12.price == 40);
+    const auto shop46 = classicShopOfferForFloor(46, 3);
+    assert(shop46.atk == 10 && shop46.def == 20 && shop46.price == 80);
 
     Player player;
     player.hp = 100;

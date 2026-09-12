@@ -40,6 +40,8 @@ struct ShopData {
     int armorValue  = 8;
     // 原版商人/罐子编号；0 表示编辑器自定义商店。
     int classicNpcId = 0;
+    int classicShopFloor = 0;
+    int classicPurchaseCount = 0;
 };
 
 struct FloorData {
@@ -87,6 +89,7 @@ public:
 
     void addShopAt(int x, int y, const ShopData& s);
     const ShopData* shopAt(int x, int y) const;
+    ShopData* shopAt(int x, int y);
 
     bool breakWall(int x, int y);
     void goUpFloor(int srcX, int srcY, bool findStairs = true);

@@ -11,8 +11,16 @@ struct ClassicItemTier {
     int largePotionHp;
 };
 
+struct ClassicShopOffer {
+    int hp;
+    int atk;
+    int def;
+    int price;
+};
+
 // 按原版楼层段落计算四种基础道具的数值。
 ClassicItemTier classicItemTierForFloor(int floor);
+ClassicShopOffer classicShopOfferForFloor(int floor, int purchaseCount);
 
 class Item {
 public:

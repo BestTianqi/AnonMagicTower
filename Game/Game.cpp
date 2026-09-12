@@ -118,6 +118,14 @@ void Game::generateClassicTower()
                 ShopData shop{20 + level * 10, 20 + level * 10, 20 + level * 10,
                               100 + level * 5, 2 + level / 10, 2 + level / 10};
                 shop.classicNpcId = id;
+                shop.classicShopFloor = id == 15 ? 4 : id == 16 ? 12 : id == 28 ? 32 : id == 43 ? 46 : 0;
+                if (shop.classicShopFloor > 0) {
+                    const auto offer = classicShopOfferForFloor(shop.classicShopFloor, 0);
+                    shop.potionPrice = shop.weaponPrice = shop.armorPrice = offer.price;
+                    shop.potionValue = offer.hp;
+                    shop.weaponValue = offer.atk;
+                    shop.armorValue = offer.def;
+                }
                 fd.shops[key] = shop;
             } else {
                 fd.map[key] = Tile_NPC;
@@ -316,6 +324,14 @@ void Game::addShopAt(int x, int y, const ShopData& s)
 }
 
 const ShopData* Game::shopAt(int x, int y) const
+{
+    int key = posKey(x, y);
+    auto it = m_currentFloor->shops.find(key);
+    if (it == m_currentFloor->shops.end()) return nullptr;
+    return &it->second;
+}
+
+ShopData* Game::shopAt(int x, int y)
 {
     int key = posKey(x, y);
     auto it = m_currentFloor->shops.find(key);
@@ -699,7 +715,8 @@ bool Game::saveToFile(const std::string& path) const
                 << s.potionPrice << " " << s.weaponPrice << " "
                 << s.armorPrice << " "
                 << s.potionValue << " " << s.weaponValue << " "
-                << s.armorValue << " " << s.classicNpcId << "\n";
+                << s.armorValue << " " << s.classicNpcId << " "
+                << s.classicShopFloor << " " << s.classicPurchaseCount << "\n";
         }
     }
 
@@ -896,16 +913,20 @@ bool Game::loadFromFile(const std::string& path)
     if (marker == "SHOP") {
         size_t totalShops = 0; ifs >> totalShops;
         for (size_t i = 0; i < totalShops; ++i) {
-            int fnum, sx, sy, pp, wp, ap, pv = 200, wv = 5, av = 8, classicNpcId = 0;
+            int fnum, sx, sy, pp, wp, ap, pv = 200, wv = 5, av = 8, classicNpcId = 0, classicShopFloor = 0, classicPurchaseCount = 0;
             ifs >> fnum >> sx >> sy >> pp >> wp >> ap;
             if (ifs.peek() != '\n' && ifs.peek() != EOF)
                 ifs >> pv >> wv >> av;
             if (ifs.peek() != '\n' && ifs.peek() != '\r' && ifs.peek() != EOF)
                 ifs >> classicNpcId;
+            if (ifs.peek() != '\n' && ifs.peek() != '\r' && ifs.peek() != EOF)
+                ifs >> classicShopFloor >> classicPurchaseCount;
             auto it = m_floors.find(fnum);
             if (it != m_floors.end()) {
                 ShopData shop{pp, wp, ap, pv, wv, av};
                 shop.classicNpcId = classicNpcId;
+                shop.classicShopFloor = classicShopFloor;
+                shop.classicPurchaseCount = classicPurchaseCount;
                 it->second.shops.emplace(sy * m_width + sx, shop);
             }
         }

@@ -10,6 +10,17 @@ ClassicItemTier classicItemTierForFloor(int floor)
     return {tier, tier, tier * 50, tier * 200};
 }
 
+ClassicShopOffer classicShopOfferForFloor(int floor, int purchaseCount)
+{
+    const int safeFloor = std::max(1, std::min(50, floor));
+    const int priceCount = std::max(0, purchaseCount);
+    int atk = 2, def = 4;
+    if (safeFloor >= 46) { atk = 10; def = 20; }
+    else if (safeFloor >= 32) { atk = 8; def = 16; }
+    else if (safeFloor >= 12) { atk = 4; def = 8; }
+    return {100, atk, def, 10 * priceCount * (priceCount - 1) + 20};
+}
+
 // Item
 Item::Item(const std::string& name, int value)
     : name(name), value(value)
