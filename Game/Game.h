@@ -38,6 +38,8 @@ struct ShopData {
     int potionValue = 200;
     int weaponValue = 5;
     int armorValue  = 8;
+    // 原版商人/罐子编号；0 表示编辑器自定义商店。
+    int classicNpcId = 0;
 };
 
 struct FloorData {

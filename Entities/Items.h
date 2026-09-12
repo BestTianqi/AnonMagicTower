@@ -32,6 +32,10 @@ enum class ItemType {
     Weapon,
     Armor,
     Treasure,
+    RubyGem,
+    SapphireGem,
+    SmallPotion,
+    LargePotion,
     Key,
     PenguinDoll,
     MatchaParfait,
@@ -46,17 +50,42 @@ enum class ItemType {
 
 class Potion : public Item {
 public:
-    Potion(int healAmount);
+    Potion(int healAmount, const std::string& displayName = "Potion");
     void Apply(Player& player) const override;
     int HealAmount() const { return m_heal; }
 private:
     int m_heal;
 };
 
+// 原版50层魔塔固定数值药水：小血瓶+200，大血瓶+500。
+class SmallPotion : public Potion {
+public:
+    SmallPotion();
+};
+
+class LargePotion : public Potion {
+public:
+    LargePotion();
+};
+
+// 原版宝石拾取即生效：红宝石+3攻击，蓝宝石+3防御。
+class RubyGem : public Item {
+public:
+    RubyGem();
+    void Apply(Player& player) const override;
+};
+
+class SapphireGem : public Item {
+public:
+    SapphireGem();
+    void Apply(Player& player) const override;
+};
+
 class HolyWater : public Item {
 public:
     HolyWater();
     void Apply(Player& player) const override;
+    bool IsUseItem() const override { return true; }
 };
 
 class Weapon : public Item {

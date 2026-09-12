@@ -90,6 +90,10 @@
         <file>images/runtime/items/key_yellow.png</file>
         <file>images/runtime/items/key_magic.png</file>
         <file>images/runtime/items/potion.png</file>
+        <file>images/runtime/items/potion_small.png</file>
+        <file>images/runtime/items/potion_large.png</file>
+        <file>images/runtime/items/ruby_gem.png</file>
+        <file>images/runtime/items/sapphire_gem.png</file>
         <file>images/runtime/items/weapon.png</file>
         <file>images/runtime/items/armor.png</file>
         <file>images/runtime/items/treasure.png</file>

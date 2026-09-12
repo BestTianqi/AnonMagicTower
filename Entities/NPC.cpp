@@ -4,17 +4,25 @@
 NPC::NPC(const std::string& name, const std::vector<std::string>& dialog,
          std::unique_ptr<Item> reward,
          bool isTrader, int tradeGoldCost,
-         std::unique_ptr<Item> tradeReward)
+         std::unique_ptr<Item> tradeReward,
+         int classicId)
     : m_name(name), m_dialog(dialog), m_reward(std::move(reward)), m_given(false),
       m_isTrader(isTrader), m_tradeGoldCost(tradeGoldCost),
-      m_tradeReward(std::move(tradeReward)), m_tradeDone(false)
+      m_tradeReward(std::move(tradeReward)), m_tradeDone(false), m_classicId(classicId)
 {
 }
 
 std::string NPC::Interact(Player& player)
 {
     if (m_reward && !m_given) {
-        m_reward->Apply(player);
+        if (m_reward->IsUseItem()) {
+            player.AddItem(std::move(m_reward));
+        } else if (m_reward->IsPassiveEffect()) {
+            m_reward->Apply(player);
+            player.AddItem(std::move(m_reward));
+        } else {
+            m_reward->Apply(player);
+        }
         m_given = true;
         return m_name + ": 谢谢你，接受我的礼物。";
     }

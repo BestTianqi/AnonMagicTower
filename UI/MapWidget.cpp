@@ -541,6 +541,8 @@ static bool hasCustomShape(const std::string& name)
            name == "Weapon" || name == "武器" ||
            name == "Armor" || name == "防具" ||
            name == "Potion" || name == "生命药" ||
+           name == "小血瓶" || name == "大血瓶" ||
+           name == "红宝石" || name == "蓝宝石" ||
            name == "匿名眼镜" ||
            name == "破墙锤" ||
            name == "上楼器" ||
@@ -573,10 +575,19 @@ static void itemAppearance(const std::string& name, int value, QColor& fill, QCo
           label = QString::fromUtf8("万能钥"); textColor = QColor(255, 220, 100); return; }
 
     // 属性类
-    if (qname == QString::fromUtf8("Potion") || qname == QString::fromUtf8("生命药"))
+    if (qname == QString::fromUtf8("Potion") || qname == QString::fromUtf8("生命药") ||
+        qname == QString::fromUtf8("小血瓶") || qname == QString::fromUtf8("大血瓶"))
         { fill = QColor(200, 60, 60); border = QColor(150, 30, 30);
           label = QString::fromUtf8("生命药"); textColor = Qt::white;
           desc = QString("+%1HP").arg(value); return; }
+    if (qname == QString::fromUtf8("红宝石") || qname == QString::fromUtf8("Ruby Gem"))
+        { fill = QColor(220, 40, 55); border = QColor(125, 15, 25);
+          label = QString::fromUtf8("红宝石"); textColor = Qt::white;
+          desc = QString("ATK+3"); return; }
+    if (qname == QString::fromUtf8("蓝宝石") || qname == QString::fromUtf8("Sapphire Gem"))
+        { fill = QColor(50, 100, 220); border = QColor(20, 50, 145);
+          label = QString::fromUtf8("蓝宝石"); textColor = Qt::white;
+          desc = QString("DEF+3"); return; }
     if (qname == QString::fromUtf8("Weapon") || qname == QString::fromUtf8("武器"))
         { fill = QColor(210, 140, 40); border = QColor(160, 100, 20);
           label = QString::fromUtf8("武器"); textColor = Qt::white;

@@ -13,10 +13,13 @@ public:
     NPC(const std::string& name, const std::vector<std::string>& dialog,
         std::unique_ptr<Item> reward = nullptr,
         bool isTrader = false, int tradeGoldCost = 0,
-        std::unique_ptr<Item> tradeReward = nullptr);
+        std::unique_ptr<Item> tradeReward = nullptr,
+        int classicId = 0);
 
     const std::string& GetName() const { return m_name; }
     const std::vector<std::string>& Dialog() const { return m_dialog; }
+    int ClassicId() const { return m_classicId; }
+    void SetClassicId(int id) { m_classicId = id; }
 
     // 与玩家交互
     std::string Interact(Player& player);
@@ -45,4 +48,5 @@ private:
     int  m_tradeGoldCost;
     std::unique_ptr<Item> m_tradeReward;
     bool m_tradeDone;
+    int m_classicId;
 };

@@ -16,14 +16,44 @@ int Item::GetValue() const { return value; }
 void Item::Apply(Player& /*player*/) const { /* default: nothing */ }
 
 // Potion
-Potion::Potion(int healAmount)
-    : Item("Potion", healAmount), m_heal(healAmount)
+Potion::Potion(int healAmount, const std::string& displayName)
+    : Item(displayName, healAmount), m_heal(healAmount)
 {
 }
 
 void Potion::Apply(Player& player) const
 {
     player.hp += m_heal;
+}
+
+SmallPotion::SmallPotion()
+    : Potion(200, QString::fromUtf8("小血瓶").toStdString())
+{
+}
+
+LargePotion::LargePotion()
+    : Potion(500, QString::fromUtf8("大血瓶").toStdString())
+{
+}
+
+RubyGem::RubyGem()
+    : Item(QString::fromUtf8("红宝石").toStdString(), 3)
+{
+}
+
+void RubyGem::Apply(Player& player) const
+{
+    player.atk += 3;
+}
+
+SapphireGem::SapphireGem()
+    : Item(QString::fromUtf8("蓝宝石").toStdString(), 3)
+{
+}
+
+void SapphireGem::Apply(Player& player) const
+{
+    player.def += 3;
 }
 
 HolyWater::HolyWater()

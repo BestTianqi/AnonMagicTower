@@ -21,6 +21,8 @@
 #include <QLabel>
 #include <QTabWidget>
 #include <QIcon>
+#include <QRandomGenerator>
+#include <algorithm>
 
 static void applyRuntimeArtSkin(QWidget& widget)
 {
@@ -158,6 +160,14 @@ void MainWindow::loadAssets()
         {"万能钥匙",      ":/images/runtime/items/key_magic.png"},
         {"Potion",        ":/images/runtime/items/potion.png"},
         {"生命药",        ":/images/runtime/items/potion.png"},
+        {"小血瓶",        ":/images/runtime/items/potion_small.png"},
+        {"大血瓶",        ":/images/runtime/items/potion_large.png"},
+        {"Small Potion",  ":/images/runtime/items/potion_small.png"},
+        {"Large Potion",  ":/images/runtime/items/potion_large.png"},
+        {"红宝石",        ":/images/runtime/items/ruby_gem.png"},
+        {"蓝宝石",        ":/images/runtime/items/sapphire_gem.png"},
+        {"Ruby Gem",      ":/images/runtime/items/ruby_gem.png"},
+        {"Sapphire Gem",  ":/images/runtime/items/sapphire_gem.png"},
         {"Weapon",        ":/images/runtime/items/weapon.png"},
         {"武器",          ":/images/runtime/items/weapon.png"},
         {"Armor",         ":/images/runtime/items/armor.png"},
@@ -220,6 +230,16 @@ QString MainWindow::getItemDescription(const Item* item) const
 
     if (name == "Potion" || name == QString::fromUtf8("生命药"))
         return QString::fromUtf8("恢复 %1 点生命值").arg(val);
+    if (name == QString::fromUtf8("小血瓶"))
+        return QString::fromUtf8("恢复 200 点生命值");
+    if (name == QString::fromUtf8("大血瓶"))
+        return QString::fromUtf8("恢复 500 点生命值");
+    if (name == QString::fromUtf8("红宝石"))
+        return QString::fromUtf8("攻击力 +3（拾取即生效）");
+    if (name == QString::fromUtf8("蓝宝石"))
+        return QString::fromUtf8("防御力 +3（拾取即生效）");
+    if (name == "Ruby Gem") return QString::fromUtf8("攻击力 +3（拾取即生效）");
+    if (name == "Sapphire Gem") return QString::fromUtf8("防御力 +3（拾取即生效）");
     if (name == "Weapon" || name == QString::fromUtf8("武器"))
         return QString::fromUtf8("攻击力 +%1").arg(val);
     if (name == "Armor" || name == QString::fromUtf8("防具"))
@@ -349,6 +369,60 @@ void MainWindow::showNPCDialog(int x, int y)
 
     Player& p = m_game->player();
 
+    // 原版关键 NPC 事件（保留一次性状态）。
+    const int classicId = npc->ClassicId();
+    if (!npc->HasGivenReward() && classicId == 33) {
+        p.atk = (p.atk * 103 + 99) / 100;
+        p.def = (p.def * 103 + 99) / 100;
+        npc->SetGiven(true);
+        QMessageBox::information(this, QString::fromUtf8("商人"), QString::fromUtf8("你的攻击力和防御力提升了 3%！"));
+        updateHUD();
+        return;
+    }
+    if (!npc->HasGivenReward() && classicId == 22) {
+        auto reply = QMessageBox::question(this, QString::fromUtf8("公主"),
+            QString::fromUtf8("谢谢你救了我！现在前往魔塔顶层吗？"), QMessageBox::Yes | QMessageBox::No);
+        if (reply == QMessageBox::Yes) {
+            npc->SetGiven(true);
+            while (m_game->currentFloor() < 50) m_game->goUpFloor(p.x, p.y, false);
+            QMessageBox::information(this, QString::fromUtf8("公主"), QString::fromUtf8("我会在魔王身边等你。"));
+        }
+        updateHUD();
+        return;
+    }
+    if (!npc->HasGivenReward() && classicId == 10) {
+        auto reply = QMessageBox::question(this, QString::fromUtf8("不正经的商人"),
+            QString::fromUtf8("给我 1 金币，试试你的运气？（1% 获得 88 金币）"), QMessageBox::Yes | QMessageBox::No);
+        if (reply == QMessageBox::Yes && p.gold >= 1) {
+            --p.gold;
+            npc->SetGiven(true);
+            if (QRandomGenerator::global()->bounded(100) == 0) p.gold += 88;
+        }
+        updateHUD();
+        return;
+    }
+    if (!npc->HasGivenReward() && classicId == 24) {
+        auto reply = QMessageBox::question(this, QString::fromUtf8("神秘的商人"),
+            QString::fromUtf8("我会随机提升一项属性，同时扣除另一项属性，确定交易吗？"), QMessageBox::Yes | QMessageBox::No);
+        if (reply == QMessageBox::Yes) {
+            int gain = QRandomGenerator::global()->bounded(3);
+            int loss = QRandomGenerator::global()->bounded(3);
+            if (gain == 0) p.hp += 100; else if (gain == 1) p.atk += 10; else p.def += 10;
+            if (loss == 0) p.hp = std::max(1, p.hp - 100); else if (loss == 1) p.atk = std::max(0, p.atk - 10); else p.def = std::max(0, p.def - 10);
+            npc->SetGiven(true);
+        }
+        updateHUD();
+        return;
+    }
+    if (!npc->HasGivenReward() && (classicId == 13 || classicId == 14 || classicId == 25 || classicId == 31)) {
+        // 小偷事件：打开身边的隐藏墙，等价于原版暗道剧情。
+        for (int dy = -1; dy <= 1; ++dy)
+            for (int dx = -1; dx <= 1; ++dx)
+                if (std::abs(dx) + std::abs(dy) == 1 && m_game->tileAt(x + dx, y + dy) == Tile_DarkWall)
+                    m_game->setTile(x + dx, y + dy, Tile_Floor);
+        npc->SetGiven(true);
+    }
+
     // 交易NPC
     if (npc->IsTrader() && !npc->IsTradeDone()) {
         const Item* tradeReward = npc->GetTradeReward();
@@ -435,6 +509,45 @@ void MainWindow::showShopDialog(int x, int y)
     if (!shop) return;
 
     Player& p = m_game->player();
+
+    // 原版固定兑换商人：钥匙数量与价格保持 50 层魔塔配置。
+    const int classicId = shop->classicNpcId;
+    struct FixedOffer { QString text; int cost; std::function<void()> grant; };
+    FixedOffer offer;
+    bool fixed = true;
+    switch (classicId) {
+    case 7:  offer = {QString::fromUtf8("蓝钥匙 ×1"), 50, [&] { p.AddKey(KeyType::Blue); }}; break;
+    case 8:  offer = {QString::fromUtf8("黄钥匙 ×5"), 50, [&] { p.AddKey(KeyType::Green, 5); }}; break;
+    case 9:  offer = {QString::fromUtf8("红钥匙 ×5"), 800, [&] { p.AddKey(KeyType::Red, 5); }}; break;
+    case 11: offer = {QString::fromUtf8("蓝钥匙 ×1"), 200, [&] { p.AddKey(KeyType::Blue); }}; break;
+    case 27: offer = {QString::fromUtf8("黄钥匙 ×4、蓝钥匙 ×1"), 1000, [&] { p.AddKey(KeyType::Green, 4); p.AddKey(KeyType::Blue); }}; break;
+    case 36: offer = {QString::fromUtf8("黄钥匙 ×3"), 200, [&] { p.AddKey(KeyType::Green, 3); }}; break;
+    case 38: offer = {QString::fromUtf8("蓝钥匙 ×3"), 2000, [&] { p.AddKey(KeyType::Blue, 3); }}; break;
+    case 41: offer = {QString::fromUtf8("生命值 +2000"), 1000, [&] { p.hp += 2000; }}; break;
+    case 44: offer = {QString::fromUtf8("地震卷轴"), 4000, [&] { p.AddItem(std::make_unique<WallBreaker>()); }}; break;
+    default: fixed = false; break;
+    }
+    if (fixed) {
+        const bool canAfford = p.gold >= offer.cost;
+        auto reply = QMessageBox::question(this, QString::fromUtf8("原版商人"),
+            QString::fromUtf8("%1\n价格：%2 金币\n当前金币：%3\n购买吗？").arg(offer.text).arg(offer.cost).arg(p.gold),
+            canAfford ? (QMessageBox::Yes | QMessageBox::No) : QMessageBox::No);
+        if (reply == QMessageBox::Yes && canAfford) { p.gold -= offer.cost; offer.grant(); }
+        updateHUD();
+        return;
+    }
+    if (classicId == 15 || classicId == 16 || classicId == 28 || classicId == 43) {
+        const int cost = classicId == 15 ? 25 : classicId == 16 ? 50 : classicId == 28 ? 100 : 200;
+        auto reply = QMessageBox::question(this, QString::fromUtf8("属性罐"),
+            QString::fromUtf8("支付 %1 金币，随机获得一项属性提升？").arg(cost), QMessageBox::Yes | QMessageBox::No);
+        if (reply == QMessageBox::Yes && p.gold >= cost) {
+            p.gold -= cost;
+            const int stat = QRandomGenerator::global()->bounded(3);
+            if (stat == 0) p.hp += 100; else if (stat == 1) p.atk += 2; else p.def += 4;
+        }
+        updateHUD();
+        return;
+    }
     int surcharge = p.shopUseCount * 60;
 
     struct ShopItem {

@@ -39,10 +39,10 @@ void Game::generateClassicTower()
         case 2:  return std::make_unique<Key>(KeyType::Blue);
         case 3:  return std::make_unique<Key>(KeyType::Red);
         case 4:  return std::make_unique<MagicKey>();
-        case 5:  return std::make_unique<Potion>(200);
-        case 6:  return std::make_unique<Potion>(500);
-        case 7:  return std::make_unique<Weapon>(3);
-        case 8:  return std::make_unique<Armor>(3);
+        case 5:  return std::make_unique<SmallPotion>();
+        case 6:  return std::make_unique<LargePotion>();
+        case 7:  return std::make_unique<RubyGem>();
+        case 8:  return std::make_unique<SapphireGem>();
         case 10: return std::make_unique<AnonGlasses>();
         case 13: return std::make_unique<WallBreaker>();
         case 17: return std::make_unique<HolyWater>();
@@ -109,16 +109,49 @@ void Game::generateClassicTower()
                 fd.map[key] = Tile_Monster;
                 continue;
             }
-            const bool merchant = id == 6 || id == 7 || id == 8 || id == 9 || id == 10 ||
-                                  id == 11 || id == 15 || id == 16 || id == 24 || id == 27 ||
-                                  id == 28 || id == 36 || id == 38 || id == 41 || id == 43 || id == 44;
+            const bool merchant = id == 6 || id == 7 || id == 8 || id == 9 || id == 11 ||
+                                  id == 15 || id == 16 || id == 27 || id == 28 || id == 36 ||
+                                  id == 38 || id == 41 || id == 43 || id == 44;
             if (merchant) {
                 fd.map[key] = Tile_Shop;
-                fd.shops[key] = ShopData{20 + level * 10, 20 + level * 10, 20 + level * 10,
-                                         100 + level * 5, 2 + level / 10, 2 + level / 10};
+                ShopData shop{20 + level * 10, 20 + level * 10, 20 + level * 10,
+                              100 + level * 5, 2 + level / 10, 2 + level / 10};
+                shop.classicNpcId = id;
+                fd.shops[key] = shop;
             } else {
                 fd.map[key] = Tile_NPC;
-                fd.npcs.emplace(key, NPC("剧情角色", {"这里保持原版 NPC 的地图位置。"}));
+                const char* name = (id == 22) ? "公主" : ((id == 12 || id == 13 || id == 14 || id == 25 || id == 30 || id == 31 || id == 46) ? "小偷" : "老头");
+                std::vector<std::string> dialog{"这是第 " + std::to_string(level) + " 层。继续探索吧。"};
+                switch (id) {
+                case 2: dialog = {"欢迎来到魔塔，先收集钥匙和装备吧。"}; break;
+                case 3: dialog = {"这本怪物手册交给你。", "它能查看本层怪物的能力。"}; break;
+                case 4: dialog = {"购买物品后再与商人对话，他会告诉你重要信息。"}; break;
+                case 5: dialog = {"魔塔里隐藏着许多秘密通道。"}; break;
+                case 12: case 13: dialog = {"喂！别挡路，我要先走一步。"}; break;
+                case 14: case 25: case 31: dialog = {"我挖了一条暗道，已经替你打开了。"}; break;
+                case 17: dialog = {"听说塔内有两把隐藏的红钥匙。"}; break;
+                case 19: dialog = {"注意那些颜色与众不同的墙。"}; break;
+                case 20: dialog = {"大法师在25层，他是魔塔的主人。"}; break;
+                case 21: dialog = {"25层以后会遇到更强的敌人，准备好再前进。"}; break;
+                case 23: dialog = {"27层的道路被封锁了，寻找隐藏的道路吧。"}; break;
+                case 26: dialog = {"魔塔有50层，但你不能直接到达顶层。"}; break;
+                case 29: dialog = {"有些墙壁只是伪装，靠近它们试试看。"}; break;
+                case 30: dialog = {"救救我！这里的牢门似乎能被打开。"}; break;
+                case 34: dialog = {"前方的道路需要更高级的装备。"}; break;
+                case 35: dialog = {"秘宝被藏在更高的楼层。"}; break;
+                case 37: dialog = {"翡翠剑的房间需要用镐破墙进入。"}; break;
+                case 39: dialog = {"通往异界的入口就在不远处。"}; break;
+                case 40: dialog = {"44层被藏在异界，只有通过秘宝才能到达。"}; break;
+                case 42: dialog = {"神圣盾能免疫魔法攻击，但它被藏在异界内。"}; break;
+                case 45: dialog = {"要打败魔龙必须准备神圣剑、神圣盾或屠龙匕首。"}; break;
+                default: break;
+                }
+                std::unique_ptr<Item> reward;
+                if (id == 3) reward = std::make_unique<AnonGlasses>();
+                else if (id == 18) reward = std::make_unique<HolyWater>();
+                else if (id == 32) reward = std::make_unique<Treasure>(1000);
+                NPC npc(name, dialog, std::move(reward), false, 0, nullptr, id);
+                fd.npcs.emplace(key, std::move(npc));
             }
         } else if (type == 3 && id >= 1 && id <= 34) {
             fd.monsters[key] = MonsterDB::getByIndex(id - 1);
@@ -643,7 +676,7 @@ bool Game::saveToFile(const std::string& path) const
                 << n.IsTrader() << " " << n.GetTradeGoldCost() << " "
                 << (tradeReward ? tradeReward->GetName() : "-") << " "
                 << (tradeReward ? tradeReward->GetValue() : 0) << " "
-                << n.IsTradeDone() << "\n";
+                << n.IsTradeDone() << " " << n.ClassicId() << "\n";
             for (auto& d : n.Dialog())
                 ofs << d << "\n";
         }
@@ -665,7 +698,7 @@ bool Game::saveToFile(const std::string& path) const
                 << s.potionPrice << " " << s.weaponPrice << " "
                 << s.armorPrice << " "
                 << s.potionValue << " " << s.weaponValue << " "
-                << s.armorValue << "\n";
+                << s.armorValue << " " << s.classicNpcId << "\n";
         }
     }
 
@@ -710,6 +743,14 @@ std::unique_ptr<Item> Game::createItemByName(const std::string& iname, int ival)
         return std::make_unique<Key>(KeyType::Green);
     if (iname == "Potion" || iname == QString::fromUtf8("生命药").toStdString())
         return std::make_unique<Potion>(ival);
+    if (iname == "Small Potion" || iname == QString::fromUtf8("小血瓶").toStdString())
+        return std::make_unique<SmallPotion>();
+    if (iname == "Large Potion" || iname == QString::fromUtf8("大血瓶").toStdString())
+        return std::make_unique<LargePotion>();
+    if (iname == "Ruby Gem" || iname == QString::fromUtf8("红宝石").toStdString())
+        return std::make_unique<RubyGem>();
+    if (iname == "Sapphire Gem" || iname == QString::fromUtf8("蓝宝石").toStdString())
+        return std::make_unique<SapphireGem>();
     if (iname == "Weapon" || iname == QString::fromUtf8("武器").toStdString())
         return std::make_unique<Weapon>(ival);
     if (iname == "Armor" || iname == QString::fromUtf8("防具").toStdString())
@@ -808,6 +849,9 @@ bool Game::loadFromFile(const std::string& path)
                 if (ifs.peek() != '\n' && ifs.peek() != '\r' && ifs.peek() != EOF)
                     ifs >> tradeDone;
             }
+            int classicId = 0;
+            if (ifs.peek() != '\n' && ifs.peek() != '\r' && ifs.peek() != EOF)
+                ifs >> classicId;
             ifs.ignore();
             std::vector<std::string> dialog;
             for (size_t d = 0; d < dsize; ++d) {
@@ -819,7 +863,7 @@ bool Game::loadFromFile(const std::string& path)
             int key = ny * m_width + nx;
             auto reward = (rewardName == "-") ? nullptr : createItemByName(rewardName, rewardValue);
             auto tradeReward = (tradeRewardName == "-") ? nullptr : createItemByName(tradeRewardName, tradeRewardValue);
-            auto npc = NPC(nname, dialog, std::move(reward), isTrader, tradeGoldCost, std::move(tradeReward));
+            auto npc = NPC(nname, dialog, std::move(reward), isTrader, tradeGoldCost, std::move(tradeReward), classicId);
             npc.SetGiven(given);
             npc.SetTradeDone(tradeDone);
             fd.npcs.emplace(key, std::move(npc));
@@ -834,7 +878,8 @@ bool Game::loadFromFile(const std::string& path)
                 if (ifs.peek() != '\n' && ifs.peek() != '\r' && ifs.peek() != EOF)
                     ifs >> pv >> wv >> av;
                 int key = sy * m_width + sx;
-                fd.shops.emplace(key, ShopData{pp, wp, ap, pv, wv, av});
+                ShopData shop{pp, wp, ap, pv, wv, av};
+                fd.shops.emplace(key, shop);
             }
         }
 
@@ -850,13 +895,18 @@ bool Game::loadFromFile(const std::string& path)
     if (marker == "SHOP") {
         size_t totalShops = 0; ifs >> totalShops;
         for (size_t i = 0; i < totalShops; ++i) {
-            int fnum, sx, sy, pp, wp, ap, pv = 200, wv = 5, av = 8;
+            int fnum, sx, sy, pp, wp, ap, pv = 200, wv = 5, av = 8, classicNpcId = 0;
             ifs >> fnum >> sx >> sy >> pp >> wp >> ap;
             if (ifs.peek() != '\n' && ifs.peek() != EOF)
                 ifs >> pv >> wv >> av;
+            if (ifs.peek() != '\n' && ifs.peek() != '\r' && ifs.peek() != EOF)
+                ifs >> classicNpcId;
             auto it = m_floors.find(fnum);
-            if (it != m_floors.end())
-                it->second.shops.emplace(sy * m_width + sx, ShopData{pp, wp, ap, pv, wv, av});
+            if (it != m_floors.end()) {
+                ShopData shop{pp, wp, ap, pv, wv, av};
+                shop.classicNpcId = classicNpcId;
+                it->second.shops.emplace(sy * m_width + sx, shop);
+            }
         }
         // 读取玩家数据
         ifs >> px >> py >> php >> patk >> pdef >> pgold;
