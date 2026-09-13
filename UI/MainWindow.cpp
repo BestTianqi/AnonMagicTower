@@ -689,26 +689,41 @@ void MainWindow::showVisualNovelDialogue(const std::vector<VisualNovelPage>& pag
     QDialog dlg(this);
     dlg.setWindowTitle(QString::fromUtf8("剧情"));
     dlg.setModal(true);
-    dlg.setFixedSize(900, 310);
+    dlg.setFixedSize(1240, 620);
     dlg.setWindowFlags(Qt::Dialog | Qt::FramelessWindowHint);
     dlg.setStyleSheet(
         "QDialog { background: rgba(14, 12, 28, 248); border: 2px solid #8c6ba8; }"
         "QLabel#vnName { font-size: 20px; font-weight: 800; padding: 3px 0; }"
         "QLabel#vnText { color: #fff4e6; font-size: 18px; }"
+        "QLabel#vnPortrait { background: transparent; border: none; }"
+        "QFrame#vnBox { background: rgba(18, 15, 35, 245); border: 2px solid #a57cc2; border-radius: 8px; }"
         "QPushButton { color: #fff7d0; background: #5f3d79; border: 1px solid #d5a8f0;"
         " border-radius: 6px; padding: 8px 24px; font-size: 15px; font-weight: 700; }"
         "QPushButton:hover { background: #79509a; }"
     );
     auto* root = new QVBoxLayout(&dlg);
-    root->setContentsMargins(18, 16, 18, 14);
-    root->setSpacing(8);
-    auto* content = new QHBoxLayout();
-    content->setSpacing(18);
-    auto* portrait = new QLabel(&dlg);
-    portrait->setFixedSize(150, 220);
-    portrait->setAlignment(Qt::AlignCenter);
-    portrait->setStyleSheet("background: rgba(0,0,0,90); border: 1px solid #655275;");
-    content->addWidget(portrait);
+    root->setContentsMargins(18, 12, 18, 14);
+    root->setSpacing(6);
+    auto* stage = new QHBoxLayout();
+    stage->setContentsMargins(18, 0, 18, 0);
+    auto* leftPortrait = new QLabel(&dlg);
+    leftPortrait->setObjectName("vnPortrait");
+    leftPortrait->setFixedSize(300, 400);
+    leftPortrait->setAlignment(Qt::AlignBottom | Qt::AlignHCenter);
+    auto* rightPortrait = new QLabel(&dlg);
+    rightPortrait->setObjectName("vnPortrait");
+    rightPortrait->setFixedSize(300, 400);
+    rightPortrait->setAlignment(Qt::AlignBottom | Qt::AlignHCenter);
+    stage->addWidget(leftPortrait, 0, Qt::AlignLeft | Qt::AlignBottom);
+    stage->addStretch(1);
+    stage->addWidget(rightPortrait, 0, Qt::AlignRight | Qt::AlignBottom);
+    root->addLayout(stage, 1);
+
+    auto* box = new QFrame(&dlg);
+    box->setObjectName("vnBox");
+    auto* boxLayout = new QVBoxLayout(box);
+    boxLayout->setContentsMargins(18, 10, 14, 10);
+    boxLayout->setSpacing(4);
     auto* textColumn = new QVBoxLayout();
     auto* name = new QLabel(&dlg);
     name->setObjectName("vnName");
@@ -719,26 +734,35 @@ void MainWindow::showVisualNovelDialogue(const std::vector<VisualNovelPage>& pag
     textColumn->addWidget(name);
     textColumn->addWidget(text, 1);
     textColumn->addStretch();
-    content->addLayout(textColumn, 1);
-    root->addLayout(content, 1);
+    boxLayout->addLayout(textColumn, 1);
     auto* next = new QPushButton(QString::fromUtf8("继续 ▶"), &dlg);
     next->setDefault(true);
     next->setFixedWidth(140);
     auto* buttonRow = new QHBoxLayout();
     buttonRow->addStretch();
     buttonRow->addWidget(next);
-    root->addLayout(buttonRow);
+    boxLayout->addLayout(buttonRow);
+    root->addWidget(box, 0);
     int pageIndex = 0;
     const auto renderPage = [&]() {
         const VisualNovelPage& page = pages[static_cast<size_t>(pageIndex)];
         name->setText(page.speaker);
         name->setStyleSheet(QStringLiteral("color: %1;").arg(page.accent));
         text->setText(page.text);
-        QPixmap image(page.portrait);
-        if (!image.isNull())
-            portrait->setPixmap(image.scaled(portrait->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
-        else
-            portrait->clear();
+        const bool playerSpeaking = page.speaker.contains(QString::fromUtf8("爱音"));
+        const QString leftPath = playerSpeaking ? page.portrait
+                                                : QStringLiteral(":/images/characters/portraits/anon.png");
+        const QString rightPath = playerSpeaking
+            ? QStringLiteral(":/images/characters/portraits/soyo.png") : page.portrait;
+        const auto setPortrait = [](QLabel* target, const QString& path) {
+            const QPixmap image(path);
+            if (!image.isNull())
+                target->setPixmap(image.scaled(target->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+            else
+                target->clear();
+        };
+        setPortrait(leftPortrait, leftPath);
+        setPortrait(rightPortrait, rightPath);
         next->setText(pageIndex + 1 == static_cast<int>(pages.size())
                           ? QString::fromUtf8("继续 ▶") : QString::fromUtf8("继续 ▶"));
     };
@@ -751,7 +775,7 @@ void MainWindow::showVisualNovelDialogue(const std::vector<VisualNovelPage>& pag
         }
     });
     renderPage();
-    dlg.move((width() - dlg.width()) / 2, (height() - dlg.height()) / 2);
+    dlg.move((width() - dlg.width()) / 2, height() - dlg.height() - 24);
     dlg.exec();
 }
 
@@ -762,28 +786,52 @@ bool MainWindow::showVisualNovelChoice(const QString& speaker, const QString& me
     QDialog dlg(this);
     dlg.setWindowTitle(QString::fromUtf8("剧情选择"));
     dlg.setModal(true);
-    dlg.setFixedSize(900, 310);
+    dlg.setFixedSize(1240, 620);
     dlg.setWindowFlags(Qt::Dialog | Qt::FramelessWindowHint);
     dlg.setStyleSheet(
         "QDialog { background: rgba(14, 12, 28, 248); border: 2px solid #8c6ba8; }"
         "QLabel#vnName { font-size: 20px; font-weight: 800; color: #ffb5d7; }"
         "QLabel#vnText { color: #fff4e6; font-size: 18px; }"
+        "QLabel#vnPortrait { background: transparent; border: none; }"
+        "QFrame#vnBox { background: rgba(18, 15, 35, 245); border: 2px solid #a57cc2; border-radius: 8px; }"
         "QPushButton { color: #fff7d0; background: #5f3d79; border: 1px solid #d5a8f0;"
         " border-radius: 6px; padding: 8px 24px; font-size: 15px; font-weight: 700; }"
         "QPushButton:hover { background: #79509a; }"
     );
     auto* root = new QVBoxLayout(&dlg);
-    root->setContentsMargins(18, 16, 18, 14);
-    auto* content = new QHBoxLayout();
-    content->setSpacing(18);
-    auto* portrait = new QLabel(&dlg);
-    portrait->setFixedSize(150, 220);
-    portrait->setAlignment(Qt::AlignCenter);
-    portrait->setStyleSheet("background: rgba(0,0,0,90); border: 1px solid #655275;");
-    const QPixmap image(portraitPath);
-    if (!image.isNull())
-        portrait->setPixmap(image.scaled(portrait->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
-    content->addWidget(portrait);
+    root->setContentsMargins(18, 12, 18, 14);
+    root->setSpacing(6);
+    auto* stage = new QHBoxLayout();
+    stage->setContentsMargins(18, 0, 18, 0);
+    auto* leftPortrait = new QLabel(&dlg);
+    leftPortrait->setObjectName("vnPortrait");
+    leftPortrait->setFixedSize(300, 400);
+    leftPortrait->setAlignment(Qt::AlignBottom | Qt::AlignHCenter);
+    auto* rightPortrait = new QLabel(&dlg);
+    rightPortrait->setObjectName("vnPortrait");
+    rightPortrait->setFixedSize(300, 400);
+    rightPortrait->setAlignment(Qt::AlignBottom | Qt::AlignHCenter);
+    const bool playerSpeaking = speaker.contains(QString::fromUtf8("爱音"));
+    const QString leftPath = playerSpeaking ? portraitPath
+                                            : QStringLiteral(":/images/characters/portraits/anon.png");
+    const QString rightPath = playerSpeaking
+        ? QStringLiteral(":/images/characters/portraits/soyo.png") : portraitPath;
+    const auto setPortrait = [](QLabel* target, const QString& path) {
+        const QPixmap image(path);
+        if (!image.isNull())
+            target->setPixmap(image.scaled(target->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    };
+    setPortrait(leftPortrait, leftPath);
+    setPortrait(rightPortrait, rightPath);
+    stage->addWidget(leftPortrait, 0, Qt::AlignLeft | Qt::AlignBottom);
+    stage->addStretch(1);
+    stage->addWidget(rightPortrait, 0, Qt::AlignRight | Qt::AlignBottom);
+    root->addLayout(stage, 1);
+
+    auto* box = new QFrame(&dlg);
+    box->setObjectName("vnBox");
+    auto* boxLayout = new QVBoxLayout(box);
+    boxLayout->setContentsMargins(18, 10, 14, 10);
     auto* column = new QVBoxLayout();
     auto* name = new QLabel(speaker, &dlg);
     name->setObjectName("vnName");
@@ -793,8 +841,7 @@ bool MainWindow::showVisualNovelChoice(const QString& speaker, const QString& me
     text->setAlignment(Qt::AlignLeft | Qt::AlignTop);
     column->addWidget(name);
     column->addWidget(text, 1);
-    content->addLayout(column, 1);
-    root->addLayout(content, 1);
+    boxLayout->addLayout(column, 1);
     auto* buttons = new QHBoxLayout();
     buttons->addStretch();
     auto* no = new QPushButton(noText, &dlg);
@@ -803,11 +850,12 @@ bool MainWindow::showVisualNovelChoice(const QString& speaker, const QString& me
     yes->setDefault(true);
     buttons->addWidget(no);
     buttons->addWidget(yes);
-    root->addLayout(buttons);
+    boxLayout->addLayout(buttons);
+    root->addWidget(box, 0);
     bool accepted = false;
     connect(yes, &QPushButton::clicked, &dlg, [&]() { accepted = true; dlg.accept(); });
     connect(no, &QPushButton::clicked, &dlg, &QDialog::reject);
-    dlg.move((width() - dlg.width()) / 2, (height() - dlg.height()) / 2);
+    dlg.move((width() - dlg.width()) / 2, height() - dlg.height() - 24);
     dlg.exec();
     return accepted;
 }
