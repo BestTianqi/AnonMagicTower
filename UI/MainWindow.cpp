@@ -996,27 +996,60 @@ void MainWindow::showOpeningPrisonStory()
 void MainWindow::showOpeningFloorStory(int fromFloor, int toFloor)
 {
     (void)fromFloor;
+    if (toFloor < 2 || toFloor > 50 || m_floorStoriesShown.count(toFloor) != 0)
+        return;
+
+    std::vector<VisualNovelPage> pages;
     if (toFloor == 2 && !m_floor2OpeningShown) {
         m_floor2OpeningShown = true;
-        showVisualNovelDialogue({
+        pages = {
             {QString::fromUtf8("千早爱音"),
              QString::fromUtf8("这里就是魔塔二层……听说被夺走的铁剑和铁盾分别藏在更高的楼层。"),
              QStringLiteral(":/images/characters/portraits/anon.png"), QStringLiteral("#ff8fc7")},
             {QString::fromUtf8("旁白"),
              QString::fromUtf8("先去找牢房里的米歇尔，她知道通往暗道的方法。"),
              QStringLiteral(":/images/characters/portraits/michelle.png"), QStringLiteral("#ffd66b")}
-        });
-    } else if (fromFloor == 2 && toFloor == 3 && !m_floor3OpeningShown) {
+        };
+    } else if (toFloor == 3 && !m_floor3OpeningShown) {
         m_floor3OpeningShown = true;
-        showVisualNovelDialogue({
+        pages = {
             {QString::fromUtf8("千早爱音"),
              QString::fromUtf8("三层的空气好沉重……前方似乎有守卫巡逻。"),
              QStringLiteral(":/images/characters/portraits/anon.png"), QStringLiteral("#ff8fc7")},
             {QString::fromUtf8("旁白"),
              QString::fromUtf8("小心前进，别被他们发现。"),
              QStringLiteral(":/images/characters/portraits/soyo.png"), QStringLiteral("#ffd66b")}
-        });
+        };
+    } else {
+        QString location;
+        QString warning;
+        QString portrait = QStringLiteral(":/images/characters/portraits/marina.png");
+        switch (toFloor) {
+        case 4: location = QStringLiteral("商店层的灯牌在黑暗里亮起。凛凛子似乎正在准备新的交易。"); warning = QStringLiteral("先确认钥匙和金币，再决定要不要购买强化。"); portrait = QStringLiteral(":/images/characters/portraits/ririko.png"); break;
+        case 5: location = QStringLiteral("第五层传来熟悉的金属声——铁剑就在这附近。"); warning = QStringLiteral("拿回装备，才能继续追上素世的脚步。"); break;
+        case 9: location = QStringLiteral("第九层的冷风穿过长廊，铁盾的气息就在前方。"); warning = QStringLiteral("机关门不会白白打开，留意周围的守卫。"); break;
+        case 10: location = QStringLiteral("第十层的花门紧闭，舞台中央传来椎名立希的脚步声。"); warning = QStringLiteral("击败侧翼怪物，才能解开上下花门。"); portrait = QStringLiteral(":/images/characters/portraits/taki.png"); break;
+        case 20: location = QStringLiteral("第二十层的石壁刻着古老的乐谱，魔法守卫在暗处等待。"); warning = QStringLiteral("不要忽视每一扇机关门，它们都对应着守卫。"); break;
+        case 25: location = QStringLiteral("第二十五层的大厅回荡着大法师的低语。"); warning = QStringLiteral("这里开始，敌人的防御会明显提升。"); portrait = QStringLiteral(":/images/characters/portraits/sakiko.png"); break;
+        case 30: location = QStringLiteral("第三十层的牢门后传来求救声，像是有人被困在舞台后台。"); warning = QStringLiteral("找到开门的钥匙，再决定是否深入。"); break;
+        case 40: location = QStringLiteral("第四十层通往异界的入口终于显现，星河在墙后缓慢流动。"); warning = QStringLiteral("秘宝是开启后续道路的关键。"); break;
+        case 44: location = QStringLiteral("异界深处的第四十四层没有熟悉的方向感，只有不断变化的舞台。"); warning = QStringLiteral("检查装备与回复道具，别让自己困在这里。"); break;
+        case 49: location = QStringLiteral("第四十九层的王座前，魔龙守卫挡住了最后的道路。"); warning = QStringLiteral("神圣剑、神圣盾或屠龙匕首，至少准备一样。"); portrait = QStringLiteral(":/images/characters/portraits/soyo_stage.png"); break;
+        case 50: location = QStringLiteral("第五十层的顶灯全部亮起，长崎素世正在王座尽头等你。"); warning = QStringLiteral("走完最后一段路，完成这场属于 MyGO!!!!! 与 Ave Mujica 的演出。"); portrait = QStringLiteral(":/images/characters/portraits/soyo_stage.png"); break;
+        default:
+            location = QStringLiteral("你来到了魔塔第 %1 层。新的敌人与机关正在前方展开。").arg(toFloor);
+            warning = QStringLiteral("观察墙壁、门和怪物的排列，寻找安全的路线。");
+            break;
+        }
+        pages = {
+            {QString::fromUtf8("千早爱音"), location,
+             QStringLiteral(":/images/characters/portraits/anon.png"), QStringLiteral("#ff8fc7")},
+            {QString::fromUtf8("旁白"), warning, portrait, QStringLiteral("#ffd66b")}
+        };
     }
+
+    m_floorStoriesShown.insert(toFloor);
+    if (!pages.empty()) showVisualNovelDialogue(pages);
 }
 
 void MainWindow::showNPCDialog(int x, int y)

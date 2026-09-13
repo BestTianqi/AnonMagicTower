@@ -6,6 +6,7 @@
 #include <QTimer>
 #include <QString>
 #include <vector>
+#include <unordered_set>
 #include <QTemporaryFile>
 
 class MainWindow : public QWidget {
@@ -63,5 +64,6 @@ private:
     bool m_hasUndoSnapshot = false;
     bool m_floor2OpeningShown = false;
     bool m_floor3OpeningShown = false;
+    std::unordered_set<int> m_floorStoriesShown;
     Ui::MainWindow ui;
 };
