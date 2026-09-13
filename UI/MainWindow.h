@@ -4,6 +4,8 @@
 #include "Game/Game.h"
 #include "ui_MainWindow.h"
 #include <QTimer>
+#include <QString>
+#include <vector>
 
 class MainWindow : public QWidget {
     Q_OBJECT
@@ -15,12 +17,20 @@ protected:
     void keyPressEvent(QKeyEvent* event) override;
 
 private:
+    struct VisualNovelPage {
+        QString speaker;
+        QString text;
+        QString portrait;
+        QString accent;
+    };
+
     void updateHUD();
     void updateMonsterPanel();
     void showInventory();
     void showOpeningFloorStory(int fromFloor, int toFloor);
     void showPrisonTrapPrompt();
     void showFloor3PrisonVisualNovel();
+    void showVisualNovelDialogue(const std::vector<VisualNovelPage>& pages);
     void showOpeningPrisonStory();
     void showStoryMessage(const QString& message);
     void showNPCDialog(int x, int y);

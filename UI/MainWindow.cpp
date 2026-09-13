@@ -307,13 +307,10 @@ void MainWindow::showBattleFeedback(const QString& message)
 
 void MainWindow::showStoryMessage(const QString& message)
 {
-    if (!ui.battleLabel) return;
-    // 序章文字直接落在主界面的事件提示条中，保持地图连续可见。
-    ui.battleLabel->setText(QString::fromUtf8("【剧情】\n%1").arg(message));
-    ui.battleLabel->setVisible(true);
-    m_battleFeedbackTimer.stop();
-    m_battleFeedbackTimer.setSingleShot(true);
-    m_battleFeedbackTimer.start(6500);
+    showVisualNovelDialogue({
+        {QString::fromUtf8("旁白"), message,
+         QStringLiteral(":/images/characters/portraits/anon.png"), QStringLiteral("#ffd66b")}
+    });
 }
 
 void MainWindow::loadAssets()
@@ -657,13 +654,7 @@ void MainWindow::showPrisonTrapPrompt()
 
 void MainWindow::showFloor3PrisonVisualNovel()
 {
-    struct Page {
-        QString speaker;
-        QString text;
-        QString portrait;
-        QString accent;
-    };
-    const std::vector<Page> pages = {
+    const std::vector<VisualNovelPage> pages = {
         {QString::fromUtf8("千早爱音"),
          QString::fromUtf8("咦……这面墙后面，刚才明明什么都没有……"),
          QStringLiteral(":/images/characters/portraits/anon.png"), QStringLiteral("#ff8fc7")},
@@ -681,8 +672,22 @@ void MainWindow::showFloor3PrisonVisualNovel()
          QStringLiteral(":/images/characters/portraits/soyo.png"), QStringLiteral("#ffd66b")}
     };
 
+    showVisualNovelDialogue(pages);
+
+    // 对话全部播放完后才结算伤害并传送回二层，保留原版剧情节奏。
+    if (m_game->floor3PrisonStoryPending()) {
+        m_game->resolveFloor3PrisonStory();
+        showOpeningPrisonStory();
+        ui.mapWidget->update();
+        updateHUD();
+    }
+}
+
+void MainWindow::showVisualNovelDialogue(const std::vector<VisualNovelPage>& pages)
+{
+    if (pages.empty()) return;
     QDialog dlg(this);
-    dlg.setWindowTitle(QString::fromUtf8("三层 · 暗墙后的会面"));
+    dlg.setWindowTitle(QString::fromUtf8("剧情"));
     dlg.setModal(true);
     dlg.setFixedSize(900, 310);
     dlg.setWindowFlags(Qt::Dialog | Qt::FramelessWindowHint);
@@ -694,7 +699,6 @@ void MainWindow::showFloor3PrisonVisualNovel()
         " border-radius: 6px; padding: 8px 24px; font-size: 15px; font-weight: 700; }"
         "QPushButton:hover { background: #79509a; }"
     );
-
     auto* root = new QVBoxLayout(&dlg);
     root->setContentsMargins(18, 16, 18, 14);
     root->setSpacing(8);
@@ -705,7 +709,6 @@ void MainWindow::showFloor3PrisonVisualNovel()
     portrait->setAlignment(Qt::AlignCenter);
     portrait->setStyleSheet("background: rgba(0,0,0,90); border: 1px solid #655275;");
     content->addWidget(portrait);
-
     auto* textColumn = new QVBoxLayout();
     auto* name = new QLabel(&dlg);
     name->setObjectName("vnName");
@@ -718,7 +721,6 @@ void MainWindow::showFloor3PrisonVisualNovel()
     textColumn->addStretch();
     content->addLayout(textColumn, 1);
     root->addLayout(content, 1);
-
     auto* next = new QPushButton(QString::fromUtf8("继续 ▶"), &dlg);
     next->setDefault(true);
     next->setFixedWidth(140);
@@ -726,10 +728,9 @@ void MainWindow::showFloor3PrisonVisualNovel()
     buttonRow->addStretch();
     buttonRow->addWidget(next);
     root->addLayout(buttonRow);
-
     int pageIndex = 0;
     const auto renderPage = [&]() {
-        const Page& page = pages[static_cast<size_t>(pageIndex)];
+        const VisualNovelPage& page = pages[static_cast<size_t>(pageIndex)];
         name->setText(page.speaker);
         name->setStyleSheet(QStringLiteral("color: %1;").arg(page.accent));
         text->setText(page.text);
@@ -739,8 +740,7 @@ void MainWindow::showFloor3PrisonVisualNovel()
         else
             portrait->clear();
         next->setText(pageIndex + 1 == static_cast<int>(pages.size())
-                          ? QString::fromUtf8("承受冲击 ▶")
-                          : QString::fromUtf8("继续 ▶"));
+                          ? QString::fromUtf8("继续 ▶") : QString::fromUtf8("继续 ▶"));
     };
     connect(next, &QPushButton::clicked, &dlg, [&]() {
         if (pageIndex + 1 < static_cast<int>(pages.size())) {
@@ -753,37 +753,45 @@ void MainWindow::showFloor3PrisonVisualNovel()
     renderPage();
     dlg.move((width() - dlg.width()) / 2, (height() - dlg.height()) / 2);
     dlg.exec();
-
-    // 对话全部播放完后才结算伤害并传送回二层，保留原版剧情节奏。
-    if (m_game->floor3PrisonStoryPending()) {
-        m_game->resolveFloor3PrisonStory();
-        showOpeningPrisonStory();
-        ui.mapWidget->update();
-        updateHUD();
-    }
 }
 
 void MainWindow::showOpeningPrisonStory()
 {
-    showStoryMessage(QString::fromUtf8(
-        "夹击剧情触发！你受到600点伤害，攻击和防御被压到10。\n"
-        "你被传送回2层牢房，三层现场的五个临时怪物已经消失。\n\n"
-        "必须与小偷对话两次，才能解除陷阱状态。"));
+    showVisualNovelDialogue({
+        {QString::fromUtf8("旁白"),
+         QString::fromUtf8("夹击发生了！你受到600点伤害，攻击和防御被压到10。"),
+         QStringLiteral(":/images/characters/portraits/anon.png"), QStringLiteral("#ffd66b")},
+        {QString::fromUtf8("千早爱音"),
+         QString::fromUtf8("呜……这里是二层牢房？三层的怪物也都不见了……"),
+         QStringLiteral(":/images/characters/portraits/anon.png"), QStringLiteral("#ff8fc7")},
+        {QString::fromUtf8("米歇尔"),
+         QString::fromUtf8("想恢复状态，就来和我对话两次。铁剑在5层，铁盾在9层。"),
+         QStringLiteral(":/images/characters/portraits/michelle.png"), QStringLiteral("#ff9fbc")}
+    });
 }
 
 void MainWindow::showOpeningFloorStory(int fromFloor, int toFloor)
 {
     if (fromFloor == 1 && toFloor == 2 && !m_floor2OpeningShown) {
         m_floor2OpeningShown = true;
-        showStoryMessage(QString::fromUtf8(
-            "爱音：这里就是魔塔二层……\n\n"
-            "听说被夺走的铁剑和铁盾分别藏在更高的楼层。\n"
-            "先去找牢房里的米歇尔，她知道通往暗道的方法。"));
+        showVisualNovelDialogue({
+            {QString::fromUtf8("千早爱音"),
+             QString::fromUtf8("这里就是魔塔二层……听说被夺走的铁剑和铁盾分别藏在更高的楼层。"),
+             QStringLiteral(":/images/characters/portraits/anon.png"), QStringLiteral("#ff8fc7")},
+            {QString::fromUtf8("旁白"),
+             QString::fromUtf8("先去找牢房里的米歇尔，她知道通往暗道的方法。"),
+             QStringLiteral(":/images/characters/portraits/michelle.png"), QStringLiteral("#ffd66b")}
+        });
     } else if (fromFloor == 2 && toFloor == 3 && !m_floor3OpeningShown) {
         m_floor3OpeningShown = true;
-        showStoryMessage(QString::fromUtf8(
-            "爱音：三层的空气好沉重……\n\n"
-            "前方似乎有守卫巡逻。小心前进，别被他们发现。"));
+        showVisualNovelDialogue({
+            {QString::fromUtf8("千早爱音"),
+             QString::fromUtf8("三层的空气好沉重……前方似乎有守卫巡逻。"),
+             QStringLiteral(":/images/characters/portraits/anon.png"), QStringLiteral("#ff8fc7")},
+            {QString::fromUtf8("旁白"),
+             QString::fromUtf8("小心前进，别被他们发现。"),
+             QStringLiteral(":/images/characters/portraits/soyo.png"), QStringLiteral("#ffd66b")}
+        });
     }
 }
 
