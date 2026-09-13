@@ -9,6 +9,7 @@
 #include <fstream>
 #include <queue>
 #include <sstream>
+#include <unordered_map>
 #include <unordered_set>
 
 namespace {
@@ -22,15 +23,42 @@ bool hasClassicMonsterId(const FloorData& floor, int id)
     return false;
 }
 
-bool mechanismDoorReady(int floorNumber, const FloorData& floor)
+bool mechanismDoorReadyAt(int floorNumber, const FloorData& floor, int doorX, int doorY)
 {
     // 10 层花门由进入中央 Boss 区的剧情事件开启，而不是清怪开启。
     if (floorNumber == 10) return false;
     // 原版 48 层圣剑房花门是损坏的机关，清怪后仍不会自动开启。
     if (floorNumber == 48) return false;
 
-    // 每个机关门组绑定原版指定守卫 ID（1-based）。未列出的自定义楼层
-    // 使用“清空本层怪物”这一通用规则，保持编辑器地图的直觉行为。
+    // 优先按原版常见的“门周围八格”逐门判定：只要门周围存在怪物，
+    // 必须全部清除后这扇门才会打开。这样同一楼层的多扇门可以分别解锁。
+    bool hasAdjacentMonster = false;
+    for (int dy = -1; dy <= 1; ++dy) {
+        for (int dx = -1; dx <= 1; ++dx) {
+            if (dx == 0 && dy == 0) continue;
+            const int x = doorX + dx;
+            const int y = doorY + dy;
+            const int key = y * MAP_SIZE + x;
+            if (floor.monsters.find(key) != floor.monsters.end()) {
+                hasAdjacentMonster = true;
+                break;
+            }
+        }
+        if (hasAdjacentMonster) break;
+    }
+    if (hasAdjacentMonster) {
+        for (int dy = -1; dy <= 1; ++dy) {
+            for (int dx = -1; dx <= 1; ++dx) {
+                if (dx == 0 && dy == 0) continue;
+                const int key = (doorY + dy) * MAP_SIZE + (doorX + dx);
+                if (floor.monsters.find(key) != floor.monsters.end()) return false;
+            }
+        }
+        return true;
+    }
+
+    // 某些原版门（例如二层六扇铁门）周围没有怪物，仍绑定原版指定守卫
+    // ID（1-based）。未列出的自定义楼层使用“清空本层”通用规则。
     static const std::unordered_map<int, std::vector<int>> guardGroups = {
         {2,  {21}},                         // 六扇铁门：两名中级卫兵
         {8,  {1, 2, 3, 4, 5, 6, 7}},       // 1–7号怪物
@@ -59,6 +87,19 @@ bool mechanismDoorReady(int floorNumber, const FloorData& floor)
     for (int id : it->second)
         if (hasClassicMonsterId(floor, id)) return false;
     return true;
+}
+
+bool mechanismDoorReady(int floorNumber, const FloorData& floor)
+{
+    // 仅供需要楼层级判断的旧调用；实际开门路径会逐门调用上面的函数。
+    for (int y = 0; y < MAP_SIZE; ++y) {
+        for (int x = 0; x < MAP_SIZE; ++x) {
+            const int key = y * MAP_SIZE + x;
+            if (floor.map[key] != Tile_DoorMagic && floor.map[key] != Tile_DoorIron) continue;
+            if (mechanismDoorReadyAt(floorNumber, floor, x, y)) return true;
+        }
+    }
+    return false;
 }
 
 } // namespace
@@ -431,7 +472,7 @@ bool Game::isTeleportReachable(int targetX, int targetY) const
     const bool targetMechanismDoor =
         (targetTile == Tile_DoorMagic || targetTile == Tile_DoorIron) &&
         ((m_floor == 48 && m_player.wallBreakerUsed) ||
-         (m_currentFloor && mechanismDoorReady(m_floor, *m_currentFloor)));
+         (m_currentFloor && mechanismDoorReadyAt(m_floor, *m_currentFloor, targetX, targetY)));
     if (!walkable(targetTile) && !targetInteractable && !targetDoorWithKey && !targetMechanismDoor)
         return false;
     const int currentTile = tileAt(m_player.x, m_player.y);
@@ -578,11 +619,12 @@ int Game::useBomb()
 
 void Game::openMechanismDoorsIfReady()
 {
-    if (!m_currentFloor || !mechanismDoorReady(m_floor, *m_currentFloor)) return;
+    if (!m_currentFloor) return;
     for (int y = 0; y < m_height; ++y) {
         for (int x = 0; x < m_width; ++x) {
             const int tile = tileAt(x, y);
-            if (tile == Tile_DoorMagic || tile == Tile_DoorIron)
+            if ((tile == Tile_DoorMagic || tile == Tile_DoorIron) &&
+                mechanismDoorReadyAt(m_floor, *m_currentFloor, x, y))
                 setTile(x, y, Tile_Floor);
         }
     }
@@ -662,8 +704,8 @@ void Game::triggerFloor10AmbushIfNeeded()
 
     m_floor10AmbushTriggered = true;
 
-    // 八幡海铃退到中央通道最上方；侧翼门在进入陷阱时打开，
-    // 主角上下两格新增机关门，必须清完侧翼怪才能通过。
+    // 八幡海铃退到中央通道最上方；侧翼花门在进入陷阱时取消，
+    // 主角上下两格花门堵住，必须清完原地的侧翼怪才能通过。
     const int oldCaptainKey = posKey(7, 5);
     int captainKey = oldCaptainKey;
     auto captainIt = m_currentFloor->monsters.find(captainKey);
@@ -693,8 +735,8 @@ void Game::triggerFloor10AmbushIfNeeded()
     m_floor10AmbushMovements.clear();
     m_floor10AmbushMonsterKeys.clear();
 
-    // 取原版骷髅人/骷髅士兵（ID 5/6）中距离入口最近的六只，
-    // 清除旧格后放置到入口周围可行走位置，表现“走过来围住主角”。
+    // 取原版骷髅人/骷髅士兵（ID 5/6）中距离入口最近的六只作为侧翼守卫。
+    // 按当前十层规则，怪物保持原地图位置，不再移动或播放移动动画。
     std::vector<std::pair<int, Monster>> candidates;
     for (const auto& entry : m_currentFloor->monsters) {
         const int classicId = MonsterDB::indexOf(entry.second.GetName()) + 1;
@@ -711,59 +753,10 @@ void Game::triggerFloor10AmbushIfNeeded()
     });
     if (candidates.size() > 6) candidates.resize(6);
 
-    const std::unordered_set<int> selectedKeys = [&candidates]() {
-        std::unordered_set<int> keys;
-        for (const auto& candidate : candidates) keys.insert(candidate.first);
-        return keys;
-    }();
     for (const auto& candidate : candidates) {
-        if (candidate.first >= 0 && candidate.first < static_cast<int>(m_currentFloor->map.size()) &&
-            m_currentFloor->map[candidate.first] == Tile_Monster)
-            m_currentFloor->map[candidate.first] = Tile_Floor;
-        m_currentFloor->monsters.erase(candidate.first);
-    }
-
-    std::vector<int> targets;
-    for (int radius = 1; radius <= 4; ++radius) {
-        for (int dy = -radius; dy <= radius; ++dy) {
-            for (int dx = -radius; dx <= radius; ++dx) {
-                if (std::abs(dx) + std::abs(dy) != radius) continue;
-                const int x = m_player.x + dx, y = m_player.y + dy;
-                if (x < 2 || y < 2 || x > m_width - 3 || y > m_height - 3) continue;
-                const int key = posKey(x, y);
-                const int tile = tileAt(x, y);
-                const bool freeSelected = selectedKeys.count(key) != 0;
-                if ((tile == Tile_Floor || freeSelected) &&
-                    m_currentFloor->items.count(key) == 0 &&
-                    m_currentFloor->npcs.count(key) == 0 && key != posKey(m_player.x, m_player.y))
-                    targets.push_back(key);
-            }
-        }
-    }
-
-    size_t targetIndex = 0;
-    for (const auto& candidate : candidates) {
-        while (targetIndex < targets.size() && m_currentFloor->monsters.count(targets[targetIndex]) != 0)
-            ++targetIndex;
-        if (targetIndex < targets.size()) {
-            const int key = targets[targetIndex++];
-            m_currentFloor->monsters[key] = candidate.second;
-            m_currentFloor->map[key] = Tile_Monster;
-            m_floor10AmbushMonsterKeys.insert(key);
-            const int fromX = candidate.first % m_width;
-            const int fromY = candidate.first / m_width;
-            const int toX = key % m_width;
-            const int toY = key / m_width;
-            if (fromX != toX || fromY != toY)
-                m_floor10AmbushMovements.push_back({candidate.second, fromX, fromY, toX, toY});
-            continue;
-        }
-        // 地图编辑器可能把周围铺满障碍，无法组成包围时保留原位置，
-        // 不让剧情事件凭空删除怪物。
-        m_currentFloor->monsters[candidate.first] = candidate.second;
-        m_currentFloor->map[candidate.first] = Tile_Monster;
         m_floor10AmbushMonsterKeys.insert(candidate.first);
     }
+    m_floor10AmbushMovements.clear();
     resolveFloor10AmbushIfCleared();
 }
 
@@ -951,7 +944,7 @@ Game::MoveResult Game::tryMovePlayer(int nx, int ny)
             triggerFloor10AmbushIfNeeded();
             return Move_Ok;
         }
-        if (!mechanismDoorReady(m_floor, *m_currentFloor)) return Move_DoorLocked;
+        if (!mechanismDoorReadyAt(m_floor, *m_currentFloor, nx, ny)) return Move_DoorLocked;
         setTile(nx, ny, Tile_Floor);
         m_player.x = nx; m_player.y = ny;
         triggerFloor10AmbushIfNeeded();

@@ -258,13 +258,13 @@ int main() {
     mechanismDoor.setTile(4, 3, Tile_DoorIron);
     const Monster intermediateGuard("椎名立希SP·中级卫兵", 1, 0, 0, 0);
     mechanismDoor.spawnMonster(5, 3, intermediateGuard);
-    mechanismDoor.spawnMonster(6, 3, intermediateGuard);
+    mechanismDoor.spawnMonster(5, 4, intermediateGuard);
     assert(mechanismDoor.tryMovePlayer(4, 3) == Game::Move_DoorLocked);
     log.clear();
     assert(mechanismDoor.fightAt(5, 3, log) == Game::Fight_PlayerWin);
     assert(mechanismDoor.tileAt(4, 3) == Tile_DoorIron);
     log.clear();
-    assert(mechanismDoor.fightAt(6, 3, log) == Game::Fight_PlayerWin);
+    assert(mechanismDoor.fightAt(5, 4, log) == Game::Fight_PlayerWin);
     assert(mechanismDoor.tileAt(4, 3) == Tile_Floor);
 
     // 全塔静态机关门条件审计：每一层都必须等原版指定怪物组清空，
@@ -304,8 +304,8 @@ int main() {
     assert(brokenFlowerDoor.tryMovePlayer(4, 3) == Game::Move_Ok);
     assert(brokenFlowerDoor.tileAt(4, 3) == Tile_Floor);
 
-    // 10 层完整 Boss 事件：到达八幡海铃前一格后，第三/第四排怪物
-    // 移动到侧翼，侧翼门打开，上下门锁定；清完侧翼怪后上下门开启，
+    // 10 层完整 Boss 事件：到达八幡海铃前一格后，海铃退到最上方，
+    // 左右花门取消，侧翼怪保持原位，上下门锁定；清完侧翼怪后上下门开启，
     // 击败海铃会出现奖励提示与向上楼梯。
     Game floor10Ambush;
     for (int i = 0; i < 9; ++i) floor10Ambush.goUpFloor(7, 12, false);
@@ -327,12 +327,8 @@ int main() {
     assert(floor10Ambush.tileAt(9, 5) == Tile_Floor);
     assert(floor10Ambush.tileAt(7, 5) == Tile_DoorMagic);
     assert(floor10Ambush.tileAt(7, 7) == Tile_DoorMagic);
-    const auto ambushMovement = floor10Ambush.takeFloor10AmbushMovementAnimations();
-    assert(ambushMovement.size() == 6);
-    for (const auto& movement : ambushMovement) {
-        assert(movement.fromY == 3 || movement.fromY == 4);
-        assert(movement.fromX != movement.toX || movement.fromY != movement.toY);
-    }
+    assert(floor10Ambush.takeFloor10AmbushMovementAnimations().empty());
+    assert(floor10Ambush.hasMonsterAt(3, 3));
     assert(floor10Ambush.monsterAt(7, 2) != nullptr);
     assert(floor10Ambush.monsterAt(7, 2)->GetName() == "八幡海铃·骷髅队长");
     int surrounded = 0;
