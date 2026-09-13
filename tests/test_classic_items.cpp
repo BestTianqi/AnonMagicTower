@@ -32,13 +32,13 @@ int main() {
     assert(classicItemTierForFloor(21).rubyAttack == 3);
     assert(classicItemTierForFloor(50).largePotionHp == 1000);
     const auto shop4 = classicShopOfferForFloor(4, 0);
-    assert(shop4.hp == 100 && shop4.atk == 2 && shop4.def == 4 && shop4.price == 20);
+    assert(shop4.hp == 10 && shop4.atk == 2 && shop4.def == 4 && shop4.price == 20);
     const auto shop4Next = classicShopOfferForFloor(4, 1);
-    assert(shop4Next.hp == 100 && shop4Next.atk == 2 && shop4Next.def == 4 && shop4Next.price == 40);
+    assert(shop4Next.hp == 20 && shop4Next.atk == 2 && shop4Next.def == 4 && shop4Next.price == 40);
     const auto shop12 = classicShopOfferForFloor(12, 2);
-    assert(shop12.hp == 100 && shop12.atk == 4 && shop12.def == 8 && shop12.price == 80);
+    assert(shop12.hp == 30 && shop12.atk == 4 && shop12.def == 8 && shop12.price == 80);
     const auto shop46 = classicShopOfferForFloor(46, 3);
-    assert(shop46.atk == 10 && shop46.def == 20 && shop46.price == 140);
+    assert(shop46.hp == 40 && shop46.atk == 10 && shop46.def == 20 && shop46.price == 140);
     assert(classicShopOfferForFloor(46, 4).price == 220);
 
     // 道具名称校验：中英文别名归一到游戏内显示名，未知名称必须被拒绝。
