@@ -2,6 +2,7 @@
 #include <array>
 #include <memory>
 #include <string>
+#include <vector>
 #include <cstdio>
 #include "Entities/Items.h"
 #include "Entities/NPC.h"
@@ -265,6 +266,33 @@ int main() {
     log.clear();
     assert(mechanismDoor.fightAt(6, 3, log) == Game::Fight_PlayerWin);
     assert(mechanismDoor.tileAt(4, 3) == Tile_Floor);
+
+    // 全塔静态机关门条件审计：每一层都必须等原版指定怪物组清空，
+    // 不能因为清掉了无关怪物而提前开门。
+    const std::vector<std::pair<int, std::vector<int>>> classicDoorRequirements = {
+        {2, {21}}, {8, {1, 2, 3, 4, 5, 6, 7}}, {11, {3, 9, 10, 11, 12}},
+        {15, {3, 9, 10, 11, 12, 13}}, {17, {7, 9, 10, 11, 12, 13}},
+        {20, {3, 10, 11, 14}}, {30, {1, 2, 9}}, {32, {18, 19, 20, 21, 24}},
+        {35, {23}}, {38, {12, 18, 19, 20, 21, 22, 24}}, {44, {32}},
+        {45, {26, 27, 28, 29, 30, 31}}, {49, {27, 30}}
+    };
+    for (const auto& [floor, ids] : classicDoorRequirements) {
+        Game audit;
+        audit.initFloor(floor);
+        audit.player().x = 3;
+        audit.player().y = 4;
+        audit.player().atk = 100000;
+        audit.player().hp = 1000000000;
+        audit.setTile(4, 4, floor == 2 ? Tile_DoorIron : Tile_DoorMagic);
+        for (size_t i = 0; i < ids.size(); ++i)
+            audit.spawnMonster(6 + static_cast<int>(i), 4, MonsterDB::getByIndex(ids[i] - 1));
+        assert(audit.tryMovePlayer(4, 4) == Game::Move_DoorLocked);
+        for (size_t i = 0; i < ids.size(); ++i) {
+            std::vector<std::string> auditLog;
+            assert(audit.fightAt(6 + static_cast<int>(i), 4, auditLog) == Game::Fight_PlayerWin);
+        }
+        assert(audit.tileAt(4, 4) == Tile_Floor);
+    }
 
     // 48 层原版花门是坏门，只能用镐破坏，不会因清怪自动开启。
     Game brokenFlowerDoor;

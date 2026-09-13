@@ -32,9 +32,9 @@ bool mechanismDoorReady(int floorNumber, const FloorData& floor)
     // 每个机关门组绑定原版指定守卫 ID（1-based）。未列出的自定义楼层
     // 使用“清空本层怪物”这一通用规则，保持编辑器地图的直觉行为。
     static const std::unordered_map<int, std::vector<int>> guardGroups = {
-        {2,  {21}},
-        {8,  {1, 2, 3, 4, 5, 6, 7}},
-        {11, {3, 9, 10, 11, 12}},
+        {2,  {21}},                         // 六扇铁门：两名中级卫兵
+        {8,  {1, 2, 3, 4, 5, 6, 7}},       // 1–7号怪物
+        {11, {3, 9, 10, 11, 12}},           // 初级法师、大史莱姆/大蝙蝠/高级法师/兽人
         {15, {3, 9, 10, 11, 12, 13}},
         {17, {7, 9, 10, 11, 12, 13}},
         {20, {3, 10, 11, 14}},
@@ -46,8 +46,16 @@ bool mechanismDoorReady(int floorNumber, const FloorData& floor)
         {45, {26, 27, 28, 29, 30, 31}},
         {49, {27, 30}},
     };
+    static const std::unordered_set<int> classicDoorFloors = {
+        2, 8, 10, 11, 15, 17, 20, 30, 32, 35, 38, 44, 45, 48, 49
+    };
     const auto it = guardGroups.find(floorNumber);
-    if (it == guardGroups.end()) return floor.monsters.empty();
+    if (it == guardGroups.end()) {
+        // 经典塔有机关门但未配置守卫组时禁止自动开门，避免误用编辑器楼层的
+        // “清空本层”兜底规则；非经典自定义楼层仍保留该兜底行为。
+        if (classicDoorFloors.count(floorNumber) != 0) return false;
+        return floor.monsters.empty();
+    }
     for (int id : it->second)
         if (hasClassicMonsterId(floor, id)) return false;
     return true;
