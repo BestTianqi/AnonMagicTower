@@ -217,6 +217,11 @@ void MapWidget::syncPlayerMotionTarget()
         m_lastPlayerTileX = tileX;
         m_lastPlayerTileY = tileY;
         m_motionInitialized = true;
+    } else if (!m_movementAnimationEnabled) {
+        m_playerMotion.snapTo(tileX, tileY);
+        m_playerFrame = 1;
+        m_lastPlayerTileX = tileX;
+        m_lastPlayerTileY = tileY;
     } else if (tileX != m_lastPlayerTileX || tileY != m_lastPlayerTileY) {
         const bool animated = m_playerMotion.beginGridStep(m_lastPlayerTileX, m_lastPlayerTileY,
                                                            tileX, tileY, kPlayerWalkSpeed);
@@ -224,6 +229,15 @@ void MapWidget::syncPlayerMotionTarget()
         m_lastPlayerTileX = tileX;
         m_lastPlayerTileY = tileY;
     }
+}
+
+void MapWidget::snapPlayerToGame()
+{
+    m_motionInitialized = false;
+    m_monsterMotions.clear();
+    m_monsterMotionActive = false;
+    syncPlayerMotionTarget();
+    update();
 }
 
 void MapWidget::advancePlayerMotion()

@@ -18,6 +18,9 @@ class MapWidget : public QWidget {
 public:
     explicit MapWidget(Game* game, QWidget* parent = nullptr);
     void setGame(Game* game) { m_game = game; update(); }
+    void setMovementAnimationEnabled(bool enabled) { m_movementAnimationEnabled = enabled; }
+    bool movementAnimationEnabled() const { return m_movementAnimationEnabled; }
+    void snapPlayerToGame();
 
     void loadTileImage(int tileType, const QString& path);
     void loadItemImage(const std::string& name, const QString& path);
@@ -84,4 +87,5 @@ private:
     QElapsedTimer m_monsterMotionClock;
     std::vector<MonsterMotion> m_monsterMotions;
     bool m_monsterMotionActive = false;
+    bool m_movementAnimationEnabled = true;
 };

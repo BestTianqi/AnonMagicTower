@@ -28,6 +28,10 @@
 #include <QRandomGenerator>
 #include <QLocale>
 #include <QMap>
+#include <QSettings>
+#include <QStandardPaths>
+#include <QTemporaryFile>
+#include <QApplication>
 #include <algorithm>
 #include <iterator>
 
@@ -123,6 +127,9 @@ static void applyRuntimeArtSkin(QWidget& widget)
 MainWindow::MainWindow(Game* game, QWidget* parent)
     : QWidget(parent), m_game(game)
 {
+    m_undoFile.setAutoRemove(true);
+    m_undoFile.open();
+    m_undoFile.close();
     setFocusPolicy(Qt::StrongFocus);
     ui.setupUi(this);
     setWindowTitle(QString::fromUtf8("MYGO!!!!! × Ave Mujica：梦限大魔塔"));
@@ -144,18 +151,29 @@ MainWindow::MainWindow(Game* game, QWidget* parent)
     const QString buttonArt =
         "QPushButton { color: #fff7d0; border-image: url(:/images/runtime/ui/button_texture.png) 18 24 18 24 stretch stretch; padding: 8px 14px; font-size: 14px; font-weight: 700; }"
         "QPushButton:hover { color: white; }";
-    for (QPushButton* button : {ui.invButton, ui.saveButton, ui.loadButton, ui.editorButton, ui.modButton})
+    for (QPushButton* button : {ui.invButton, ui.saveButton, ui.quickSaveButton,
+                                ui.undoButton, ui.loadButton, ui.settingsButton,
+                                ui.editorButton, ui.modButton})
         button->setStyleSheet(buttonArt);
     ui.invButton->setIcon(QIcon(":/images/runtime/items/artifact.png"));
     ui.saveButton->setIcon(QIcon(":/images/runtime/items/treasure.png"));
+    ui.quickSaveButton->setIcon(QIcon(":/images/runtime/items/treasure.png"));
+    ui.undoButton->setIcon(QIcon(":/images/runtime/items/key_magic.png"));
     ui.loadButton->setIcon(QIcon(":/images/runtime/items/stairs_down.png"));
+    ui.settingsButton->setIcon(QIcon(":/images/runtime/items/glasses.png"));
     ui.editorButton->setIcon(QIcon(":/images/runtime/items/glasses.png"));
     ui.modButton->setIcon(QIcon(":/images/runtime/items/key_magic.png"));
-    for (QPushButton* button : {ui.invButton, ui.saveButton, ui.loadButton, ui.editorButton, ui.modButton})
+    for (QPushButton* button : {ui.invButton, ui.saveButton, ui.quickSaveButton,
+                                ui.undoButton, ui.loadButton, ui.settingsButton,
+                                ui.editorButton, ui.modButton})
         button->setIconSize(QSize(30, 30));
+    ui.undoButton->setEnabled(false);
     ui.invButton->setText(QString::fromUtf8("背包"));
     ui.saveButton->setText(QString::fromUtf8("保存"));
+    ui.quickSaveButton->setText(QString::fromUtf8("即时存档"));
+    ui.undoButton->setText(QString::fromUtf8("撤销"));
     ui.loadButton->setText(QString::fromUtf8("读取"));
+    ui.settingsButton->setText(QString::fromUtf8("设置"));
     ui.editorButton->setText(QString::fromUtf8("地图编辑器"));
     ui.modButton->setText(QString::fromUtf8("修改器"));
     ui.monsterScroll->setStyleSheet(
@@ -168,6 +186,10 @@ MainWindow::MainWindow(Game* game, QWidget* parent)
 
     ui.mapWidget->setGame(m_game);
     ui.mapWidget->setFocusPolicy(Qt::NoFocus);
+    QSettings settings(QStringLiteral("MyGO-Mota"), QStringLiteral("MyGO-Mota"));
+    m_battleFeedbackEnabled = settings.value(QStringLiteral("battleFeedback"), true).toBool();
+    ui.mapWidget->setMovementAnimationEnabled(
+        settings.value(QStringLiteral("movementAnimation"), true).toBool());
     connect(ui.mapWidget, &MapWidget::tileClicked, this, [this](int x, int y) {
         if (m_game->player().hp <= 0 || ui.mapWidget->isSceneAnimating()) return;
         if (m_game->floor3PrisonStoryPending()) {
@@ -176,6 +198,7 @@ MainWindow::MainWindow(Game* game, QWidget* parent)
             updateHUD();
             return;
         }
+        captureUndoSnapshot();
         const int floorBefore = m_game->currentFloor();
         const auto result = m_game->teleportPlayerTo(x, y);
         startMonsterMovementAnimation();
@@ -256,6 +279,10 @@ MainWindow::MainWindow(Game* game, QWidget* parent)
         if (!file.isEmpty()) {
             bool ok = m_game->loadFromFile(file.toStdString());
             if (ok) {
+                m_hasUndoSnapshot = false;
+                ui.undoButton->setEnabled(false);
+                m_hasPendingMove = false;
+                ui.mapWidget->snapPlayerToGame();
                 ui.mapWidget->update();
                 updateHUD();
                 QMessageBox::information(this, QString::fromUtf8("读取"), QString::fromUtf8("读取成功"));
@@ -297,12 +324,88 @@ void MainWindow::startMonsterMovementAnimation()
 
 void MainWindow::showBattleFeedback(const QString& message)
 {
-    if (!ui.battleLabel) return;
+    if (!m_battleFeedbackEnabled || !ui.battleLabel) return;
     ui.battleLabel->setText(message);
     ui.battleLabel->setVisible(true);
     m_battleFeedbackTimer.stop();
     m_battleFeedbackTimer.setSingleShot(true);
     m_battleFeedbackTimer.start(3500);
+}
+
+void MainWindow::captureUndoSnapshot()
+{
+    if (!m_game) return;
+    if (m_undoFile.fileName().isEmpty()) {
+        if (!m_undoFile.open()) return;
+        m_undoFile.close();
+    }
+    m_hasUndoSnapshot = m_game->saveToFile(m_undoFile.fileName().toStdString());
+    ui.undoButton->setEnabled(m_hasUndoSnapshot);
+}
+
+void MainWindow::undoLastAction()
+{
+    if (!m_hasUndoSnapshot) {
+        QMessageBox::information(this, QString::fromUtf8("撤销"),
+            QString::fromUtf8("当前没有可撤销的操作。"));
+        return;
+    }
+    if (!m_game->loadFromFile(m_undoFile.fileName().toStdString())) {
+        QMessageBox::warning(this, QString::fromUtf8("撤销"),
+            QString::fromUtf8("撤销存档读取失败。"));
+        return;
+    }
+    m_hasUndoSnapshot = false;
+    ui.undoButton->setEnabled(false);
+    m_hasPendingMove = false;
+    ui.mapWidget->snapPlayerToGame();
+    ui.mapWidget->update();
+    updateHUD();
+}
+
+void MainWindow::quickSave()
+{
+    QString dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    if (dir.isEmpty()) dir = QDir::currentPath();
+    QDir().mkpath(dir);
+    const QString path = QDir(dir).filePath(QStringLiteral("quicksave.sav"));
+    const bool ok = m_game->saveToFile(path.toStdString());
+    QMessageBox::information(this, QString::fromUtf8("即时存档"),
+        ok ? QString::fromUtf8("即时存档已保存。\n%1").arg(path)
+           : QString::fromUtf8("即时存档失败。"));
+}
+
+void MainWindow::showSettings()
+{
+    QSettings settings(QStringLiteral("MyGO-Mota"), QStringLiteral("MyGO-Mota"));
+    QDialog dlg(this);
+    dlg.setWindowTitle(QString::fromUtf8("设置"));
+    dlg.setFixedSize(420, 250);
+    auto* layout = new QVBoxLayout(&dlg);
+    auto* animation = new QCheckBox(QString::fromUtf8("启用连续移动动画"), &dlg);
+    animation->setChecked(ui.mapWidget->movementAnimationEnabled());
+    auto* battle = new QCheckBox(QString::fromUtf8("显示战斗结果提示"), &dlg);
+    battle->setChecked(m_battleFeedbackEnabled);
+    layout->addWidget(animation);
+    layout->addWidget(battle);
+    layout->addWidget(new QLabel(QString::fromUtf8(
+        "方向键：移动\n"
+        "背包中的消耗品按原版规则使用；楼层传送器可重复使用。"), &dlg));
+    auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg);
+    buttons->button(QDialogButtonBox::Ok)->setText(QString::fromUtf8("应用"));
+    buttons->button(QDialogButtonBox::Cancel)->setText(QString::fromUtf8("取消"));
+    layout->addStretch();
+    layout->addWidget(buttons);
+    connect(buttons, &QDialogButtonBox::accepted, &dlg, [&]() {
+        ui.mapWidget->setMovementAnimationEnabled(animation->isChecked());
+        m_battleFeedbackEnabled = battle->isChecked();
+        settings.setValue(QStringLiteral("movementAnimation"), animation->isChecked());
+        settings.setValue(QStringLiteral("battleFeedback"), battle->isChecked());
+        dlg.accept();
+    });
+    connect(buttons, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+    applyRuntimeArtSkin(dlg);
+    dlg.exec();
 }
 
 void MainWindow::showStoryMessage(const QString& message)
@@ -311,6 +414,10 @@ void MainWindow::showStoryMessage(const QString& message)
         {QString::fromUtf8("旁白"), message,
          QStringLiteral(":/images/characters/portraits/anon.png"), QStringLiteral("#ffd66b")}
     });
+
+    connect(ui.quickSaveButton, &QPushButton::clicked, this, &MainWindow::quickSave);
+    connect(ui.undoButton, &QPushButton::clicked, this, &MainWindow::undoLastAction);
+    connect(ui.settingsButton, &QPushButton::clicked, this, &MainWindow::showSettings);
 }
 
 void MainWindow::loadAssets()
@@ -590,6 +697,7 @@ void MainWindow::showInventory()
                             QString::fromStdString(item->GetName()),
                             getItemDescription(item)));
                 } else {
+                    captureUndoSnapshot();
                     const bool isFlyingWand = dynamic_cast<const FlyingWand*>(item) != nullptr;
                     const bool isFloorTeleporter = dynamic_cast<const FloorTeleporter*>(item) != nullptr;
                     const bool isSymmetryFlyer = dynamic_cast<const SymmetryFlyer*>(item) != nullptr;
@@ -1151,6 +1259,7 @@ void MainWindow::showShopDialog(int x, int y)
                 .arg(offer.text).arg(offer.cost).arg(p.gold),
             shopPortrait, canAfford ? QString::fromUtf8("购买") : QString::fromUtf8("金币不足"));
         if (accepted && canAfford) {
+            captureUndoSnapshot();
             p.gold -= offer.cost;
             offer.grant();
             shop->classicPurchaseCount = 1;
@@ -1185,7 +1294,8 @@ void MainWindow::showShopDialog(int x, int y)
         for (const auto& item : offers) {
             auto* button = new QPushButton(QString::fromUtf8("购买 %1（%2）").arg(item.name, item.effect), &dlg);
             button->setEnabled(p.gold >= offer.price);
-            QObject::connect(button, &QPushButton::clicked, &dlg, [&dlg, &p, &purchased, offer, item] {
+            QObject::connect(button, &QPushButton::clicked, &dlg, [this, &dlg, &p, &purchased, offer, item] {
+                captureUndoSnapshot();
                 p.gold -= offer.price;
                 item.apply();
                 ++p.shopUseCount;
@@ -1273,7 +1383,8 @@ void MainWindow::showShopDialog(int x, int y)
         );
         btn->setEnabled(item.basePrice > 0 && p.gold >= item.actualPrice);
 
-        connect(btn, &QPushButton::clicked, &dlg, [&dlg, &item, &purchased, &purchasedName, &purchasedEffect]() {
+        connect(btn, &QPushButton::clicked, &dlg, [this, &dlg, &item, &purchased, &purchasedName, &purchasedEffect]() {
+            captureUndoSnapshot();
             item.apply();
             purchased = true;
             purchasedName = item.name;
@@ -1758,6 +1869,14 @@ void MainWindow::updateHUD()
 
 void MainWindow::keyPressEvent(QKeyEvent* event)
 {
+    if ((event->modifiers() & Qt::ControlModifier) && event->key() == Qt::Key_Z) {
+        undoLastAction();
+        return;
+    }
+    if (event->key() == Qt::Key_F5) {
+        quickSave();
+        return;
+    }
     // 玩家已死亡则不响应
     if (m_game->player().hp <= 0) {
         QWidget::keyPressEvent(event);
@@ -1788,6 +1907,7 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
     }
 
     // 检查上楼器/下楼器（传送到当前坐标，不找楼梯）
+    captureUndoSnapshot();
     if (m_game->player().stairUpUsed) {
         m_game->player().stairUpUsed = false;
         m_game->goUpFloor(m_game->player().x, m_game->player().y, false);

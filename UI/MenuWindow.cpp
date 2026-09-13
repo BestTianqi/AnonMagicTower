@@ -8,6 +8,12 @@
 #include <QMessageBox>
 #include <QIcon>
 #include <QPainter>
+#include <QDialog>
+#include <QVBoxLayout>
+#include <QCheckBox>
+#include <QDialogButtonBox>
+#include <QLabel>
+#include <QSettings>
 
 MenuWindow::MenuWindow(QWidget* parent)
     : QWidget(parent)
@@ -113,12 +119,33 @@ void MenuWindow::onMapEditor()
 
 void MenuWindow::onSettings()
 {
-    QMessageBox::information(this, QString::fromUtf8("设置"),
-        QString::fromUtf8("设置功能开发中…\n\n"
-            "操作说明：\n"
-            "方向键：移动\n"
-            "Shift+点击：地图编辑器中放置玩家\n"
-            "右键：地图编辑器中擦除"));
+    QSettings settings(QStringLiteral("MyGO-Mota"), QStringLiteral("MyGO-Mota"));
+    QDialog dlg(this);
+    dlg.setWindowTitle(QString::fromUtf8("设置"));
+    dlg.setFixedSize(420, 250);
+    auto* layout = new QVBoxLayout(&dlg);
+    auto* animation = new QCheckBox(QString::fromUtf8("启用连续移动动画"), &dlg);
+    animation->setChecked(settings.value(QStringLiteral("movementAnimation"), true).toBool());
+    auto* battle = new QCheckBox(QString::fromUtf8("显示战斗结果提示"), &dlg);
+    battle->setChecked(settings.value(QStringLiteral("battleFeedback"), true).toBool());
+    layout->addWidget(animation);
+    layout->addWidget(battle);
+    layout->addWidget(new QLabel(QString::fromUtf8(
+        "方向键：移动\n"
+        "地图编辑器：Shift+点击放置玩家，右键擦除\n"
+        "背包中的消耗品按原版规则使用。"), &dlg));
+    auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg);
+    buttons->button(QDialogButtonBox::Ok)->setText(QString::fromUtf8("应用"));
+    buttons->button(QDialogButtonBox::Cancel)->setText(QString::fromUtf8("取消"));
+    layout->addStretch();
+    layout->addWidget(buttons);
+    connect(buttons, &QDialogButtonBox::accepted, &dlg, [&]() {
+        settings.setValue(QStringLiteral("movementAnimation"), animation->isChecked());
+        settings.setValue(QStringLiteral("battleFeedback"), battle->isChecked());
+        dlg.accept();
+    });
+    connect(buttons, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+    dlg.exec();
 }
 
 void MenuWindow::enterGame(Game* game)

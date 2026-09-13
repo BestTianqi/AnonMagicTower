@@ -6,6 +6,7 @@
 #include <QTimer>
 #include <QString>
 #include <vector>
+#include <QTemporaryFile>
 
 class MainWindow : public QWidget {
     Q_OBJECT
@@ -39,6 +40,10 @@ private:
     void showNPCDialog(int x, int y);
     void showShopDialog(int x, int y);
     void showModifier();
+    void showSettings();
+    void captureUndoSnapshot();
+    void undoLastAction();
+    void quickSave();
     void gameOver();
     void gameWin();
     QString getItemDescription(const Item* item) const;
@@ -53,6 +58,9 @@ private:
     int m_pendingMoveDy = 0;
     bool m_hasPendingMove = false;
     bool m_adminMode = false;
+    bool m_battleFeedbackEnabled = true;
+    QTemporaryFile m_undoFile;
+    bool m_hasUndoSnapshot = false;
     bool m_floor2OpeningShown = false;
     bool m_floor3OpeningShown = false;
     Ui::MainWindow ui;

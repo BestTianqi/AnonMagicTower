@@ -36,6 +36,9 @@ public:
     // 是否放入背包手动使用（默认 false = 拾取即用）
     virtual bool IsUseItem() const { return false; }
 
+    // 是否为原版中的可重复使用道具。可重复使用道具使用后仍留在背包。
+    virtual bool IsReusable() const { return false; }
+
     // 是否被动永久效果（放入背包但不消耗，仅查看描述）
     virtual bool IsPassiveEffect() const { return false; }
 
@@ -294,6 +297,7 @@ public:
     FloorTeleporter();
     void Apply(Player& player) const override;
     bool IsUseItem() const override { return true; }
+    bool IsReusable() const override { return true; }
 };
 
 class SymmetryFlyer : public Item {

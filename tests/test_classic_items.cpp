@@ -117,8 +117,13 @@ int main() {
     auto floorTeleporter = Game::createItemByName("楼层传送器", 0);
     assert(floorTeleporter && floorTeleporter->GetName() == "楼层传送器");
     assert(floorTeleporter->IsUseItem());
+    assert(floorTeleporter->IsReusable());
     floorTeleporter->Apply(player);
     assert(player.flyWandUses == 2);
+    player.AddItem(std::move(floorTeleporter));
+    const int teleporterCount = player.InventoryCount();
+    assert(player.UseItem(teleporterCount - 1));
+    assert(player.InventoryCount() == teleporterCount);
     SymmetryFlyer symmetry;
     symmetry.Apply(player);
     assert(player.symmetryFlyerUses == 3);

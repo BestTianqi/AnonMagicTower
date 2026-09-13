@@ -32,7 +32,10 @@ public:
     QLabel*      battleLabel   = nullptr;
     QPushButton* invButton    = nullptr;
     QPushButton* saveButton   = nullptr;
+    QPushButton* quickSaveButton = nullptr;
+    QPushButton* undoButton   = nullptr;
     QPushButton* loadButton   = nullptr;
+    QPushButton* settingsButton = nullptr;
     QPushButton* editorButton = nullptr;
     QPushButton* modButton    = nullptr;
 
@@ -190,6 +193,18 @@ public:
         );
         vbox->addWidget(saveButton);
 
+        quickSaveButton = new QPushButton(sidePanel);
+        quickSaveButton->setObjectName("quickSaveButton");
+        quickSaveButton->setText(QString::fromUtf8("⚡ 即时存档"));
+        quickSaveButton->setMinimumHeight(40);
+        vbox->addWidget(quickSaveButton);
+
+        undoButton = new QPushButton(sidePanel);
+        undoButton->setObjectName("undoButton");
+        undoButton->setText(QString::fromUtf8("↶ 撤销"));
+        undoButton->setMinimumHeight(40);
+        vbox->addWidget(undoButton);
+
         loadButton = new QPushButton(sidePanel);
         loadButton->setObjectName("loadButton");
         loadButton->setText(QString::fromUtf8("📂 读取"));
@@ -200,6 +215,12 @@ public:
             "QPushButton:hover { background: #5a5a7a; }"
         );
         vbox->addWidget(loadButton);
+
+        settingsButton = new QPushButton(sidePanel);
+        settingsButton->setObjectName("settingsButton");
+        settingsButton->setText(QString::fromUtf8("⚙ 设置"));
+        settingsButton->setMinimumHeight(40);
+        vbox->addWidget(settingsButton);
 
         editorButton = new QPushButton(sidePanel);
         editorButton->setObjectName("editorButton");
