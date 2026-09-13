@@ -251,6 +251,14 @@ void MapWidget::loadItemImage(const std::string& name, const QString& path)
                                     Qt::FastTransformation);
 }
 
+void MapWidget::loadNPCImage(const std::string& name, const QString& path)
+{
+    QPixmap px(path);
+    if (!px.isNull())
+        m_npcPix[name] = px.scaled(TILE_SIZE, TILE_SIZE, Qt::IgnoreAspectRatio,
+                                   Qt::FastTransformation);
+}
+
 void MapWidget::loadDarkWallRevealedImage(const QString& path)
 {
     QPixmap px(path);
@@ -852,6 +860,15 @@ void MapWidget::paintEvent(QPaintEvent*)
                     }
                 }
                 if (!pix) pix = &m_defaultMonsterPix;
+            }
+
+            // NPC 图块按角色名称选择素材；普通 NPC 仍回退到 Tile_NPC 默认图。
+            if (t == Tile_NPC) {
+                if (NPC* npc = m_game->npcAt(x, y)) {
+                    auto npcImage = m_npcPix.find(npc->GetName());
+                    if (npcImage != m_npcPix.end())
+                        pix = &npcImage->second;
+                }
             }
 
             // -- 道具：全部使用预制像素素材，不再由 QPainter 绘制形状 --

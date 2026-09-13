@@ -311,6 +311,7 @@ void MainWindow::loadAssets()
     // 普通 NPC 使用麻里奈，商店使用凛凛子（均为 60×60 RGBA 角色小人）。
     mw->loadTileImage(Tile_Shop,        ":/images/characters/portraits/ririko.png");
     mw->loadTileImage(Tile_NPC,         ":/images/characters/portraits/marina.png");
+    mw->loadNPCImage("小偷",             ":/images/characters/portraits/michelle.png");
 
     const std::vector<std::pair<const char*, const char*>> itemImages = {
         {"Red Key",       ":/images/runtime/items/key_red.png"},
@@ -636,7 +637,9 @@ void MainWindow::showNPCDialog(int x, int y)
     // NPC 对话使用与地图图块相同的角色头像，保持角色身份连续。
     const QString npcPortrait = npc->IsTrader()
         ? QStringLiteral(":/images/characters/portraits/ririko.png")
-        : QStringLiteral(":/images/characters/portraits/marina.png");
+        : (npc->GetName() == "小偷"
+            ? QStringLiteral(":/images/characters/portraits/michelle.png")
+            : QStringLiteral(":/images/characters/portraits/marina.png"));
     auto showNpcInfo = [&](const QString& title, const QString& text) {
         QMessageBox box(this);
         box.setWindowTitle(title);

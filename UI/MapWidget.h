@@ -21,6 +21,7 @@ public:
 
     void loadTileImage(int tileType, const QString& path);
     void loadItemImage(const std::string& name, const QString& path);
+    void loadNPCImage(const std::string& name, const QString& path);
     void loadDarkWallRevealedImage(const QString& path);
     void loadMonsterImage(const std::string& name, const QString& path);
     void loadPlayerImage(const QString& path);
@@ -48,6 +49,7 @@ private:
     std::unordered_map<int, QPixmap>        m_tilePix;
     std::unordered_map<std::string, QPixmap> m_monsterPix;
     std::unordered_map<std::string, QPixmap> m_itemPix;
+    std::unordered_map<std::string, QPixmap> m_npcPix;
     std::unordered_set<int>                  m_hasTileImage;    // 记录哪些 tile 类型有真实图片
     std::unordered_set<std::string>          m_hasMonsterImage; // 记录哪些怪物有真实图片
     bool m_hasPlayerImage = false;
