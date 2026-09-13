@@ -59,6 +59,25 @@ void MenuWindow::paintEvent(QPaintEvent* /*event*/)
     painter.drawPixmap(0, 0, scaled, x, y, width(), height());
 }
 
+void MenuWindow::resizeEvent(QResizeEvent* event)
+{
+    QWidget::resizeEvent(event);
+    // 游戏页与菜单共用同一个顶层窗口，始终覆盖整个客户区。
+    if (m_gameWindow)
+        m_gameWindow->setGeometry(rect());
+}
+
+void MenuWindow::setMenuControlsVisible(bool visible)
+{
+    for (QWidget* control : {static_cast<QWidget*>(ui.titleLabel),
+                             static_cast<QWidget*>(ui.newGameBtn),
+                             static_cast<QWidget*>(ui.loadGameBtn),
+                             static_cast<QWidget*>(ui.mapEditorBtn),
+                             static_cast<QWidget*>(ui.settingsBtn)}) {
+        control->setVisible(visible);
+    }
+}
+
 void MenuWindow::onNewGame()
 {
     auto* game = new Game();
@@ -109,20 +128,32 @@ void MenuWindow::onSettings()
 
 void MenuWindow::enterGame(Game* game)
 {
-    m_gameWindow = new MainWindow(game);
+    if (m_gameWindow) {
+        delete game;
+        return;
+    }
+    // MainWindow 作为菜单窗口的子页面显示，不再创建第二个顶层窗口。
+    m_gameWindow = new MainWindow(game, this);
+    m_gameWindow->setWindowFlags(Qt::Widget);
+    m_gameWindow->setAttribute(Qt::WA_DeleteOnClose);
+    m_gameWindow->setGeometry(rect());
     m_gameWindow->loadAssets();
+    setMenuControlsVisible(false);
     m_gameWindow->show();
     m_gameWindow->raise();
     m_gameWindow->activateWindow();
     m_gameWindow->setFocus();
 
-    // 游戏窗口关闭时回到菜单
+    // 游戏页关闭时恢复同一窗口中的菜单控件。
     connect(m_gameWindow, &QWidget::destroyed, this, [this]() {
         m_gameWindow = nullptr;
+        setMenuControlsVisible(true);
+        raise();
+        activateWindow();
+        setFocus();
     });
-    // 或者直接检测关闭事件来重新显示菜单
+    // 兼容旧版窗口生命周期设置；父窗口本身保持可见。
     m_gameWindow->setAttribute(Qt::WA_DeleteOnClose);
     connect(m_gameWindow, &QObject::destroyed, this, &QWidget::show);
 
-    hide();
 }

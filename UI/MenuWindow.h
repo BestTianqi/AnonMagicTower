@@ -13,6 +13,7 @@ public:
 
 protected:
     void paintEvent(QPaintEvent* event) override;
+    void resizeEvent(QResizeEvent* event) override;
 
 private slots:
     void onNewGame();
@@ -22,6 +23,7 @@ private slots:
 
 private:
     void enterGame(class Game* game);
+    void setMenuControlsVisible(bool visible);
 
     Ui::MenuWindow ui;
     QPixmap m_backgroundImage;
