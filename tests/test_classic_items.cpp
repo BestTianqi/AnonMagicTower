@@ -335,7 +335,7 @@ int main() {
             floor10RewardShown = true;
     assert(floor10RewardShown);
 
-    // 前三层原版序章：3层向前走触发昏迷，被送回2层并停在小偷旁边。
+    // 前三层原版序章：3层先显现包围怪物，等待点击确认后才传送回2层。
     Game openingStory;
     openingStory.goUpFloor(2, 12, false);
     openingStory.goUpFloor(2, 12, false);
@@ -346,6 +346,11 @@ int main() {
     openingStory.player().y = 9;
     openingStory.setTile(6, 9, Tile_Floor);
     assert(openingStory.tryMovePlayer(6, 9) == Game::Move_Ok);
+    assert(openingStory.currentFloor() == 3);
+    assert(openingStory.floor3PrisonStoryPending());
+    assert(openingStory.player().x == 6 && openingStory.player().y == 9);
+    assert(openingStory.tryMovePlayer(5, 9) == Game::Move_Block);
+    openingStory.resolveFloor3PrisonStory();
     assert(openingStory.currentFloor() == 2);
     assert(openingStory.player().x == 4 && openingStory.player().y == 9);
 
@@ -363,13 +368,12 @@ int main() {
     classicOpening.player().y = 9;
     classicOpening.setTile(6, 9, Tile_Floor);
     assert(classicOpening.tryMovePlayer(6, 9) == Game::Move_Ok);
-    assert(classicOpening.currentFloor() == 2);
-    assert(classicOpening.player().hp == 400);
-    assert(classicOpening.player().atk == 10);
-    assert(classicOpening.player().def == 10);
-    assert(classicOpening.player().x == 4 && classicOpening.player().y == 9);
+    assert(classicOpening.currentFloor() == 3);
+    assert(classicOpening.floor3PrisonStoryPending());
+    assert(classicOpening.player().hp == 1000);
+    assert(classicOpening.player().atk == 100);
+    assert(classicOpening.player().def == 100);
     assert(classicOpening.floor3TrapActive());
-    classicOpening.goUpFloor(4, 9, false);
     assert(classicOpening.monsterAt(6, 7) != nullptr);
     assert(classicOpening.monsterAt(6, 7)->GetName() == "长崎素世·幻影");
     for (const auto& position : std::array<std::pair<int, int>, 4>{
@@ -378,6 +382,17 @@ int main() {
         assert(classicOpening.monsterAt(position.first, position.second) != nullptr);
         assert(classicOpening.monsterAt(position.first, position.second)->GetName() == "藤都子SP·魔法警卫");
     }
+    classicOpening.resolveFloor3PrisonStory();
+    assert(classicOpening.currentFloor() == 2);
+    assert(classicOpening.player().hp == 400);
+    assert(classicOpening.player().atk == 10);
+    assert(classicOpening.player().def == 10);
+    classicOpening.goUpFloor(4, 9, false);
+    assert(classicOpening.monsterAt(6, 7) == nullptr);
+    for (const auto& position : std::array<std::pair<int, int>, 4>{
+             std::pair<int, int>{5, 9}, std::pair<int, int>{7, 9},
+             std::pair<int, int>{6, 8}, std::pair<int, int>{6, 10}})
+        assert(classicOpening.monsterAt(position.first, position.second) == nullptr);
 
     Game quakeGame;
     quakeGame.setTile(4, 4, Tile_Wall);

@@ -66,6 +66,7 @@ void Game::generateClassicTower()
     m_floors.clear();
     m_floor = 1;
     m_floor3PrisonTriggered = false;
+    m_floor3PrisonStoryPending = false;
     m_floor3TrapActive = false;
     m_floor10AmbushTriggered = false;
     m_floor10AmbushMonsterKeys.clear();
@@ -283,6 +284,7 @@ void Game::initFloor(int floor)
 bool Game::loadDefaultMap()
 {
     m_floor3PrisonTriggered = false;
+    m_floor3PrisonStoryPending = false;
     m_floor3TrapActive = false;
     m_floor10AmbushTriggered = false;
     m_floor10AmbushMonsterKeys.clear();
@@ -454,6 +456,7 @@ bool Game::isTeleportReachable(int targetX, int targetY) const
 
 Game::MoveResult Game::teleportPlayerTo(int targetX, int targetY)
 {
+    if (m_floor3PrisonStoryPending) return Move_Block;
     if (!isTeleportReachable(targetX, targetY)) return Move_Block;
 
     const int tile = tileAt(targetX, targetY);
@@ -560,13 +563,14 @@ void Game::openMechanismDoorsIfReady()
 
 void Game::triggerFloor3PrisonStoryIfNeeded()
 {
-    if (m_floor != 3 || m_floor3PrisonTriggered || !m_currentFloor)
+    if (m_floor != 3 || m_floor3PrisonTriggered || m_floor3PrisonStoryPending || !m_currentFloor)
         return;
     // 三层入口附近的 (6,9) 是原版“走入包围圈”的剧情点。
     if (m_player.x != 6 || m_player.y != 9)
         return;
 
     m_floor3PrisonTriggered = true;
+    m_floor3PrisonStoryPending = true;
     m_floor3TrapActive = true;
     // 先在三层留下事件现场：长崎素世位于主角上方，四名魔法警卫
     // 围住触发格的四个方向。战斗结束后仍可返回三层查看现场。
@@ -579,8 +583,14 @@ void Game::triggerFloor3PrisonStoryIfNeeded()
     const int guardPositions[][2] = {{5, 9}, {7, 9}, {6, 8}, {6, 10}};
     for (const auto& position : guardPositions)
         placeTrapMonster(position[0], position[1], MonsterDB::get("藤都子SP·魔法警卫"));
-    // 原版序章的围攻伤害与虚弱效果：四名魔法警卫围住主角后
-    // 造成固定伤害，并将攻击、防御固定压到 10。
+}
+
+void Game::resolveFloor3PrisonStory()
+{
+    if (!m_floor3PrisonStoryPending || m_floor != 3 || !m_currentFloor)
+        return;
+
+    // 原版序章的围攻伤害与虚弱效果：确认剧情后才结算。
     m_player.hp = std::max(1, m_player.hp - 600);
     m_player.atk = 10;
     m_player.def = 10;
@@ -588,6 +598,16 @@ void Game::triggerFloor3PrisonStoryIfNeeded()
     // 小偷位于二层 (4,8)，主角被扔回其下方的 (4,9)。
     m_player.x = 4;
     m_player.y = 9;
+
+    // 传送完成后清理三层现场的五个临时怪物，不影响三层原有敌人。
+    FloorData& floor3 = m_floors[3];
+    const int trapPositions[][2] = {{6, 7}, {5, 9}, {7, 9}, {6, 8}, {6, 10}};
+    for (const auto& position : trapPositions) {
+        const int key = posKey(position[0], position[1]);
+        floor3.monsters.erase(key);
+        floor3.map[key] = floor3.items.count(key) ? Tile_Item : Tile_Floor;
+    }
+    m_floor3PrisonStoryPending = false;
 }
 
 void Game::triggerFloor10AmbushIfNeeded()
@@ -835,6 +855,8 @@ void Game::goDownFloor(int srcX, int srcY, bool findStairs)
 
 Game::MoveResult Game::tryMovePlayer(int nx, int ny)
 {
+    // 夹击现场显现后必须由鼠标点击确认剧情，期间不允许继续移动。
+    if (m_floor3PrisonStoryPending) return Move_Block;
     if (nx < 0 || ny < 0 || nx >= m_width || ny >= m_height) return Move_Block;
     int tile = tileAt(nx, ny);
 
@@ -1237,7 +1259,7 @@ bool Game::saveToFile(const std::string& path) const
         << m_player.hasHolyShield << " " << m_player.freezeMagicUsed << " "
         << m_player.flyWandUses << " " << m_player.symmetryFlyerUses << " "
         << m_floor10AmbushTriggered << " " << m_floor3PrisonTriggered << " "
-        << m_floor3TrapActive << "\n";
+        << m_floor3TrapActive << " " << m_floor3PrisonStoryPending << "\n";
 
     // 背包物品
     ofs << m_player.InventoryCount() << "\n";
@@ -1530,6 +1552,7 @@ bool Game::loadFromFile(const std::string& path)
     bool floor10AmbushTriggered = false;
     bool floor3PrisonTriggered = false;
     bool floor3TrapActive = false;
+    bool floor3PrisonStoryPending = false;
     std::string invToken;
     ifs >> invToken;
     if (invToken == "EXTRA") {
@@ -1546,6 +1569,8 @@ bool Game::loadFromFile(const std::string& path)
                     ifs >> floor3PrisonTriggered;
                 if (ifs.peek() != '\n' && ifs.peek() != '\r' && ifs.peek() != EOF)
                     ifs >> floor3TrapActive;
+                if (ifs.peek() != '\n' && ifs.peek() != '\r' && ifs.peek() != EOF)
+                    ifs >> floor3PrisonStoryPending;
             }
         }
         ifs >> invToken; // 下一个是背包数量
@@ -1579,6 +1604,7 @@ bool Game::loadFromFile(const std::string& path)
     m_player.symmetryFlyerUses = symmetryFlyerUses;
     m_floor10AmbushTriggered = floor10AmbushTriggered;
     m_floor3PrisonTriggered = floor3PrisonTriggered;
+    m_floor3PrisonStoryPending = floor3PrisonStoryPending;
     m_floor3TrapActive = floor3TrapActive;
     m_floor10AmbushMonsterKeys.clear();
 

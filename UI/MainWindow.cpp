@@ -168,12 +168,21 @@ MainWindow::MainWindow(Game* game, QWidget* parent)
     ui.mapWidget->setFocusPolicy(Qt::NoFocus);
     connect(ui.mapWidget, &MapWidget::tileClicked, this, [this](int x, int y) {
         if (m_game->player().hp <= 0 || ui.mapWidget->isPlayerMoving()) return;
+        if (m_game->floor3PrisonStoryPending()) {
+            m_game->resolveFloor3PrisonStory();
+            showOpeningPrisonStory();
+            ui.mapWidget->update();
+            updateHUD();
+            return;
+        }
         const int floorBefore = m_game->currentFloor();
         const auto result = m_game->teleportPlayerTo(x, y);
         switch (result) {
         case Game::Move_Pickup:
         case Game::Move_Ok:
-            if (floorBefore == 3 && m_game->currentFloor() == 2)
+            if (m_game->floor3PrisonStoryPending())
+                showPrisonTrapPrompt();
+            else if (floorBefore == 3 && m_game->currentFloor() == 2)
                 showOpeningPrisonStory();
             ui.mapWidget->update();
             updateHUD();
@@ -630,12 +639,19 @@ void MainWindow::showInventory()
     dlg.exec();
 }
 
+void MainWindow::showPrisonTrapPrompt()
+{
+    showStoryMessage(QString::fromUtf8(
+        "五个身影已经显现：长崎素世与四名魔法警卫将你围住！\n"
+        "点击地图画面继续，触发夹击剧情。"));
+}
+
 void MainWindow::showOpeningPrisonStory()
 {
     showStoryMessage(QString::fromUtf8(
-        "长崎素世出现在你上方，四名魔法警卫从四面围住了你！\n"
-        "你受到600点伤害，攻击和防御被压到10。\n\n"
-        "你被扔回2层牢房。必须与小偷对话两次，才能解除陷阱状态。"));
+        "夹击剧情触发！你受到600点伤害，攻击和防御被压到10。\n"
+        "你被传送回2层牢房，三层现场的五个临时怪物已经消失。\n\n"
+        "必须与小偷对话两次，才能解除陷阱状态。"));
 }
 
 void MainWindow::showOpeningFloorStory(int fromFloor, int toFloor)
@@ -1418,7 +1434,9 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
         break;
     }
     case Game::Move_Ok:
-        if (floorBefore == 3 && m_game->currentFloor() == 2)
+        if (m_game->floor3PrisonStoryPending())
+            showPrisonTrapPrompt();
+        else if (floorBefore == 3 && m_game->currentFloor() == 2)
             showOpeningPrisonStory();
         ui.mapWidget->update();
         updateHUD();

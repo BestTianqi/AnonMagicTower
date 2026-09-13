@@ -19,6 +19,7 @@ private:
     void updateMonsterPanel();
     void showInventory();
     void showOpeningFloorStory(int fromFloor, int toFloor);
+    void showPrisonTrapPrompt();
     void showOpeningPrisonStory();
     void showStoryMessage(const QString& message);
     void showNPCDialog(int x, int y);
