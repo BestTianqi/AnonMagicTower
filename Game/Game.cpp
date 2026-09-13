@@ -10,6 +10,49 @@
 #include <queue>
 #include <sstream>
 
+namespace {
+
+bool hasClassicMonsterId(const FloorData& floor, int id)
+{
+    for (const auto& entry : floor.monsters) {
+        if (MonsterDB::indexOf(entry.second.GetName()) == id - 1)
+            return true;
+    }
+    return false;
+}
+
+bool mechanismDoorReady(int floorNumber, const FloorData& floor)
+{
+    // 原版 48 层圣剑房花门是损坏的机关，清怪后仍不会自动开启。
+    if (floorNumber == 48) return false;
+
+    // 每个机关门组绑定原版指定守卫 ID（1-based）。未列出的自定义楼层
+    // 使用“清空本层怪物”这一通用规则，保持编辑器地图的直觉行为。
+    static const std::unordered_map<int, std::vector<int>> guardGroups = {
+        {2,  {21}},
+        {8,  {1, 2, 3, 4, 5, 6, 7}},
+        {10, {6}},
+        {11, {3, 9, 10, 11, 12}},
+        {15, {3, 9, 10, 11, 12, 13}},
+        {17, {7, 9, 10, 11, 12, 13}},
+        {20, {3, 10, 11, 14}},
+        {30, {1, 2, 9}},
+        {32, {18, 19, 20, 21, 24}},
+        {35, {23}},
+        {38, {12, 18, 19, 20, 21, 22, 24}},
+        {44, {32}},
+        {45, {26, 27, 28, 29, 30, 31}},
+        {49, {27, 30}},
+    };
+    const auto it = guardGroups.find(floorNumber);
+    if (it == guardGroups.end()) return floor.monsters.empty();
+    for (int id : it->second)
+        if (hasClassicMonsterId(floor, id)) return false;
+    return true;
+}
+
+} // namespace
+
 Game::Game()
     : m_width(MAP_SIZE), m_height(MAP_SIZE)
 {
@@ -356,7 +399,12 @@ bool Game::isTeleportReachable(int targetX, int targetY) const
         (targetTile == Tile_DoorRed && (m_player.HasKey(KeyType::Red) || m_player.magicKeyUses > 0)) ||
         (targetTile == Tile_DoorBlue && (m_player.HasKey(KeyType::Blue) || m_player.magicKeyUses > 0)) ||
         (targetTile == Tile_DoorGreen && (m_player.HasKey(KeyType::Green) || m_player.magicKeyUses > 0));
-    if (!walkable(targetTile) && !targetInteractable && !targetDoorWithKey) return false;
+    const bool targetMechanismDoor =
+        (targetTile == Tile_DoorMagic || targetTile == Tile_DoorIron) &&
+        ((m_floor == 48 && m_player.wallBreakerUsed) ||
+         (m_currentFloor && mechanismDoorReady(m_floor, *m_currentFloor)));
+    if (!walkable(targetTile) && !targetInteractable && !targetDoorWithKey && !targetMechanismDoor)
+        return false;
     const int currentTile = tileAt(m_player.x, m_player.y);
     const bool currentInteractable =
         currentTile == Tile_NPC || currentTile == Tile_Shop ||
@@ -426,6 +474,9 @@ Game::MoveResult Game::teleportPlayerTo(int targetX, int targetY)
     case Tile_DoorGreen:
         // 复用普通移动的开门逻辑，确保钥匙/万能钥匙只消耗一次。
         return tryMovePlayer(targetX, targetY);
+    case Tile_DoorMagic:
+    case Tile_DoorIron:
+        return tryMovePlayer(targetX, targetY);
     case Tile_StairsUp:
         return Move_StairsUp;
     case Tile_StairsDown:
@@ -474,7 +525,20 @@ int Game::useBomb()
         setTile(x, y, m_currentFloor->items.count(key) ? Tile_Item : Tile_Floor);
         ++defeated;
     }
+    openMechanismDoorsIfReady();
     return defeated;
+}
+
+void Game::openMechanismDoorsIfReady()
+{
+    if (!m_currentFloor || !mechanismDoorReady(m_floor, *m_currentFloor)) return;
+    for (int y = 0; y < m_height; ++y) {
+        for (int x = 0; x < m_width; ++x) {
+            const int tile = tileAt(x, y);
+            if (tile == Tile_DoorMagic || tile == Tile_DoorIron)
+                setTile(x, y, Tile_Floor);
+        }
+    }
 }
 
 int Game::useEarthquakeScroll()
@@ -599,8 +663,15 @@ Game::MoveResult Game::tryMovePlayer(int nx, int ny)
 
     case Tile_DoorMagic:
     case Tile_DoorIron:
-        // 原作由楼层剧情开启；当前事件兼容层在本层敌人清空后放行。
-        if (!m_currentFloor->monsters.empty()) return Move_DoorLocked;
+        // 机关门不消耗钥匙，击败本楼层指定守卫后自动打开。
+        // 48 层圣剑房为原版损坏花门，只能用镐破坏。
+        if (m_floor == 48 && m_player.wallBreakerUsed) {
+            m_player.wallBreakerUsed = false;
+            setTile(nx, ny, Tile_Floor);
+            m_player.x = nx; m_player.y = ny;
+            return Move_Ok;
+        }
+        if (!mechanismDoorReady(m_floor, *m_currentFloor)) return Move_DoorLocked;
         setTile(nx, ny, Tile_Floor);
         m_player.x = nx; m_player.y = ny;
         return Move_Ok;
@@ -771,6 +842,7 @@ Game::FightResult Game::fightAt(int x, int y, std::vector<std::string>& outLog)
             int key = posKey(x, y);
             m_currentFloor->monsters.erase(key);
             setTile(x, y, m_currentFloor->items.count(key) ? Tile_Item : Tile_Floor);
+            openMechanismDoorsIfReady();
 
             if (m_floor == 49 && bossName == "藤都子SP·魔法警卫") {
                 auto eventKey = [this](int sourceX, int sourceY) {

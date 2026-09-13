@@ -124,4 +124,7 @@ private:
 
     std::unordered_map<int, FloorData> m_floors;
     FloorData* m_currentFloor = nullptr;
+
+    // 按原版楼层事件检查机关门，并在满足条件时自动开门。
+    void openMechanismDoorsIfReady();
 };

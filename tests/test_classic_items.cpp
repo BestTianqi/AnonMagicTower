@@ -247,6 +247,34 @@ int main() {
     assert(bombGame.hasMonsterAt(4, 5));
     assert(bombGame.player().gold == 7);
 
+    // 原版机关门：2 层六扇铁门在两名中级卫兵都被击败后自动打开。
+    Game mechanismDoor;
+    mechanismDoor.initFloor(2);
+    mechanismDoor.player().x = 3;
+    mechanismDoor.player().y = 3;
+    mechanismDoor.player().atk = 100;
+    mechanismDoor.setTile(4, 3, Tile_DoorIron);
+    const Monster intermediateGuard("椎名立希SP·中级卫兵", 1, 0, 0, 0);
+    mechanismDoor.spawnMonster(5, 3, intermediateGuard);
+    mechanismDoor.spawnMonster(6, 3, intermediateGuard);
+    assert(mechanismDoor.tryMovePlayer(4, 3) == Game::Move_DoorLocked);
+    log.clear();
+    assert(mechanismDoor.fightAt(5, 3, log) == Game::Fight_PlayerWin);
+    assert(mechanismDoor.tileAt(4, 3) == Tile_DoorIron);
+    log.clear();
+    assert(mechanismDoor.fightAt(6, 3, log) == Game::Fight_PlayerWin);
+    assert(mechanismDoor.tileAt(4, 3) == Tile_Floor);
+
+    // 48 层原版花门是坏门，只能用镐破坏，不会因清怪自动开启。
+    Game brokenFlowerDoor;
+    brokenFlowerDoor.initFloor(48);
+    brokenFlowerDoor.player().x = 3;
+    brokenFlowerDoor.player().y = 3;
+    brokenFlowerDoor.player().wallBreakerUsed = true;
+    brokenFlowerDoor.setTile(4, 3, Tile_DoorMagic);
+    assert(brokenFlowerDoor.tryMovePlayer(4, 3) == Game::Move_Ok);
+    assert(brokenFlowerDoor.tileAt(4, 3) == Tile_Floor);
+
     Game quakeGame;
     quakeGame.setTile(4, 4, Tile_Wall);
     quakeGame.setTile(5, 5, Tile_DarkWall);
