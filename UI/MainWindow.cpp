@@ -1262,6 +1262,45 @@ void MainWindow::showShopDialog(int x, int y)
 
     Player& p = m_game->player();
 
+    // 4/12/32/46 层是可重复购买的原版属性商店，必须优先于一次性兑换商人判断。
+    if (shop->classicShopFloor > 0) {
+        const ClassicShopOffer offer = classicShopOfferForFloor(shop->classicShopFloor, p.shopUseCount);
+        QDialog dlg(this);
+        dlg.setWindowTitle(QString::fromUtf8("属性商店"));
+        dlg.setFixedSize(400, 300);
+        auto* layout = new QVBoxLayout(&dlg);
+        layout->addWidget(new QLabel(QString::fromUtf8("原版商店：全局第 %1 次购买价格 %2 金币").arg(p.shopUseCount + 1).arg(offer.price), &dlg));
+        struct Offer { QString name; QString effect; std::function<void()> apply; };
+        const Offer offers[] = {
+            {QString::fromUtf8("生命值"), QString::fromUtf8("+%1").arg(offer.hp), [&]{ p.hp += offer.hp; }},
+            {QString::fromUtf8("攻击力"), QString::fromUtf8("+%1").arg(offer.atk), [&]{ p.atk += offer.atk; }},
+            {QString::fromUtf8("防御力"), QString::fromUtf8("+%1").arg(offer.def), [&]{ p.def += offer.def; }}
+        };
+        bool purchased = false;
+        for (const auto& item : offers) {
+            auto* button = new QPushButton(QString::fromUtf8("购买 %1（%2）").arg(item.name, item.effect), &dlg);
+            button->setEnabled(p.gold >= offer.price);
+            QObject::connect(button, &QPushButton::clicked, &dlg, [this, &dlg, &p, &purchased, offer, item] {
+                captureUndoSnapshot();
+                p.gold -= offer.price;
+                item.apply();
+                ++p.shopUseCount;
+                purchased = true;
+                dlg.accept();
+            });
+            layout->addWidget(button);
+        }
+        auto* leave = new QPushButton(QString::fromUtf8("离开"), &dlg);
+        QObject::connect(leave, &QPushButton::clicked, &dlg, &QDialog::reject);
+        layout->addWidget(leave);
+        applyRuntimeArtSkin(dlg);
+        dlg.exec();
+        // classicPurchaseCount 仅兼容旧存档，不参与属性商店是否可再次购买的判定。
+        (void)purchased;
+        updateHUD();
+        return;
+    }
+
     // 原版固定兑换商人：钥匙数量与价格保持 50 层魔塔配置。
     const int classicId = shop->classicNpcId;
     const QString shopPortrait = QStringLiteral(":/images/characters/portraits/ririko.png");
@@ -1316,43 +1355,6 @@ void MainWindow::showShopDialog(int x, int y)
                  shopPortrait, QStringLiteral("#ffb5d7")}
             });
         }
-        updateHUD();
-        return;
-    }
-    if (shop->classicShopFloor > 0) {
-        const ClassicShopOffer offer = classicShopOfferForFloor(shop->classicShopFloor, p.shopUseCount);
-        QDialog dlg(this);
-        dlg.setWindowTitle(QString::fromUtf8("属性商店"));
-        dlg.setFixedSize(400, 300);
-        auto* layout = new QVBoxLayout(&dlg);
-        layout->addWidget(new QLabel(QString::fromUtf8("原版商店：全局第 %1 次购买价格 %2 金币").arg(p.shopUseCount + 1).arg(offer.price), &dlg));
-        struct Offer { QString name; QString effect; std::function<void()> apply; };
-        const Offer offers[] = {
-            {QString::fromUtf8("生命值"), QString::fromUtf8("+%1").arg(offer.hp), [&]{ p.hp += offer.hp; }},
-            {QString::fromUtf8("攻击力"), QString::fromUtf8("+%1").arg(offer.atk), [&]{ p.atk += offer.atk; }},
-            {QString::fromUtf8("防御力"), QString::fromUtf8("+%1").arg(offer.def), [&]{ p.def += offer.def; }}
-        };
-        bool purchased = false;
-        for (const auto& item : offers) {
-            auto* button = new QPushButton(QString::fromUtf8("购买 %1（%2）").arg(item.name, item.effect), &dlg);
-            button->setEnabled(p.gold >= offer.price);
-            QObject::connect(button, &QPushButton::clicked, &dlg, [this, &dlg, &p, &purchased, offer, item] {
-                captureUndoSnapshot();
-                p.gold -= offer.price;
-                item.apply();
-                ++p.shopUseCount;
-                purchased = true;
-                dlg.accept();
-            });
-            layout->addWidget(button);
-        }
-        auto* leave = new QPushButton(QString::fromUtf8("离开"), &dlg);
-        QObject::connect(leave, &QPushButton::clicked, &dlg, &QDialog::reject);
-        layout->addWidget(leave);
-        applyRuntimeArtSkin(dlg);
-        dlg.exec();
-        if (purchased)
-            shop->classicPurchaseCount = 1;
         updateHUD();
         return;
     }
