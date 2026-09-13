@@ -20,6 +20,7 @@ private:
     void showInventory();
     void showOpeningFloorStory(int fromFloor, int toFloor);
     void showPrisonTrapPrompt();
+    void showFloor3PrisonVisualNovel();
     void showOpeningPrisonStory();
     void showStoryMessage(const QString& message);
     void showNPCDialog(int x, int y);

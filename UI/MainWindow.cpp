@@ -171,8 +171,7 @@ MainWindow::MainWindow(Game* game, QWidget* parent)
     connect(ui.mapWidget, &MapWidget::tileClicked, this, [this](int x, int y) {
         if (m_game->player().hp <= 0 || ui.mapWidget->isSceneAnimating()) return;
         if (m_game->floor3PrisonStoryPending()) {
-            m_game->resolveFloor3PrisonStory();
-            showOpeningPrisonStory();
+            showFloor3PrisonVisualNovel();
             ui.mapWidget->update();
             updateHUD();
             return;
@@ -653,7 +652,115 @@ void MainWindow::showPrisonTrapPrompt()
 {
     showStoryMessage(QString::fromUtf8(
         "五个身影已经显现：长崎素世与四名魔法警卫将你围住！\n"
-        "点击地图画面继续，触发夹击剧情。"));
+        "点击地图画面继续，查看事件对话。"));
+}
+
+void MainWindow::showFloor3PrisonVisualNovel()
+{
+    struct Page {
+        QString speaker;
+        QString text;
+        QString portrait;
+        QString accent;
+    };
+    const std::vector<Page> pages = {
+        {QString::fromUtf8("千早爱音"),
+         QString::fromUtf8("咦……这面墙后面，刚才明明什么都没有……"),
+         QStringLiteral(":/images/characters/portraits/anon.png"), QStringLiteral("#ff8fc7")},
+        {QString::fromUtf8("长崎素世"),
+         QString::fromUtf8("终于追上你了，爱音。你以为自己能平安通过这里吗？"),
+         QStringLiteral(":/images/characters/portraits/soyo.png"), QStringLiteral("#d9b6ff")},
+        {QString::fromUtf8("千早爱音"),
+         QString::fromUtf8("素世？！你为什么会在这里？我们不是约好要一起离开的吗？"),
+         QStringLiteral(":/images/characters/portraits/anon.png"), QStringLiteral("#ff8fc7")},
+        {QString::fromUtf8("长崎素世"),
+         QString::fromUtf8("别再往前了。把她围起来——这一次，我不会再让你逃走。"),
+         QStringLiteral(":/images/characters/portraits/soyo.png"), QStringLiteral("#d9b6ff")},
+        {QString::fromUtf8("系统"),
+         QString::fromUtf8("四名魔法警卫显现！夹击陷阱启动。\n点击“继续”承受冲击并返回二层。"),
+         QStringLiteral(":/images/characters/portraits/soyo.png"), QStringLiteral("#ffd66b")}
+    };
+
+    QDialog dlg(this);
+    dlg.setWindowTitle(QString::fromUtf8("三层 · 暗墙后的会面"));
+    dlg.setModal(true);
+    dlg.setFixedSize(900, 310);
+    dlg.setWindowFlags(Qt::Dialog | Qt::FramelessWindowHint);
+    dlg.setStyleSheet(
+        "QDialog { background: rgba(14, 12, 28, 248); border: 2px solid #8c6ba8; }"
+        "QLabel#vnName { font-size: 20px; font-weight: 800; padding: 3px 0; }"
+        "QLabel#vnText { color: #fff4e6; font-size: 18px; }"
+        "QPushButton { color: #fff7d0; background: #5f3d79; border: 1px solid #d5a8f0;"
+        " border-radius: 6px; padding: 8px 24px; font-size: 15px; font-weight: 700; }"
+        "QPushButton:hover { background: #79509a; }"
+    );
+
+    auto* root = new QVBoxLayout(&dlg);
+    root->setContentsMargins(18, 16, 18, 14);
+    root->setSpacing(8);
+    auto* content = new QHBoxLayout();
+    content->setSpacing(18);
+    auto* portrait = new QLabel(&dlg);
+    portrait->setFixedSize(150, 220);
+    portrait->setAlignment(Qt::AlignCenter);
+    portrait->setStyleSheet("background: rgba(0,0,0,90); border: 1px solid #655275;");
+    content->addWidget(portrait);
+
+    auto* textColumn = new QVBoxLayout();
+    auto* name = new QLabel(&dlg);
+    name->setObjectName("vnName");
+    auto* text = new QLabel(&dlg);
+    text->setObjectName("vnText");
+    text->setWordWrap(true);
+    text->setAlignment(Qt::AlignLeft | Qt::AlignTop);
+    textColumn->addWidget(name);
+    textColumn->addWidget(text, 1);
+    textColumn->addStretch();
+    content->addLayout(textColumn, 1);
+    root->addLayout(content, 1);
+
+    auto* next = new QPushButton(QString::fromUtf8("继续 ▶"), &dlg);
+    next->setDefault(true);
+    next->setFixedWidth(140);
+    auto* buttonRow = new QHBoxLayout();
+    buttonRow->addStretch();
+    buttonRow->addWidget(next);
+    root->addLayout(buttonRow);
+
+    int pageIndex = 0;
+    const auto renderPage = [&]() {
+        const Page& page = pages[static_cast<size_t>(pageIndex)];
+        name->setText(page.speaker);
+        name->setStyleSheet(QStringLiteral("color: %1;").arg(page.accent));
+        text->setText(page.text);
+        QPixmap image(page.portrait);
+        if (!image.isNull())
+            portrait->setPixmap(image.scaled(portrait->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+        else
+            portrait->clear();
+        next->setText(pageIndex + 1 == static_cast<int>(pages.size())
+                          ? QString::fromUtf8("承受冲击 ▶")
+                          : QString::fromUtf8("继续 ▶"));
+    };
+    connect(next, &QPushButton::clicked, &dlg, [&]() {
+        if (pageIndex + 1 < static_cast<int>(pages.size())) {
+            ++pageIndex;
+            renderPage();
+        } else {
+            dlg.accept();
+        }
+    });
+    renderPage();
+    dlg.move((width() - dlg.width()) / 2, (height() - dlg.height()) / 2);
+    dlg.exec();
+
+    // 对话全部播放完后才结算伤害并传送回二层，保留原版剧情节奏。
+    if (m_game->floor3PrisonStoryPending()) {
+        m_game->resolveFloor3PrisonStory();
+        showOpeningPrisonStory();
+        ui.mapWidget->update();
+        updateHUD();
+    }
 }
 
 void MainWindow::showOpeningPrisonStory()
