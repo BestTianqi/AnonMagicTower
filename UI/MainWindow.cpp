@@ -11,12 +11,14 @@
 #include <QDir>
 #include <QDialog>
 #include <QVBoxLayout>
+#include <QGridLayout>
 #include <QListWidget>
 #include <QDialogButtonBox>
 #include <QPushButton>
 #include <QHBoxLayout>
 #include <QFrame>
 #include <QSpinBox>
+#include <QCheckBox>
 #include <QInputDialog>
 #include <QGroupBox>
 #include <QComboBox>
@@ -1010,7 +1012,7 @@ void MainWindow::showModifier()
 
     QDialog dlg(this);
     dlg.setWindowTitle(QString::fromUtf8("修改器"));
-    dlg.setFixedSize(380, 480);
+    dlg.setFixedSize(420, 600);
     dlg.setStyleSheet("QDialog { background-color: #1a1a2e; color: #d0d0d0; }");
 
     auto* layout = new QVBoxLayout(&dlg);
@@ -1189,6 +1191,85 @@ void MainWindow::showModifier()
 
     itemLayout->addStretch();
     tab->addTab(itemTab, QString::fromUtf8("道具"));
+
+    // === Tab 3: 管理员调试 ===
+    auto* debugTab = new QWidget();
+    auto* debugLayout = new QVBoxLayout(debugTab);
+    debugLayout->setSpacing(8);
+    debugLayout->setContentsMargins(8, 8, 8, 8);
+
+    auto* adminCheck = new QCheckBox(QString::fromUtf8("启用管理员模式"), debugTab);
+    adminCheck->setChecked(m_adminMode);
+    adminCheck->setStyleSheet("QCheckBox { color: #ffd66b; font-size: 14px; font-weight: bold; }");
+    debugLayout->addWidget(adminCheck);
+
+    auto* debugHint = new QLabel(QString::fromUtf8(
+        "开启后可绕过门、钥匙和剧情触发，直接传送到任意楼层坐标。\n"
+        "坐标范围：X/Y 0-14；楼层 1-50。"), debugTab);
+    debugHint->setWordWrap(true);
+    debugHint->setStyleSheet("color: #aaa; font-size: 12px;");
+    debugLayout->addWidget(debugHint);
+
+    auto* debugForm = new QGridLayout();
+    auto* floorSpin = new QSpinBox(debugTab);
+    floorSpin->setRange(1, 50);
+    floorSpin->setValue(m_game->currentFloor());
+    auto* xSpin = new QSpinBox(debugTab);
+    xSpin->setRange(0, m_game->width() - 1);
+    xSpin->setValue(m_game->player().x);
+    auto* ySpin = new QSpinBox(debugTab);
+    ySpin->setRange(0, m_game->height() - 1);
+    ySpin->setValue(m_game->player().y);
+    for (QSpinBox* spin : {floorSpin, xSpin, ySpin}) {
+        spin->setStyleSheet("QSpinBox { background: #222; color: #fff; border: 1px solid #555; padding: 4px; }");
+        spin->setEnabled(m_adminMode);
+    }
+    debugForm->addWidget(new QLabel(QString::fromUtf8("楼层"), debugTab), 0, 0);
+    debugForm->addWidget(floorSpin, 0, 1);
+    debugForm->addWidget(new QLabel(QString::fromUtf8("X"), debugTab), 1, 0);
+    debugForm->addWidget(xSpin, 1, 1);
+    debugForm->addWidget(new QLabel(QString::fromUtf8("Y"), debugTab), 2, 0);
+    debugForm->addWidget(ySpin, 2, 1);
+    debugLayout->addLayout(debugForm);
+
+    auto* debugTeleportBtn = new QPushButton(QString::fromUtf8("传送"), debugTab);
+    debugTeleportBtn->setEnabled(m_adminMode);
+    debugTeleportBtn->setStyleSheet(
+        "QPushButton { background: #624c8a; color: #fff; border: 1px solid #b99bea; "
+        "border-radius: 4px; padding: 7px 16px; font-weight: bold; }"
+        "QPushButton:disabled { background: #333; color: #777; border-color: #555; }");
+    debugLayout->addWidget(debugTeleportBtn);
+
+    auto* debugStatus = new QLabel(QString::fromUtf8("管理员模式已关闭"), debugTab);
+    debugStatus->setStyleSheet("color: #999; font-size: 12px;");
+    debugLayout->addWidget(debugStatus);
+    debugLayout->addStretch();
+    tab->addTab(debugTab, QString::fromUtf8("调试"));
+
+    auto setDebugEnabled = [this, adminCheck, floorSpin, xSpin, ySpin, debugTeleportBtn, debugStatus](bool enabled) {
+        m_adminMode = enabled;
+        floorSpin->setEnabled(enabled);
+        xSpin->setEnabled(enabled);
+        ySpin->setEnabled(enabled);
+        debugTeleportBtn->setEnabled(enabled);
+        debugStatus->setText(enabled ? QString::fromUtf8("管理员模式已开启")
+                                     : QString::fromUtf8("管理员模式已关闭"));
+        debugStatus->setStyleSheet(enabled ? "color: #ffd66b; font-size: 12px;"
+                                           : "color: #999; font-size: 12px;");
+    };
+    connect(adminCheck, &QCheckBox::toggled, this, setDebugEnabled);
+    connect(debugTeleportBtn, &QPushButton::clicked, this,
+            [this, floorSpin, xSpin, ySpin, debugStatus]() {
+        if (!m_adminMode) return;
+        if (m_game->debugTeleport(floorSpin->value(), xSpin->value(), ySpin->value())) {
+            debugStatus->setText(QString::fromUtf8("已传送到 %1 层 (%2,%3)")
+                .arg(m_game->currentFloor()).arg(m_game->player().x).arg(m_game->player().y));
+            ui.mapWidget->update();
+            updateHUD();
+        } else {
+            debugStatus->setText(QString::fromUtf8("传送失败：坐标或楼层越界"));
+        }
+    });
 
     layout->addWidget(tab);
 

@@ -505,6 +505,21 @@ Game::MoveResult Game::teleportPlayerTo(int targetX, int targetY)
     }
 }
 
+bool Game::debugTeleport(int floor, int x, int y)
+{
+    if (floor < 1 || floor > 50 || x < 0 || y < 0 || x >= m_width || y >= m_height)
+        return false;
+    if (m_floors.find(floor) == m_floors.end())
+        initFloor(floor);
+    m_floor = floor;
+    m_currentFloor = &m_floors[floor];
+    m_player.x = x;
+    m_player.y = y;
+    // 调试传送应能离开等待中的剧情现场，避免被事件锁死。
+    m_floor3PrisonStoryPending = false;
+    return true;
+}
+
 ShopData* Game::shopAt(int x, int y)
 {
     int key = posKey(x, y);

@@ -37,6 +37,7 @@ private:
     int m_pendingMoveDx = 0;
     int m_pendingMoveDy = 0;
     bool m_hasPendingMove = false;
+    bool m_adminMode = false;
     bool m_floor2OpeningShown = false;
     bool m_floor3OpeningShown = false;
     Ui::MainWindow ui;

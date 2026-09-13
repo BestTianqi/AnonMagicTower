@@ -81,6 +81,8 @@ public:
     bool isTeleportReachable(int targetX, int targetY) const;
     // 将玩家移动到鼠标选中的可达格，并执行该格应有的交互。
     MoveResult teleportPlayerTo(int targetX, int targetY);
+    // 管理员调试传送：绕过可达性、钥匙和剧情触发，只校验楼层/坐标边界。
+    bool debugTeleport(int floor, int x, int y);
 
     enum FightResult { Fight_PlayerWin, Fight_PlayerDead, Fight_GameWin, Fight_Stalemate };
     FightResult fightAt(int x, int y, std::vector<std::string>& outLog);

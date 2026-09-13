@@ -410,6 +410,20 @@ int main() {
     assert(freezeGame.tileAt(6, 6) == Tile_Floor);
     assert(!freezeGame.player().freezeMagicUsed);
 
+    // 管理员调试传送可跨楼层定位到任意地图坐标，但拒绝越界楼层/坐标。
+    Game adminTeleport;
+    adminTeleport.generateClassicTower();
+    assert(!adminTeleport.debugTeleport(0, 7, 7));
+    assert(!adminTeleport.debugTeleport(51, 7, 7));
+    assert(!adminTeleport.debugTeleport(10, -1, 7));
+    assert(!adminTeleport.debugTeleport(10, 7, 15));
+    assert(adminTeleport.debugTeleport(10, 4, 8));
+    assert(adminTeleport.currentFloor() == 10);
+    assert(adminTeleport.player().x == 4 && adminTeleport.player().y == 8);
+    assert(adminTeleport.debugTeleport(50, 14, 14));
+    assert(adminTeleport.currentFloor() == 50);
+    assert(adminTeleport.player().x == 14 && adminTeleport.player().y == 14);
+
     NPC npc("商人", {"测试"}, nullptr, true, 25,
             std::make_unique<RubyGem>(), 15);
     assert(npc.ClassicId() == 15);
