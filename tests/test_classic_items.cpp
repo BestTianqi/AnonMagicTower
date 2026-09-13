@@ -1,4 +1,5 @@
 #include <cassert>
+#include <array>
 #include <memory>
 #include <string>
 #include <cstdio>
@@ -341,8 +342,10 @@ int main() {
     openingStory.initFloor(3);
     openingStory.player().x = 2;
     openingStory.player().y = 12;
-    openingStory.setTile(3, 12, Tile_Floor);
-    assert(openingStory.tryMovePlayer(3, 12) == Game::Move_Ok);
+    openingStory.player().x = 5;
+    openingStory.player().y = 9;
+    openingStory.setTile(6, 9, Tile_Floor);
+    assert(openingStory.tryMovePlayer(6, 9) == Game::Move_Ok);
     assert(openingStory.currentFloor() == 2);
     assert(openingStory.player().x == 7 && openingStory.player().y == 7);
 
@@ -356,13 +359,25 @@ int main() {
     classicOpening.goUpFloor(2, 2);
     classicOpening.goUpFloor(2, 12);
     assert(classicOpening.currentFloor() == 3);
-    assert(classicOpening.tryMovePlayer(3, 12) == Game::Move_Ok);
+    classicOpening.player().x = 5;
+    classicOpening.player().y = 9;
+    classicOpening.setTile(6, 9, Tile_Floor);
+    assert(classicOpening.tryMovePlayer(6, 9) == Game::Move_Ok);
     assert(classicOpening.currentFloor() == 2);
     assert(classicOpening.player().hp == 400);
     assert(classicOpening.player().atk == 10);
     assert(classicOpening.player().def == 10);
     assert(classicOpening.player().x == 7 && classicOpening.player().y == 7);
     assert(classicOpening.floor3TrapActive());
+    classicOpening.goUpFloor(7, 7, false);
+    assert(classicOpening.monsterAt(6, 7) != nullptr);
+    assert(classicOpening.monsterAt(6, 7)->GetName() == "长崎素世·幻影");
+    for (const auto& position : std::array<std::pair<int, int>, 4>{
+             std::pair<int, int>{5, 9}, std::pair<int, int>{7, 9},
+             std::pair<int, int>{6, 8}, std::pair<int, int>{6, 10}}) {
+        assert(classicOpening.monsterAt(position.first, position.second) != nullptr);
+        assert(classicOpening.monsterAt(position.first, position.second)->GetName() == "藤都子SP·魔法警卫");
+    }
 
     Game quakeGame;
     quakeGame.setTile(4, 4, Tile_Wall);

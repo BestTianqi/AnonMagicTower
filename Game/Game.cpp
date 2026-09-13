@@ -564,12 +564,23 @@ void Game::triggerFloor3PrisonStoryIfNeeded()
 {
     if (m_floor != 3 || m_floor3PrisonTriggered || !m_currentFloor)
         return;
-    // 3层下楼梯右侧第一格是原版“向前走触发昏迷”的剧情点。
-    if (m_player.x != 3 || m_player.y != 12)
+    // 三层入口附近的 (6,9) 是原版“走入包围圈”的剧情点。
+    if (m_player.x != 6 || m_player.y != 9)
         return;
 
     m_floor3PrisonTriggered = true;
     m_floor3TrapActive = true;
+    // 先在三层留下事件现场：长崎素世位于主角上方，四名魔法警卫
+    // 围住触发格的四个方向。战斗结束后仍可返回三层查看现场。
+    const auto placeTrapMonster = [this](int x, int y, const Monster& monster) {
+        const int key = posKey(x, y);
+        m_currentFloor->monsters[key] = monster;
+        setTile(x, y, Tile_Monster);
+    };
+    placeTrapMonster(6, 7, MonsterDB::get("长崎素世·幻影"));
+    const int guardPositions[][2] = {{5, 9}, {7, 9}, {6, 8}, {6, 10}};
+    for (const auto& position : guardPositions)
+        placeTrapMonster(position[0], position[1], MonsterDB::get("藤都子SP·魔法警卫"));
     // 原版序章的围攻伤害与虚弱效果：四名魔法警卫围住主角后
     // 造成固定伤害，并将攻击、防御固定压到 10。
     m_player.hp = std::max(1, m_player.hp - 600);

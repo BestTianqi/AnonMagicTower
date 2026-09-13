@@ -633,7 +633,7 @@ void MainWindow::showInventory()
 void MainWindow::showOpeningPrisonStory()
 {
     showStoryMessage(QString::fromUtf8(
-        "魔王与四名魔法警卫从四面围住了你！\n"
+        "长崎素世出现在你上方，四名魔法警卫从四面围住了你！\n"
         "你受到600点伤害，攻击和防御被压到10。\n\n"
         "你被扔回2层牢房。必须与小偷对话两次，才能解除陷阱状态。"));
 }
