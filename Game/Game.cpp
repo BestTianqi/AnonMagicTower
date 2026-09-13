@@ -66,6 +66,7 @@ void Game::generateClassicTower()
     m_floors.clear();
     m_floor = 1;
     m_floor10AmbushTriggered = false;
+    m_floor10AmbushMonsterKeys.clear();
     for (int floor = 1; floor <= 50; ++floor) {
         FloorData fd;
         fd.map.assign(m_width * m_height, Tile_Wall);
@@ -275,6 +276,7 @@ void Game::initFloor(int floor)
 bool Game::loadDefaultMap()
 {
     m_floor10AmbushTriggered = false;
+    m_floor10AmbushMonsterKeys.clear();
     // 从嵌入资源加载默认地图
     QFile res(":/map.txt");
     if (res.open(QIODevice::ReadOnly)) {
@@ -531,6 +533,7 @@ int Game::useBomb()
         ++defeated;
     }
     openMechanismDoorsIfReady();
+    resolveFloor10AmbushIfCleared();
     return defeated;
 }
 
@@ -551,9 +554,8 @@ void Game::triggerFloor10AmbushIfNeeded()
     if (m_floor != 10 || m_floor10AmbushTriggered || !m_currentFloor)
         return;
 
-    // 原塔第 10 层的中央竖厅就是花门后的 Boss 区。底部红门进入
-    // (6..8, 4..9) 后触发一次，避免在两侧房间提前触发。
-    if (m_player.x < 6 || m_player.x > 8 || m_player.y < 4 || m_player.y > 9)
+    // 原塔第 10 层从红门向上走，在八幡海铃正下方这一格触发剧情。
+    if (m_player.x != 7 || m_player.y != 6)
         return;
 
     bool hasFlowerDoor = false;
@@ -571,11 +573,30 @@ void Game::triggerFloor10AmbushIfNeeded()
 
     m_floor10AmbushTriggered = true;
 
-    // 花门属于剧情机关：进入 Boss 区时立即开启，不再等待清怪条件。
-    for (int y = 0; y < m_height; ++y)
-        for (int x = 0; x < m_width; ++x)
-            if (tileAt(x, y) == Tile_DoorMagic)
-                setTile(x, y, Tile_Floor);
+    // 八幡海铃退到中央通道最上方，原位置与主角身后的格子临时上锁。
+    // 两扇侧面的花门也保持关闭，直到包围怪全部击败。
+    const int oldCaptainKey = posKey(7, 5);
+    int captainKey = oldCaptainKey;
+    auto captainIt = m_currentFloor->monsters.find(captainKey);
+    if (captainIt == m_currentFloor->monsters.end() ||
+        MonsterDB::indexOf(captainIt->second.GetName()) + 1 != 8) {
+        captainIt = std::find_if(m_currentFloor->monsters.begin(), m_currentFloor->monsters.end(),
+            [](const auto& entry) {
+                return MonsterDB::indexOf(entry.second.GetName()) + 1 == 8;
+            });
+        if (captainIt != m_currentFloor->monsters.end()) captainKey = captainIt->first;
+    }
+    if (captainIt != m_currentFloor->monsters.end()) {
+        const Monster captain = captainIt->second;
+        m_currentFloor->monsters.erase(captainIt);
+        setTile(captainKey % m_width, captainKey / m_width, Tile_Floor);
+        const int topKey = posKey(7, 2);
+        m_currentFloor->monsters[topKey] = captain;
+        setTile(7, 2, Tile_Monster);
+    }
+    setTile(7, 5, Tile_DoorMagic);
+    setTile(7, 7, Tile_DoorMagic);
+    m_floor10AmbushMonsterKeys.clear();
 
     // 取原版骷髅人/骷髅士兵（ID 5/6）中距离入口最近的六只，
     // 清除旧格后放置到入口周围可行走位置，表现“走过来围住主角”。
@@ -632,13 +653,50 @@ void Game::triggerFloor10AmbushIfNeeded()
             const int key = targets[targetIndex++];
             m_currentFloor->monsters[key] = candidate.second;
             m_currentFloor->map[key] = Tile_Monster;
+            m_floor10AmbushMonsterKeys.insert(key);
             continue;
         }
         // 地图编辑器可能把周围铺满障碍，无法组成包围时保留原位置，
         // 不让剧情事件凭空删除怪物。
         m_currentFloor->monsters[candidate.first] = candidate.second;
         m_currentFloor->map[candidate.first] = Tile_Monster;
+        m_floor10AmbushMonsterKeys.insert(candidate.first);
     }
+    resolveFloor10AmbushIfCleared();
+}
+
+void Game::resolveFloor10AmbushIfCleared()
+{
+    if (m_floor != 10 || !m_floor10AmbushTriggered || !m_currentFloor)
+        return;
+
+    bool guardsRemain = false;
+    if (!m_floor10AmbushMonsterKeys.empty()) {
+        for (const int key : m_floor10AmbushMonsterKeys) {
+            if (m_currentFloor->monsters.count(key) != 0) {
+                guardsRemain = true;
+                break;
+            }
+        }
+    } else {
+        // 读档时不保存可变集合，按主角周围四格半径重建事件状态。
+        for (const auto& entry : m_currentFloor->monsters) {
+            const int id = MonsterDB::indexOf(entry.second.GetName()) + 1;
+            if (id != 5 && id != 6) continue;
+            const int x = entry.first % m_width, y = entry.first / m_width;
+            if (std::abs(x - m_player.x) + std::abs(y - m_player.y) <= 4) {
+                guardsRemain = true;
+                break;
+            }
+        }
+    }
+    if (guardsRemain) return;
+
+    for (int y = 0; y < m_height; ++y)
+        for (int x = 0; x < m_width; ++x)
+            if (tileAt(x, y) == Tile_DoorMagic)
+                setTile(x, y, Tile_Floor);
+    m_floor10AmbushMonsterKeys.clear();
 }
 
 int Game::useEarthquakeScroll()
@@ -899,6 +957,10 @@ Game::FightResult Game::fightAt(int x, int y, std::vector<std::string>& outLog)
     }
 
     std::string bossName = m->GetName();
+    if (m_floor == 10 && bossName == "八幡海铃·骷髅队长" && !m_floor10AmbushTriggered) {
+        outLog.push_back("八幡海铃挡在花门前，先触发包围事件才能挑战她。");
+        return Fight_Stalemate;
+    }
     bool hasShield = (m_player.tempShieldCharges > 0);
     int  shieldBonus = hasShield ? 50 : 0;
 
@@ -958,6 +1020,15 @@ Game::FightResult Game::fightAt(int x, int y, std::vector<std::string>& outLog)
             m_currentFloor->monsters.erase(key);
             setTile(x, y, m_currentFloor->items.count(key) ? Tile_Item : Tile_Floor);
             openMechanismDoorsIfReady();
+            if (m_floor == 10 && m_floor10AmbushTriggered &&
+                bossName != "八幡海铃·骷髅队长")
+                m_floor10AmbushMonsterKeys.erase(key);
+            const bool floor10GuardsCleared =
+                m_floor == 10 && m_floor10AmbushTriggered &&
+                bossName != "八幡海铃·骷髅队长" &&
+                m_floor10AmbushMonsterKeys.empty();
+            if (floor10GuardsCleared)
+                resolveFloor10AmbushIfCleared();
 
             if (m_floor == 49 && bossName == "藤都子SP·魔法警卫") {
                 auto eventKey = [this](int sourceX, int sourceY) {
@@ -984,6 +1055,10 @@ Game::FightResult Game::fightAt(int x, int y, std::vector<std::string>& outLog)
             std::ostringstream ss;
             ss << "你击败了 " << bossName << " 并获得 " << gold << " 金币。";
             outLog.push_back(ss.str());
+            if (m_floor == 10 && bossName == "八幡海铃·骷髅队长") {
+                setTile(x, y, Tile_StairsUp);
+                outLog.push_back("剧情奖励：10层向上的楼梯出现！");
+            }
             if (hasShield) m_player.tempShieldCharges--;
             if (bossName == "长崎素世·本体")
                 return Fight_GameWin;
@@ -1453,6 +1528,7 @@ bool Game::loadFromFile(const std::string& path)
     m_player.flyWandUses = flyWandUses;
     m_player.symmetryFlyerUses = symmetryFlyerUses;
     m_floor10AmbushTriggered = floor10AmbushTriggered;
+    m_floor10AmbushMonsterKeys.clear();
 
     for (int i = 0; i < invCount; ++i) {
         std::string iname; int ival;

@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <unordered_map>
+#include <unordered_set>
 #include <string>
 #include <memory>
 #include "Entities/Player.h"
@@ -130,5 +131,7 @@ private:
 
     // 10 层中央 Boss 区的骷髅士兵包围事件。
     void triggerFloor10AmbushIfNeeded();
+    void resolveFloor10AmbushIfCleared();
     bool m_floor10AmbushTriggered = false;
+    std::unordered_set<int> m_floor10AmbushMonsterKeys;
 };

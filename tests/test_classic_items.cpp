@@ -275,27 +275,63 @@ int main() {
     assert(brokenFlowerDoor.tryMovePlayer(4, 3) == Game::Move_Ok);
     assert(brokenFlowerDoor.tileAt(4, 3) == Tile_Floor);
 
-    // 10 层花门事件：进入中央 Boss 区后花门立即开启，内部六只骷髅士兵
-    // 走到主角周围形成包围（事件只触发一次）。
+    // 10 层完整 Boss 事件：到达八幡海铃前一格后，海铃退到顶部，
+    // 上下通路锁定，六只侧翼怪物包围；清完包围怪后花门开启，
+    // 击败海铃会出现奖励提示与向上楼梯。
     Game floor10Ambush;
     for (int i = 0; i < 9; ++i) floor10Ambush.goUpFloor(7, 12, false);
     floor10Ambush.initFloor(10);
     floor10Ambush.player().x = 7;
-    floor10Ambush.player().y = 10;
-    floor10Ambush.setTile(7, 9, Tile_Floor);
+    floor10Ambush.player().y = 7;
+    floor10Ambush.setTile(7, 6, Tile_Floor);
     floor10Ambush.setTile(5, 5, Tile_DoorMagic);
     floor10Ambush.setTile(9, 5, Tile_DoorMagic);
+    floor10Ambush.setTile(7, 5, Tile_Monster);
+    floor10Ambush.spawnMonster(7, 5, MonsterDB::getByIndex(7));
     const Monster skeletonSoldier = MonsterDB::getByIndex(5);
     for (int i = 0; i < 6; ++i)
         floor10Ambush.spawnMonster(3 + i, 3, skeletonSoldier);
-    assert(floor10Ambush.tryMovePlayer(7, 9) == Game::Move_Ok);
+    floor10Ambush.player().atk = 1000;
+    floor10Ambush.player().hp = 10000;
+    assert(floor10Ambush.tryMovePlayer(7, 6) == Game::Move_Ok);
+    assert(floor10Ambush.tileAt(5, 5) == Tile_DoorMagic);
+    assert(floor10Ambush.tileAt(9, 5) == Tile_DoorMagic);
+    assert(floor10Ambush.tileAt(7, 5) == Tile_DoorMagic);
+    assert(floor10Ambush.tileAt(7, 7) == Tile_DoorMagic);
+    assert(floor10Ambush.monsterAt(7, 2) != nullptr);
+    assert(floor10Ambush.monsterAt(7, 2)->GetName() == "八幡海铃·骷髅队长");
+    int surrounded = 0;
+    for (int y = 2; y <= 12; ++y)
+        for (int x = 2; x <= 12; ++x)
+            if (floor10Ambush.hasMonsterAt(x, y) &&
+                floor10Ambush.monsterAt(x, y)->GetName() == "祐天寺若麦·骷髅士兵") ++surrounded;
+    assert(surrounded == 6);
+    while (true) {
+        int guardX = -1, guardY = -1;
+        for (int y = 2; y <= 12 && guardX < 0; ++y) {
+            for (int x = 2; x <= 12; ++x) {
+                auto* guard = floor10Ambush.monsterAt(x, y);
+                if (guard && guard->GetName() == "祐天寺若麦·骷髅士兵") {
+                    guardX = x; guardY = y; break;
+                }
+            }
+        }
+        if (guardX < 0) break;
+        log.clear();
+        assert(floor10Ambush.fightAt(guardX, guardY, log) == Game::Fight_PlayerWin);
+    }
     assert(floor10Ambush.tileAt(5, 5) == Tile_Floor);
     assert(floor10Ambush.tileAt(9, 5) == Tile_Floor);
-    int surrounded = 0;
-    for (int y = 7; y <= 11; ++y)
-        for (int x = 4; x <= 10; ++x)
-            if (floor10Ambush.hasMonsterAt(x, y)) ++surrounded;
-    assert(surrounded == 6);
+    assert(floor10Ambush.tileAt(7, 5) == Tile_Floor);
+    assert(floor10Ambush.tileAt(7, 7) == Tile_Floor);
+    log.clear();
+    assert(floor10Ambush.fightAt(7, 2, log) == Game::Fight_PlayerWin);
+    assert(floor10Ambush.tileAt(7, 2) == Tile_StairsUp);
+    bool floor10RewardShown = false;
+    for (const auto& line : log)
+        if (line.find("奖励") != std::string::npos || line.find("楼梯") != std::string::npos)
+            floor10RewardShown = true;
+    assert(floor10RewardShown);
 
     Game quakeGame;
     quakeGame.setTile(4, 4, Tile_Wall);
