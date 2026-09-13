@@ -66,6 +66,7 @@ void Game::generateClassicTower()
     m_floors.clear();
     m_floor = 1;
     m_floor3PrisonTriggered = false;
+    m_floor3TrapActive = false;
     m_floor10AmbushTriggered = false;
     m_floor10AmbushMonsterKeys.clear();
     for (int floor = 1; floor <= 50; ++floor) {
@@ -137,7 +138,7 @@ void Game::generateClassicTower()
         const int y = 7 - sourceY;
         if (x < 2 || x > 12 || y < 2 || y > 12) continue;
         FloorData& fd = m_floors[level];
-        const int key = y * m_width + x;
+        int key = y * m_width + x;
 
         if (type == 0) {
             int tile = Tile_Floor;
@@ -184,6 +185,12 @@ void Game::generateClassicTower()
                 fd.shops[key] = shop;
             } else {
                 fd.map[key] = Tile_NPC;
+                // 原版二层小偷位于牢房中央，固定迁移到主题地图坐标 (7,6)。
+                if (level == 2 && id == 13) {
+                    fd.map[key] = Tile_Floor;
+                    key = posKey(7, 6);
+                    fd.map[key] = Tile_NPC;
+                }
                 const char* name = (id == 22) ? "公主" : ((id == 12 || id == 13 || id == 14 || id == 25 || id == 30 || id == 31 || id == 46) ? "小偷" : "老头");
                 std::vector<std::string> dialog{"这是第 " + std::to_string(level) + " 层。继续探索吧。"};
                 switch (id) {
@@ -277,6 +284,7 @@ void Game::initFloor(int floor)
 bool Game::loadDefaultMap()
 {
     m_floor3PrisonTriggered = false;
+    m_floor3TrapActive = false;
     m_floor10AmbushTriggered = false;
     m_floor10AmbushMonsterKeys.clear();
     // 从嵌入资源加载默认地图
@@ -560,10 +568,16 @@ void Game::triggerFloor3PrisonStoryIfNeeded()
         return;
 
     m_floor3PrisonTriggered = true;
+    m_floor3TrapActive = true;
+    // 原版序章的围攻伤害与虚弱效果：四名魔法警卫围住主角后
+    // 造成固定伤害，并将攻击、防御减半。
+    m_player.hp = std::max(1, m_player.hp - 600);
+    m_player.atk = std::max(1, m_player.atk / 2);
+    m_player.def = std::max(1, m_player.def / 2);
     goDownFloor(3, 12, false);
-    // 小偷位于2层左侧房间，剧情结束后主角站到其左侧。
-    m_player.x = 3;
-    m_player.y = 8;
+    // 小偷固定在二层 (7,6)，主角被扔回其下方的牢房通道。
+    m_player.x = 7;
+    m_player.y = 7;
 }
 
 void Game::triggerFloor10AmbushIfNeeded()
@@ -1212,7 +1226,8 @@ bool Game::saveToFile(const std::string& path) const
         << m_player.hasCross << " " << m_player.hasDragonSlayer << " "
         << m_player.hasHolyShield << " " << m_player.freezeMagicUsed << " "
         << m_player.flyWandUses << " " << m_player.symmetryFlyerUses << " "
-        << m_floor10AmbushTriggered << " " << m_floor3PrisonTriggered << "\n";
+        << m_floor10AmbushTriggered << " " << m_floor3PrisonTriggered << " "
+        << m_floor3TrapActive << "\n";
 
     // 背包物品
     ofs << m_player.InventoryCount() << "\n";
@@ -1504,6 +1519,7 @@ bool Game::loadFromFile(const std::string& path)
     int flyWandUses = 0, symmetryFlyerUses = 0;
     bool floor10AmbushTriggered = false;
     bool floor3PrisonTriggered = false;
+    bool floor3TrapActive = false;
     std::string invToken;
     ifs >> invToken;
     if (invToken == "EXTRA") {
@@ -1518,6 +1534,8 @@ bool Game::loadFromFile(const std::string& path)
                     ifs >> floor10AmbushTriggered;
                 if (ifs.peek() != '\n' && ifs.peek() != '\r' && ifs.peek() != EOF)
                     ifs >> floor3PrisonTriggered;
+                if (ifs.peek() != '\n' && ifs.peek() != '\r' && ifs.peek() != EOF)
+                    ifs >> floor3TrapActive;
             }
         }
         ifs >> invToken; // 下一个是背包数量
@@ -1551,6 +1569,7 @@ bool Game::loadFromFile(const std::string& path)
     m_player.symmetryFlyerUses = symmetryFlyerUses;
     m_floor10AmbushTriggered = floor10AmbushTriggered;
     m_floor3PrisonTriggered = floor3PrisonTriggered;
+    m_floor3TrapActive = floor3TrapActive;
     m_floor10AmbushMonsterKeys.clear();
 
     for (int i = 0; i < invCount; ++i) {

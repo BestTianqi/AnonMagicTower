@@ -633,8 +633,9 @@ void MainWindow::showInventory()
 void MainWindow::showOpeningPrisonStory()
 {
     showStoryMessage(QString::fromUtf8(
-        "你在3层向前走时被守卫击晕，醒来后已经回到2层牢房。\n\n"
-        "先去找小偷，他知道被夺走的铁剑和铁盾在哪里。"));
+        "魔王与四名魔法警卫从四面围住了你！\n"
+        "你受到600点伤害，攻击和防御暂时减半。\n\n"
+        "你被扔回2层牢房。必须与小偷对话两次，才能解除陷阱状态。"));
 }
 
 void MainWindow::showOpeningFloorStory(int fromFloor, int toFloor)
@@ -729,19 +730,19 @@ void MainWindow::showNPCDialog(int x, int y)
         return;
     }
     if (classicId == 13) {
-        // 原版2层小偷是两段式剧情：第一次确认主角醒来，第二次交代
-        // 铁剑/铁盾所在楼层；第一次对话同时打开身边的暗道。
+        // 原版2层小偷必须对话两次：第一次给出铁剑/铁盾楼层，
+        // 第二次才解除三层陷阱造成的虚弱状态。
         if (!npc->HasGivenReward()) {
             for (int dy = -1; dy <= 1; ++dy)
                 for (int dx = -1; dx <= 1; ++dx)
                     if (std::abs(dx) + std::abs(dy) == 1 && m_game->tileAt(x + dx, y + dy) == Tile_DarkWall)
                         m_game->setTile(x + dx, y + dy, Tile_Floor);
             npc->SetGiven(true);
-            showNpcInfo(QString::fromUtf8("小偷"),
-                QString::fromUtf8("你清醒了吗？这里是魔塔2层的牢房。"));
+            showStoryMessage(QString::fromUtf8("铁剑在5层，铁盾在9层。先去把它们找回来。"));
         } else {
-            showNpcInfo(QString::fromUtf8("小偷"),
-                QString::fromUtf8("你的剑和盾被警卫拿走了。铁剑在5层，铁盾在9层，先去找到它们。"));
+            if (m_game->floor3TrapActive())
+                m_game->clearFloor3Trap();
+            showStoryMessage(QString::fromUtf8("快去找剑和盾吧。现在可以继续前进了。"));
         }
         ui.mapWidget->update();
         updateHUD();

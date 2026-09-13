@@ -65,6 +65,8 @@ public:
 
     Player& player() { return m_player; }
     int currentFloor() const { return m_floor; }
+    bool floor3TrapActive() const { return m_floor3TrapActive; }
+    void clearFloor3Trap() { m_floor3TrapActive = false; }
 
     enum MoveResult { Move_Ok, Move_Block, Move_Pickup, Move_Encounter,
                       Move_NPC, Move_StairsUp, Move_StairsDown, Move_PlayerDead,
@@ -134,6 +136,7 @@ private:
     void triggerFloor10AmbushIfNeeded();
     void resolveFloor10AmbushIfCleared();
     bool m_floor3PrisonTriggered = false;
+    bool m_floor3TrapActive = false;
     bool m_floor10AmbushTriggered = false;
     std::unordered_set<int> m_floor10AmbushMonsterKeys;
 };
