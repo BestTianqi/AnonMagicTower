@@ -163,6 +163,29 @@
         <file>images/characters/portraits/sakiko.png</file>
         <file>images/characters/portraits/arale.png</file>
         <file>images/characters/portraits/viola.png</file>
+        <file>images/characters/portraits/nonoka.png</file>
+        <file>images/characters/portraits/ritsu.png</file>
+        <file>images/characters/portraits/miyako.png</file>
+        <file>images/characters/portraits/yuno.png</file>
+        <file>images/characters/portraits/yukina.png</file>
+        <file>images/characters/portraits/kasumi.png</file>
+        <file>images/characters/portraits/nonoka_stage.png</file>
+        <file>images/characters/portraits/rana_stage.png</file>
+        <file>images/characters/portraits/tomori_stage.png</file>
+        <file>images/characters/portraits/soyo_stage.png</file>
+        <file>images/characters/portraits/taki_stage.png</file>
+        <file>images/characters/portraits/sakiko_stage.png</file>
+        <file>images/characters/portraits/viola_stage.png</file>
+        <file>images/characters/portraits/mutsumi_stage.png</file>
+        <file>images/characters/portraits/arale_stage.png</file>
+        <file>images/characters/portraits/ritsu_stage.png</file>
+        <file>images/characters/portraits/nyamu_stage.png</file>
+        <file>images/characters/portraits/yuno_stage.png</file>
+        <file>images/characters/portraits/umiri_stage.png</file>
+        <file>images/characters/portraits/miyako_stage.png</file>
+        <file>images/characters/portraits/uika_stage.png</file>
+        <file>images/characters/portraits/yukina_stage.png</file>
+        <file>images/characters/portraits/kasumi_stage.png</file>
         <file>images/characters/pilot/anon_casual.png</file>
         <file>images/characters/pilot/anon_stage.png</file>
     </qresource>

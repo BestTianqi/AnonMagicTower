@@ -5,9 +5,21 @@
 #include "Entities/Items.h"
 #include "Entities/NPC.h"
 #include "Entities/Player.h"
+#include "Entities/MonsterDB.h"
 #include "Game/Game.h"
 
 int main() {
+    const auto roster = MonsterDB::all();
+    assert(roster.size() == 34);
+    assert(roster[0].GetName() == "要乐奈·绿色史莱姆");
+    assert(roster[14].GetName() == "宫永ののかSP·巨型章鱼");
+    assert(roster[15].GetName() == "凑友希那·吸血鬼");
+    assert(roster[16].GetName() == "户山香澄·大法师");
+    assert(roster[30].GetName() == "藤都子SP·魔法警卫");
+    assert(roster[33].GetName() == "长崎素世·本体");
+    assert(roster[15].GetHP() == 444 && roster[15].GetATK() == 199 &&
+           roster[15].GetDEF() == 66 && roster[15].GetGold() == 144);
+
     assert(classicItemTierForFloor(1).rubyAttack == 1);
     assert(classicItemTierForFloor(10).largePotionHp == 200);
     assert(classicItemTierForFloor(11).rubyAttack == 2);

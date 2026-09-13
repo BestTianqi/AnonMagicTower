@@ -39,23 +39,40 @@ static QString monsterPortraitPath(const std::string& name)
     // 与 MapWidget::loadAssets 中的原版怪物 ID 映射保持一致。
     // 怪物名称包含“原版形态”后缀，不能只靠角色名 contains 判断。
     static const char* themedPortraits[] = {
-        ":/images/characters/portraits/rana.png",    ":/images/characters/portraits/uika.png",
-        ":/images/characters/portraits/viola.png",   ":/images/characters/portraits/tomori.png",
-        ":/images/characters/portraits/nyamu.png",   ":/images/characters/portraits/rana.png",
-        ":/images/characters/portraits/taki.png",    ":/images/characters/portraits/mutsumi.png",
-        ":/images/characters/portraits/uika.png",    ":/images/characters/portraits/rana.png",
-        ":/images/characters/portraits/tomori.png",  ":/images/characters/portraits/taki.png",
-        ":/images/characters/portraits/umiri.png",   ":/images/characters/portraits/nyamu.png",
-        ":/images/characters/portraits/mutsumi.png", ":/images/characters/portraits/uika.png",
-        ":/images/characters/portraits/sakiko.png",  ":/images/characters/portraits/viola.png",
-        ":/images/characters/portraits/arale.png",   ":/images/characters/portraits/arale.png",
-        ":/images/characters/portraits/viola.png",   ":/images/characters/portraits/umiri.png",
-        ":/images/characters/portraits/nyamu.png",   ":/images/characters/portraits/rana.png",
-        ":/images/characters/portraits/taki.png",    ":/images/characters/portraits/tomori.png",
-        ":/images/characters/portraits/umiri.png",   ":/images/characters/portraits/nyamu.png",
-        ":/images/characters/portraits/mutsumi.png", ":/images/characters/portraits/uika.png",
-        ":/images/characters/portraits/sakiko.png",  ":/images/characters/portraits/viola.png",
-        ":/images/characters/portraits/soyo.png",    ":/images/characters/portraits/soyo.png"
+        ":/images/characters/portraits/rana.png",
+        ":/images/characters/portraits/mutsumi.png",
+        ":/images/characters/portraits/sakiko.png",
+        ":/images/characters/portraits/tomori.png",
+        ":/images/characters/portraits/taki.png",
+        ":/images/characters/portraits/nyamu.png",
+        ":/images/characters/portraits/uika.png",
+        ":/images/characters/portraits/umiri.png",
+        ":/images/characters/portraits/arale.png",
+        ":/images/characters/portraits/nonoka.png",
+        ":/images/characters/portraits/viola.png",
+        ":/images/characters/portraits/ritsu.png",
+        ":/images/characters/portraits/miyako.png",
+        ":/images/characters/portraits/yuno.png",
+        ":/images/characters/portraits/nonoka_stage.png",
+        ":/images/characters/portraits/yukina.png",
+        ":/images/characters/portraits/kasumi.png",
+        ":/images/characters/portraits/rana_stage.png",
+        ":/images/characters/portraits/tomori_stage.png",
+        ":/images/characters/portraits/soyo_stage.png",
+        ":/images/characters/portraits/taki_stage.png",
+        ":/images/characters/portraits/sakiko_stage.png",
+        ":/images/characters/portraits/viola_stage.png",
+        ":/images/characters/portraits/mutsumi_stage.png",
+        ":/images/characters/portraits/soyo.png",
+        ":/images/characters/portraits/arale_stage.png",
+        ":/images/characters/portraits/ritsu_stage.png",
+        ":/images/characters/portraits/nyamu_stage.png",
+        ":/images/characters/portraits/yuno_stage.png",
+        ":/images/characters/portraits/umiri_stage.png",
+        ":/images/characters/portraits/miyako_stage.png",
+        ":/images/characters/portraits/uika_stage.png",
+        ":/images/characters/portraits/soyo_stage.png",
+        ":/images/characters/portraits/soyo_stage.png"
     };
     const int monsterIndex = MonsterDB::indexOf(name);
     if (monsterIndex >= 0 && monsterIndex < static_cast<int>(std::size(themedPortraits)))
@@ -74,6 +91,13 @@ static QString monsterPortraitPath(const std::string& name)
     if (n.contains(QString::fromUtf8("丰川祥子"))) return QStringLiteral(":/images/characters/portraits/sakiko.png");
     if (n.contains(QString::fromUtf8("薇欧拉"))) return QStringLiteral(":/images/characters/portraits/viola.png");
     if (n.contains(QString::fromUtf8("仲町"))) return QStringLiteral(":/images/characters/portraits/arale.png");
+    if (n.contains(QString::fromUtf8("宫永"))) return QStringLiteral(":/images/characters/portraits/nonoka.png");
+    if (n.contains(QString::fromUtf8("峰月"))) return QStringLiteral(":/images/characters/portraits/ritsu.png");
+    if (n.contains(QString::fromUtf8("藤都子"))) return QStringLiteral(":/images/characters/portraits/miyako.png");
+    if (n.contains(QString::fromUtf8("千石"))) return QStringLiteral(":/images/characters/portraits/yuno.png");
+    if (n.contains(QString::fromUtf8("凑友希那"))) return QStringLiteral(":/images/characters/portraits/yukina.png");
+    if (n.contains(QString::fromUtf8("户山香澄"))) return QStringLiteral(":/images/characters/portraits/kasumi.png");
+    if (n.contains(QString::fromUtf8("Soyorin"))) return QStringLiteral(":/images/characters/portraits/soyo_stage.png");
     return {};
 }
 
@@ -361,35 +385,14 @@ void MainWindow::loadAssets()
     for (const auto& [name, path] : itemImages)
         mw->loadItemImage(name, QString::fromUtf8(path));
 
-    // 加载怪物图片
+    // 加载怪物图片：使用与边栏相同的本体/舞台头像映射。
     auto monsters = MonsterDB::all();
     for (size_t i = 0; i < monsters.size(); ++i) {
-        QString path = QString(":/images/monster_%1.png").arg(i + 1, 2, 10, QChar('0'));
+        QString path = monsterPortraitPath(monsters[i].GetName());
+        if (path.isEmpty())
+            path = QString(":/images/monster_%1.png").arg(i + 1, 2, 10, QChar('0'));
         mw->loadMonsterImage(monsters[i].GetName(), path);
     }
-
-    // 34 个主题形态按原版怪物 ID 顺序映射，外观变化不影响原版数值。
-    const std::vector<const char*> themedPortraits = {
-        ":/images/characters/portraits/rana.png",    ":/images/characters/portraits/uika.png",
-        ":/images/characters/portraits/viola.png",  ":/images/characters/portraits/tomori.png",
-        ":/images/characters/portraits/nyamu.png",  ":/images/characters/portraits/rana.png",
-        ":/images/characters/portraits/taki.png",   ":/images/characters/portraits/mutsumi.png",
-        ":/images/characters/portraits/uika.png",   ":/images/characters/portraits/rana.png",
-        ":/images/characters/portraits/tomori.png", ":/images/characters/portraits/taki.png",
-        ":/images/characters/portraits/umiri.png",  ":/images/characters/portraits/nyamu.png",
-        ":/images/characters/portraits/mutsumi.png",":/images/characters/portraits/uika.png",
-        ":/images/characters/portraits/sakiko.png", ":/images/characters/portraits/viola.png",
-        ":/images/characters/portraits/arale.png",  ":/images/characters/portraits/arale.png",
-        ":/images/characters/portraits/viola.png",  ":/images/characters/portraits/umiri.png",
-        ":/images/characters/portraits/nyamu.png",  ":/images/characters/portraits/rana.png",
-        ":/images/characters/portraits/taki.png",   ":/images/characters/portraits/tomori.png",
-        ":/images/characters/portraits/umiri.png",  ":/images/characters/portraits/nyamu.png",
-        ":/images/characters/portraits/mutsumi.png",":/images/characters/portraits/uika.png",
-        ":/images/characters/portraits/sakiko.png", ":/images/characters/portraits/viola.png",
-        ":/images/characters/portraits/soyo.png",   ":/images/characters/portraits/soyo.png"
-    };
-    for (size_t i = 0; i < monsters.size() && i < themedPortraits.size(); ++i)
-        mw->loadMonsterImage(monsters[i].GetName(), QString::fromUtf8(themedPortraits[i]));
 
     mw->update();
 }
@@ -1376,9 +1379,11 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
         if (m_game->player().hasHolyShield && magicAttacker) dmgToPlayer = 0;
         // 特殊道具减伤
         std::string mn = m->GetName();
-        if (m_game->player().hasPenguinDoll && (mn == "高松灯" || mn == "企鹅"))
+        if (m_game->player().hasPenguinDoll &&
+            (mn.find("高松灯") != std::string::npos || mn.find("企鹅") != std::string::npos))
             dmgToPlayer /= 2;
-        if (m_game->player().hasMatchaParfait && (mn == "要乐奈" || mn == "小猫"))
+        if (m_game->player().hasMatchaParfait &&
+            (mn.find("要乐奈") != std::string::npos || mn.find("小猫") != std::string::npos))
             dmgToPlayer /= 2;
         int roundsToKill = (dmgToMonster > 0) ? (m->GetHP() + dmgToMonster - 1) / dmgToMonster : -1;
         int totalDamage = (roundsToKill > 0 && dmgToPlayer > 0) ? (roundsToKill - 1) * dmgToPlayer : 0;

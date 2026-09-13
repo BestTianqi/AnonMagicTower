@@ -143,17 +143,31 @@ static QString editorItemAsset(const std::string& name)
 static QString editorMonsterAsset(const std::string& name)
 {
     const QString monster = QString::fromStdString(name);
-    if (monster.contains(QString::fromUtf8("长崎素世"))) return ":/images/characters/portraits/soyo.png";
-    if (monster.contains(QString::fromUtf8("高松灯"))) return ":/images/characters/portraits/tomori.png";
-    if (monster.contains(QString::fromUtf8("椎名立希"))) return ":/images/characters/portraits/taki.png";
-    if (monster.contains(QString::fromUtf8("要乐奈"))) return ":/images/characters/portraits/rana.png";
-    if (monster.contains(QString::fromUtf8("八幡海铃"))) return ":/images/characters/portraits/umiri.png";
-    if (monster.contains(QString::fromUtf8("祐天寺若麦"))) return ":/images/characters/portraits/nyamu.png";
-    if (monster.contains(QString::fromUtf8("若叶睦"))) return ":/images/characters/portraits/mutsumi.png";
-    if (monster.contains(QString::fromUtf8("三角初华"))) return ":/images/characters/portraits/uika.png";
-    if (monster.contains(QString::fromUtf8("丰川祥子"))) return ":/images/characters/portraits/sakiko.png";
-    if (monster.contains(QString::fromUtf8("仲町"))) return ":/images/characters/portraits/arale.png";
-    return ":/images/characters/portraits/viola.png";
+    // 编辑器预览与运行时共用本体/SP 视觉规则：名称带 SP 或“幻影”时显示舞台头像。
+    const bool stage = monster.contains(QString::fromUtf8("SP")) ||
+                       monster.contains(QString::fromUtf8("幻影"));
+    const auto asset = [stage](const QString& id) {
+        return QStringLiteral(":/images/characters/portraits/") + id +
+               (stage ? QStringLiteral("_stage.png") : QStringLiteral(".png"));
+    };
+    if (monster.contains(QString::fromUtf8("长崎素世")) || monster.contains(QString::fromUtf8("Soyorin"))) return asset(QStringLiteral("soyo"));
+    if (monster.contains(QString::fromUtf8("凑友希那"))) return asset(QStringLiteral("yukina"));
+    if (monster.contains(QString::fromUtf8("户山香澄"))) return asset(QStringLiteral("kasumi"));
+    if (monster.contains(QString::fromUtf8("高松灯"))) return asset(QStringLiteral("tomori"));
+    if (monster.contains(QString::fromUtf8("椎名立希"))) return asset(QStringLiteral("taki"));
+    if (monster.contains(QString::fromUtf8("要乐奈"))) return asset(QStringLiteral("rana"));
+    if (monster.contains(QString::fromUtf8("八幡海铃"))) return asset(QStringLiteral("umiri"));
+    if (monster.contains(QString::fromUtf8("祐天寺若麦"))) return asset(QStringLiteral("nyamu"));
+    if (monster.contains(QString::fromUtf8("若叶睦"))) return asset(QStringLiteral("mutsumi"));
+    if (monster.contains(QString::fromUtf8("三角初华"))) return asset(QStringLiteral("uika"));
+    if (monster.contains(QString::fromUtf8("丰川祥子"))) return asset(QStringLiteral("sakiko"));
+    if (monster.contains(QString::fromUtf8("薇欧拉"))) return asset(QStringLiteral("viola"));
+    if (monster.contains(QString::fromUtf8("仲町"))) return asset(QStringLiteral("arale"));
+    if (monster.contains(QString::fromUtf8("宫永"))) return asset(QStringLiteral("nonoka"));
+    if (monster.contains(QString::fromUtf8("峰月"))) return asset(QStringLiteral("ritsu"));
+    if (monster.contains(QString::fromUtf8("藤都子"))) return asset(QStringLiteral("miyako"));
+    if (monster.contains(QString::fromUtf8("千石"))) return asset(QStringLiteral("yuno"));
+    return QStringLiteral(":/images/characters/portraits/viola.png");
 }
 
 MapEditWidget::MapEditWidget(QWidget* parent)

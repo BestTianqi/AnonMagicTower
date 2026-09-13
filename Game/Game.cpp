@@ -466,7 +466,8 @@ int Game::useBomb()
         if (it == m_currentFloor->monsters.end()) continue;
         const std::string name = it->second.GetName();
         // 原版炸弹不能伤害四类头目。
-        if (name.find("魔王") != std::string::npos || name.find("魔龙") != std::string::npos ||
+        if (name.find("魔王") != std::string::npos || name.find("长崎素世") != std::string::npos ||
+            name.find("魔龙") != std::string::npos ||
             name.find("大法师") != std::string::npos) continue;
         m_player.gold += it->second.GetGold();
         m_currentFloor->monsters.erase(it);
@@ -735,9 +736,11 @@ Game::FightResult Game::fightAt(int x, int y, std::vector<std::string>& outLog)
                                    bossName.find("大法师") != std::string::npos ||
                                    bossName.find("魔法") != std::string::npos;
         if (m_player.hasHolyShield && magicAttacker) dmgToPlayer = 0;
-        if (m_player.hasPenguinDoll && (bossName == "高松灯" || bossName == "企鹅"))
+        if (m_player.hasPenguinDoll &&
+            (bossName.find("高松灯") != std::string::npos || bossName.find("企鹅") != std::string::npos))
             dmgToPlayer /= 2;
-        if (m_player.hasMatchaParfait && (bossName == "要乐奈" || bossName == "小猫"))
+        if (m_player.hasMatchaParfait &&
+            (bossName.find("要乐奈") != std::string::npos || bossName.find("小猫") != std::string::npos))
             dmgToPlayer /= 2;
 
         // 双方都无法造成伤害 → 僵局
@@ -769,7 +772,7 @@ Game::FightResult Game::fightAt(int x, int y, std::vector<std::string>& outLog)
             m_currentFloor->monsters.erase(key);
             setTile(x, y, m_currentFloor->items.count(key) ? Tile_Item : Tile_Floor);
 
-            if (m_floor == 49 && bossName == "丰川祥子·魔法警卫") {
+            if (m_floor == 49 && bossName == "藤都子SP·魔法警卫") {
                 auto eventKey = [this](int sourceX, int sourceY) {
                     return (7 - sourceY) * m_width + (sourceX + 7);
                 };
@@ -781,11 +784,11 @@ Game::FightResult Game::fightAt(int x, int y, std::vector<std::string>& outLog)
                 if (sealComplete) {
                     const int bossKey = eventKey(0, 3);
                     m_currentFloor->monsters[bossKey] =
-                        Monster("长崎素世·魔王幻影", 800, 500, 100, 500);
-                    outLog.push_back("四名魔法警卫形成的封印生效，长崎素世·魔王幻影的属性降为原来的十分之一！");
+                        Monster("长崎素世·幻影", 800, 500, 100, 500);
+                    outLog.push_back("四名魔法警卫形成的封印生效，长崎素世·幻影的属性降为原来的十分之一！");
                 }
             }
-            if (m_floor == 49 && bossName == "长崎素世·魔王幻影") {
+            if (m_floor == 49 && bossName == "长崎素世·幻影") {
                 m_currentFloor->monsters.clear();
                 for (int& tile : m_currentFloor->map)
                     if (tile == Tile_Monster) tile = Tile_Floor;
@@ -795,7 +798,7 @@ Game::FightResult Game::fightAt(int x, int y, std::vector<std::string>& outLog)
             ss << "你击败了 " << bossName << " 并获得 " << gold << " 金币。";
             outLog.push_back(ss.str());
             if (hasShield) m_player.tempShieldCharges--;
-            if (bossName == "长崎素世·魔王本体")
+            if (bossName == "长崎素世·本体")
                 return Fight_GameWin;
             return Fight_PlayerWin;
         }
