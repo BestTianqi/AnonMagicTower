@@ -27,6 +27,7 @@
 #include <QLocale>
 #include <QMap>
 #include <algorithm>
+#include <iterator>
 
 static QString formatNumber(int value)
 {
@@ -35,6 +36,32 @@ static QString formatNumber(int value)
 
 static QString monsterPortraitPath(const std::string& name)
 {
+    // 与 MapWidget::loadAssets 中的原版怪物 ID 映射保持一致。
+    // 怪物名称包含“原版形态”后缀，不能只靠角色名 contains 判断。
+    static const char* themedPortraits[] = {
+        ":/images/characters/portraits/rana.png",    ":/images/characters/portraits/uika.png",
+        ":/images/characters/portraits/viola.png",   ":/images/characters/portraits/tomori.png",
+        ":/images/characters/portraits/nyamu.png",   ":/images/characters/portraits/rana.png",
+        ":/images/characters/portraits/taki.png",    ":/images/characters/portraits/mutsumi.png",
+        ":/images/characters/portraits/uika.png",    ":/images/characters/portraits/rana.png",
+        ":/images/characters/portraits/tomori.png",  ":/images/characters/portraits/taki.png",
+        ":/images/characters/portraits/umiri.png",   ":/images/characters/portraits/nyamu.png",
+        ":/images/characters/portraits/mutsumi.png", ":/images/characters/portraits/uika.png",
+        ":/images/characters/portraits/sakiko.png",  ":/images/characters/portraits/viola.png",
+        ":/images/characters/portraits/arale.png",   ":/images/characters/portraits/arale.png",
+        ":/images/characters/portraits/viola.png",   ":/images/characters/portraits/umiri.png",
+        ":/images/characters/portraits/nyamu.png",   ":/images/characters/portraits/rana.png",
+        ":/images/characters/portraits/taki.png",    ":/images/characters/portraits/tomori.png",
+        ":/images/characters/portraits/umiri.png",   ":/images/characters/portraits/nyamu.png",
+        ":/images/characters/portraits/mutsumi.png", ":/images/characters/portraits/uika.png",
+        ":/images/characters/portraits/sakiko.png",  ":/images/characters/portraits/viola.png",
+        ":/images/characters/portraits/soyo.png",    ":/images/characters/portraits/soyo.png"
+    };
+    const int monsterIndex = MonsterDB::indexOf(name);
+    if (monsterIndex >= 0 && monsterIndex < static_cast<int>(std::size(themedPortraits)))
+        return QString::fromUtf8(themedPortraits[monsterIndex]);
+
+    // 自定义怪物没有原版 ID 时，仍按名称尝试匹配主题角色。
     const QString n = QString::fromStdString(name);
     if (n.contains(QString::fromUtf8("长崎素世"))) return QStringLiteral(":/images/characters/portraits/soyo.png");
     if (n.contains(QString::fromUtf8("高松灯"))) return QStringLiteral(":/images/characters/portraits/tomori.png");
