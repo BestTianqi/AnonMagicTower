@@ -15,7 +15,8 @@ MenuWindow::MenuWindow(QWidget* parent)
     ui.setupUi(this);
     m_backgroundImage.load(QStringLiteral(":/images/backgrounds/mujica_theater.png"));
     setWindowTitle(QString::fromUtf8("MYGO!!!!! × Ave Mujica：梦限大魔塔"));
-    setMinimumSize(520, 420);
+    // 与游戏页的布局尺寸一致，嵌入后窗口不会把地图和侧栏压缩到不可用。
+    setMinimumSize(1100, 760);
     setStyleSheet(
         "QWidget#MenuWindow { background-color: #0a0812; color: #e8e9f2; }"
         "QPushButton { color: #fff7d0; border-image: url(:/images/runtime/ui/button_texture.png) 18 24 18 24 stretch stretch; padding: 10px 18px; font-size: 15px; font-weight: 700; }"
