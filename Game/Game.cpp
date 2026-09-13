@@ -1204,10 +1204,28 @@ Game::FightResult Game::fightAt(int x, int y, std::vector<std::string>& outLog)
             std::ostringstream ss;
             ss << "你击败了 " << bossName << " 并获得 " << gold << " 金币。";
             outLog.push_back(ss.str());
+            // 原版阶段 Boss 击败后会留下奖励并开启通往上一层的出口。
+            // 奖励放在 Boss 原位置，避免覆盖地图上的其他静态物件。
+            std::unique_ptr<Item> bossReward;
+            std::string rewardName;
+            int rewardStairY = m_height - 3;
             if (m_floor == 10 && bossName == "八幡海铃·骷髅队长") {
-                // 原版奖励楼梯固定出现在地图正中间最下方。
-                setTile(m_width / 2, m_height - 3, Tile_StairsUp);
-                outLog.push_back("剧情奖励：10层地图正中间下方出现向上楼梯！");
+                const auto tier = classicItemTierForFloor(m_floor);
+                bossReward = std::make_unique<RubyGem>(tier.rubyAttack, "舞台红宝石");
+                rewardName = "舞台红宝石";
+            } else if (m_floor == 20 && bossName == "凑友希那·吸血鬼") {
+                const auto tier = classicItemTierForFloor(m_floor);
+                bossReward = std::make_unique<SapphireGem>(tier.sapphireDefense, "舞台蓝宝石");
+                rewardName = "舞台蓝宝石";
+            } else if (m_floor == 40 && bossName == "幼年长崎素世·骑士队长") {
+                bossReward = std::make_unique<HolyWater>();
+                rewardName = "立希水壶";
+            }
+            if (bossReward) {
+                addItemAt(x, y, std::move(bossReward));
+                setTile(x, y, Tile_Item);
+                setTile(m_width / 2, rewardStairY, Tile_StairsUp);
+                outLog.push_back("Boss奖励：" + rewardName + "；地图正中间下方出现向上楼梯！");
             }
             if (hasShield) m_player.tempShieldCharges--;
             if (bossName == "长崎素世·本体")

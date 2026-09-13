@@ -396,12 +396,45 @@ int main() {
     log.clear();
     assert(floor10Ambush.fightAt(7, 2, log) == Game::Fight_PlayerWin);
     assert(floor10Ambush.tileAt(7, 12) == Tile_StairsUp);
-    assert(floor10Ambush.tileAt(7, 2) == Tile_Floor);
+    assert(floor10Ambush.tileAt(7, 2) == Tile_Item);
+    assert(floor10Ambush.itemAt(7, 2) != nullptr);
     bool floor10RewardShown = false;
     for (const auto& line : log)
         if (line.find("奖励") != std::string::npos || line.find("楼梯") != std::string::npos)
             floor10RewardShown = true;
     assert(floor10RewardShown);
+
+    // 20层 Boss 击败后生成蓝宝石奖励与向上楼梯。
+    Game floor20Boss;
+    for (int i = 0; i < 19; ++i) floor20Boss.goUpFloor(7, 12, false);
+    floor20Boss.initFloor(20);
+    floor20Boss.player().x = 7;
+    floor20Boss.player().y = 7;
+    floor20Boss.player().atk = 100000;
+    floor20Boss.player().hp = 1000000000;
+    floor20Boss.setTile(7, 6, Tile_Monster);
+    floor20Boss.spawnMonster(7, 6, MonsterDB::getByIndex(15));
+    log.clear();
+    assert(floor20Boss.fightAt(7, 6, log) == Game::Fight_PlayerWin);
+    assert(floor20Boss.tileAt(7, 6) == Tile_Item);
+    assert(floor20Boss.itemAt(7, 6) != nullptr);
+    assert(floor20Boss.tileAt(7, 12) == Tile_StairsUp);
+
+    // 40层 Boss 击败后生成圣水奖励与向上楼梯。
+    Game floor40Boss;
+    for (int i = 0; i < 39; ++i) floor40Boss.goUpFloor(7, 12, false);
+    floor40Boss.initFloor(40);
+    floor40Boss.player().x = 7;
+    floor40Boss.player().y = 7;
+    floor40Boss.player().atk = 100000;
+    floor40Boss.player().hp = 1000000000;
+    floor40Boss.setTile(7, 6, Tile_Monster);
+    floor40Boss.spawnMonster(7, 6, MonsterDB::getByIndex(24));
+    log.clear();
+    assert(floor40Boss.fightAt(7, 6, log) == Game::Fight_PlayerWin);
+    assert(floor40Boss.tileAt(7, 6) == Tile_Item);
+    assert(floor40Boss.itemAt(7, 6) != nullptr);
+    assert(floor40Boss.tileAt(7, 12) == Tile_StairsUp);
 
     // 前三层原版序章：3层先显现包围怪物，等待点击确认后才传送回2层。
     Game openingStory;
