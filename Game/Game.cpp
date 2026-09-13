@@ -758,23 +758,18 @@ void Game::triggerFloor10AmbushIfNeeded()
     m_floor10AmbushMovements.clear();
     m_floor10AmbushMonsterKeys.clear();
 
-    // 取原版骷髅人/骷髅士兵（ID 5/6）中距离入口最近的六只作为侧翼守卫。
+    // 十层陷阱固定绑定地图内侧第三、第四排（坐标行 4、5）的八只侧翼怪物。
+    // 不按距离筛选，避免把楼层其他位置的怪物纳入条件。
     // 按当前十层规则，怪物保持原地图位置，不再移动或播放移动动画。
     std::vector<std::pair<int, Monster>> candidates;
     for (const auto& entry : m_currentFloor->monsters) {
-        const int classicId = MonsterDB::indexOf(entry.second.GetName()) + 1;
-        const int sourceY = entry.first / m_width;
-        if ((sourceY == 3 || sourceY == 4) && (classicId == 5 || classicId == 6))
+        const int row = entry.first / m_width;
+        if (row == 4 || row == 5)
             candidates.emplace_back(entry.first, entry.second);
     }
-    std::sort(candidates.begin(), candidates.end(), [this](const auto& lhs, const auto& rhs) {
-        const int lx = lhs.first % m_width, ly = lhs.first / m_width;
-        const int rx = rhs.first % m_width, ry = rhs.first / m_width;
-        const int ld = (lx - m_player.x) * (lx - m_player.x) + (ly - m_player.y) * (ly - m_player.y);
-        const int rd = (rx - m_player.x) * (rx - m_player.x) + (ry - m_player.y) * (ry - m_player.y);
-        return ld == rd ? lhs.first < rhs.first : ld < rd;
-    });
-    if (candidates.size() > 6) candidates.resize(6);
+    std::sort(candidates.begin(), candidates.end(),
+              [](const auto& lhs, const auto& rhs) { return lhs.first < rhs.first; });
+    if (candidates.size() > 8) candidates.resize(8);
 
     for (const auto& candidate : candidates) {
         m_floor10AmbushMonsterKeys.insert(candidate.first);
@@ -804,12 +799,10 @@ void Game::resolveFloor10AmbushIfCleared()
             }
         }
     } else {
-        // 读档时不保存可变集合，按主角周围四格半径重建事件状态。
+        // 读档时不保存可变集合，按地图内侧第三、第四排重建十层侧翼守卫集合。
         for (const auto& entry : m_currentFloor->monsters) {
-            const int id = MonsterDB::indexOf(entry.second.GetName()) + 1;
-            if (id != 5 && id != 6) continue;
-            const int x = entry.first % m_width, y = entry.first / m_width;
-            if (std::abs(x - m_player.x) + std::abs(y - m_player.y) <= 4) {
+            const int row = entry.first / m_width;
+            if (row == 4 || row == 5) {
                 guardsRemain = true;
                 break;
             }

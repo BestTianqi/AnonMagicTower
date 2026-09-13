@@ -321,8 +321,10 @@ int main() {
     floor10Ambush.setTile(7, 5, Tile_Monster);
     floor10Ambush.spawnMonster(7, 5, MonsterDB::getByIndex(7));
     const Monster skeletonSoldier = MonsterDB::getByIndex(5);
-    for (int i = 0; i < 6; ++i)
-        floor10Ambush.spawnMonster(3 + i, 3, skeletonSoldier);
+    for (int i = 0; i < 4; ++i)
+        floor10Ambush.spawnMonster(2 + i, 4, skeletonSoldier);
+    for (int i = 0; i < 4; ++i)
+        floor10Ambush.spawnMonster(8 + i, 5, skeletonSoldier);
     floor10Ambush.player().atk = 1000;
     floor10Ambush.player().hp = 10000;
     assert(floor10Ambush.tryMovePlayer(7, 6) == Game::Move_Ok);
@@ -331,21 +333,23 @@ int main() {
     assert(floor10Ambush.tileAt(7, 5) == Tile_DoorMagic);
     assert(floor10Ambush.tileAt(7, 7) == Tile_DoorMagic);
     assert(floor10Ambush.takeFloor10AmbushMovementAnimations().empty());
-    assert(floor10Ambush.hasMonsterAt(3, 3));
+    assert(floor10Ambush.hasMonsterAt(2, 4));
     assert(floor10Ambush.monsterAt(7, 2) != nullptr);
     assert(floor10Ambush.monsterAt(7, 2)->GetName() == "八幡海铃·骷髅队长");
     int surrounded = 0;
-    for (int y = 2; y <= 12; ++y)
+    for (int y = 4; y <= 5; ++y)
         for (int x = 2; x <= 12; ++x)
             if (floor10Ambush.hasMonsterAt(x, y) &&
-                floor10Ambush.monsterAt(x, y)->GetName() == "祐天寺若麦·骷髅士兵") ++surrounded;
-    assert(surrounded == 6);
+                (floor10Ambush.monsterAt(x, y)->GetName() == "椎名立希·骷髅人" ||
+                 floor10Ambush.monsterAt(x, y)->GetName() == "祐天寺若麦·骷髅士兵")) ++surrounded;
+    assert(surrounded == 8);
     while (true) {
         int guardX = -1, guardY = -1;
-        for (int y = 2; y <= 12 && guardX < 0; ++y) {
+        for (int y = 4; y <= 5 && guardX < 0; ++y) {
             for (int x = 2; x <= 12; ++x) {
                 auto* guard = floor10Ambush.monsterAt(x, y);
-                if (guard && guard->GetName() == "祐天寺若麦·骷髅士兵") {
+                if (guard && (guard->GetName() == "椎名立希·骷髅人" ||
+                              guard->GetName() == "祐天寺若麦·骷髅士兵")) {
                     guardX = x; guardY = y; break;
                 }
             }
