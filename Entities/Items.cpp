@@ -18,10 +18,10 @@ ClassicShopOffer classicShopOfferForFloor(int floor, int purchaseCount)
     if (safeFloor >= 46) { atk = 10; def = 20; }
     else if (safeFloor >= 32) { atk = 8; def = 16; }
     else if (safeFloor >= 12) { atk = 4; def = 8; }
-    // 原版商店价格由全局购买次数共享：20、40、80、140。
+    // 原版商店价格由全局购买次数共享，是二阶等差数列：
+    // 20、40、80、140、220……（相邻差值每次增加 20）。
     // 楼层只影响本次提供的属性数值，不影响价格序列。
-    static constexpr int prices[] = {20, 40, 80, 140};
-    const int price = prices[std::min(priceCount, 3)];
+    const int price = 10 * priceCount * (priceCount + 1) + 20;
     return {100, atk, def, price};
 }
 

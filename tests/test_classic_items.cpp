@@ -39,7 +39,7 @@ int main() {
     assert(shop12.hp == 100 && shop12.atk == 4 && shop12.def == 8 && shop12.price == 80);
     const auto shop46 = classicShopOfferForFloor(46, 3);
     assert(shop46.atk == 10 && shop46.def == 20 && shop46.price == 140);
-    assert(classicShopOfferForFloor(46, 4).price == 140);
+    assert(classicShopOfferForFloor(46, 4).price == 220);
 
     // 道具名称校验：中英文别名归一到游戏内显示名，未知名称必须被拒绝。
     assert(Game::isKnownItemName("Red Key"));
