@@ -8,6 +8,84 @@
 
 namespace {
 constexpr float kPlayerWalkSpeed = 260.0f;
+
+struct MonsterCombatHint {
+    int hpLoss = -1;
+    int attackDelta = -1;
+};
+
+MonsterCombatHint monsterCombatHint(const Player& player, const Monster& monster)
+{
+    const std::string& name = monster.GetName();
+    const bool vampireOrOrc = name.find("吸血") != std::string::npos ||
+                              name.find("兽人") != std::string::npos;
+    const bool dragon = name.find("魔龙") != std::string::npos ||
+                        name.find("龙") != std::string::npos;
+    const bool magicAttacker = name.find("法师") != std::string::npos ||
+                               name.find("巫师") != std::string::npos ||
+                               name.find("大法师") != std::string::npos ||
+                               name.find("魔法") != std::string::npos;
+    const int attackMultiplier = (player.hasCross && vampireOrOrc) ||
+                                 (player.hasDragonSlayer && dragon) ? 2 : 1;
+    int incoming = std::max(0, monster.GetATK() - player.def -
+                            (player.tempShieldCharges > 0 ? 50 : 0));
+    if (player.hasHolyShield && magicAttacker) incoming = 0;
+    if (player.hasPenguinDoll &&
+        (name.find("高松灯") != std::string::npos || name.find("企鹅") != std::string::npos))
+        incoming /= 2;
+    if (player.hasMatchaParfait &&
+        (name.find("要乐奈") != std::string::npos || name.find("小猫") != std::string::npos))
+        incoming /= 2;
+
+    const auto roundsForAttack = [&](int rawAttack) {
+        const int dealt = std::max(0, rawAttack * attackMultiplier - monster.GetDEF());
+        return dealt > 0 ? (monster.GetHP() + dealt - 1) / dealt : -1;
+    };
+    const int currentRounds = roundsForAttack(player.atk);
+    MonsterCombatHint hint;
+    if (currentRounds > 0 && incoming >= 0)
+        hint.hpLoss = (currentRounds > 1) ? (currentRounds - 1) * incoming : 0;
+
+    // 找到使击杀回合数减少一回合的最小“额外攻击力”。
+    if (currentRounds > 1) {
+        for (int delta = 1; delta <= 100000; ++delta) {
+            if (roundsForAttack(player.atk + delta) > 0 &&
+                roundsForAttack(player.atk + delta) < currentRounds) {
+                hint.attackDelta = delta;
+                break;
+            }
+        }
+    } else if (currentRounds < 0) {
+        for (int delta = 1; delta <= 100000; ++delta) {
+            if (roundsForAttack(player.atk + delta) > 0) {
+                hint.attackDelta = delta;
+                break;
+            }
+        }
+    }
+    return hint;
+}
+
+void drawMonsterCombatHint(QPainter& painter, const QRect& rect, const Player& player,
+                           const Monster& monster)
+{
+    const MonsterCombatHint hint = monsterCombatHint(player, monster);
+    const QRect panel = rect.adjusted(1, 34, -1, -1);
+    painter.fillRect(panel, QColor(0, 0, 0, 190));
+    QFont font;
+    font.setPixelSize(9);
+    font.setBold(true);
+    painter.setFont(font);
+    painter.setPen(hint.hpLoss >= 0 ? QColor("#ff9da9") : QColor("#ffce83"));
+    painter.drawText(panel.adjusted(1, 0, -1, -10), Qt::AlignCenter,
+                    hint.hpLoss >= 0 ? QString::fromUtf8("掉血 %1").arg(hint.hpLoss)
+                                     : QString::fromUtf8("无法破防"));
+    painter.setPen(QColor("#b9d6ff"));
+    const QString threshold = hint.attackDelta > 0
+        ? QString::fromUtf8("攻+%1减伤").arg(hint.attackDelta)
+        : QString::fromUtf8("已最低伤害");
+    painter.drawText(panel.adjusted(1, 10, -1, 0), Qt::AlignCenter, threshold);
+}
 }
 
 MapWidget::MapWidget(Game* game, QWidget* parent)
@@ -959,6 +1037,13 @@ void MapWidget::paintEvent(QPaintEvent*)
             // 绘制底图
             if (pix && !pix->isNull())
                 painter.drawPixmap(r, *pix);
+
+            // 每个怪物格显示当前属性下的预计掉血，以及减少一回合伤害所需的
+            // 最小额外攻击力；计算公式与 Game::fightAt 保持一致。
+            if (t == Tile_Monster) {
+                if (const Monster* monster = m_game->monsterAt(x, y))
+                    drawMonsterCombatHint(painter, r, m_game->player(), *monster);
+            }
 
             // 门、楼梯、商店等均由素材本身表达，不再叠加代码绘制的标签底条。
         }
