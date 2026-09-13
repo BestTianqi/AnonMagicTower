@@ -346,20 +346,21 @@ int main() {
     assert(openingStory.currentFloor() == 2);
     assert(openingStory.player().x == 7 && openingStory.player().y == 7);
 
-    // 真实经典塔序章：三层入口触发围攻、固定伤害、攻防减半并回到二层小偷下方。
+    // 真实经典塔序章：三层入口触发围攻、固定伤害、攻防降至10并回到二层小偷下方。
     Game classicOpening;
     classicOpening.generateClassicTower();
     classicOpening.player().hp = 1000;
-    classicOpening.player().atk = 10;
-    classicOpening.player().def = 10;
+    // 测试目标使用经典塔的 100/100 初始攻防，兼容无 Qt 资源的测试进程。
+    classicOpening.player().atk = 100;
+    classicOpening.player().def = 100;
     classicOpening.goUpFloor(2, 2);
     classicOpening.goUpFloor(2, 12);
     assert(classicOpening.currentFloor() == 3);
     assert(classicOpening.tryMovePlayer(3, 12) == Game::Move_Ok);
     assert(classicOpening.currentFloor() == 2);
     assert(classicOpening.player().hp == 400);
-    assert(classicOpening.player().atk == 5);
-    assert(classicOpening.player().def == 5);
+    assert(classicOpening.player().atk == 10);
+    assert(classicOpening.player().def == 10);
     assert(classicOpening.player().x == 7 && classicOpening.player().y == 7);
     assert(classicOpening.floor3TrapActive());
 

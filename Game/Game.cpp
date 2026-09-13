@@ -254,8 +254,9 @@ void Game::generateClassicTower()
     m_player.x = 7;
     m_player.y = 12;
     m_player.hp = 1000;
-    m_player.atk = 10;
-    m_player.def = 10;
+    // 经典塔新游戏的序章初始攻防均为 100，三层陷阱后固定降至 10。
+    m_player.atk = 100;
+    m_player.def = 100;
 }
 
 void Game::initFloor(int floor)
@@ -570,10 +571,10 @@ void Game::triggerFloor3PrisonStoryIfNeeded()
     m_floor3PrisonTriggered = true;
     m_floor3TrapActive = true;
     // 原版序章的围攻伤害与虚弱效果：四名魔法警卫围住主角后
-    // 造成固定伤害，并将攻击、防御减半。
+    // 造成固定伤害，并将攻击、防御固定压到 10。
     m_player.hp = std::max(1, m_player.hp - 600);
-    m_player.atk = std::max(1, m_player.atk / 2);
-    m_player.def = std::max(1, m_player.def / 2);
+    m_player.atk = 10;
+    m_player.def = 10;
     goDownFloor(3, 12, false);
     // 小偷固定在二层 (7,6)，主角被扔回其下方的牢房通道。
     m_player.x = 7;

@@ -634,7 +634,7 @@ void MainWindow::showOpeningPrisonStory()
 {
     showStoryMessage(QString::fromUtf8(
         "魔王与四名魔法警卫从四面围住了你！\n"
-        "你受到600点伤害，攻击和防御暂时减半。\n\n"
+        "你受到600点伤害，攻击和防御被压到10。\n\n"
         "你被扔回2层牢房。必须与小偷对话两次，才能解除陷阱状态。"));
 }
 
