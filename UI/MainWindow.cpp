@@ -733,10 +733,8 @@ void MainWindow::showNPCDialog(int x, int y)
         // 原版2层小偷必须对话两次：第一次给出铁剑/铁盾楼层，
         // 第二次才解除三层陷阱造成的虚弱状态。
         if (!npc->HasGivenReward()) {
-            for (int dy = -1; dy <= 1; ++dy)
-                for (int dx = -1; dx <= 1; ++dx)
-                    if (std::abs(dx) + std::abs(dy) == 1 && m_game->tileAt(x + dx, y + dy) == Tile_DarkWall)
-                        m_game->setTile(x + dx, y + dy, Tile_Floor);
+            // 对话完成后只打开小偷左侧的原版暗墙。
+            m_game->setTile(3, 8, Tile_Floor);
             npc->SetGiven(true);
             showStoryMessage(QString::fromUtf8("铁剑在5层，铁盾在9层。先去把它们找回来。"));
         } else {

@@ -185,11 +185,9 @@ void Game::generateClassicTower()
                 fd.shops[key] = shop;
             } else {
                 fd.map[key] = Tile_NPC;
-                // 原版二层小偷位于牢房中央，固定迁移到主题地图坐标 (7,6)。
+                // 二层小偷使用原版牢房坐标 (4,8)；其左侧 (3,8) 是待开启暗墙。
                 if (level == 2 && id == 13) {
-                    fd.map[key] = Tile_Floor;
-                    key = posKey(7, 6);
-                    fd.map[key] = Tile_NPC;
+                    fd.map[posKey(3, 8)] = Tile_DarkWall;
                 }
                 const char* name = (id == 22) ? "公主" : ((id == 12 || id == 13 || id == 14 || id == 25 || id == 30 || id == 31 || id == 46) ? "小偷" : "老头");
                 std::vector<std::string> dialog{"这是第 " + std::to_string(level) + " 层。继续探索吧。"};
@@ -587,9 +585,9 @@ void Game::triggerFloor3PrisonStoryIfNeeded()
     m_player.atk = 10;
     m_player.def = 10;
     goDownFloor(3, 12, false);
-    // 小偷固定在二层 (7,6)，主角被扔回其下方的牢房通道。
-    m_player.x = 7;
-    m_player.y = 7;
+    // 小偷位于二层 (4,8)，主角被扔回其下方的 (4,9)。
+    m_player.x = 4;
+    m_player.y = 9;
 }
 
 void Game::triggerFloor10AmbushIfNeeded()

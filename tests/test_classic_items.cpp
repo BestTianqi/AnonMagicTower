@@ -347,7 +347,7 @@ int main() {
     openingStory.setTile(6, 9, Tile_Floor);
     assert(openingStory.tryMovePlayer(6, 9) == Game::Move_Ok);
     assert(openingStory.currentFloor() == 2);
-    assert(openingStory.player().x == 7 && openingStory.player().y == 7);
+    assert(openingStory.player().x == 4 && openingStory.player().y == 9);
 
     // 真实经典塔序章：三层入口触发围攻、固定伤害、攻防降至10并回到二层小偷下方。
     Game classicOpening;
@@ -367,9 +367,9 @@ int main() {
     assert(classicOpening.player().hp == 400);
     assert(classicOpening.player().atk == 10);
     assert(classicOpening.player().def == 10);
-    assert(classicOpening.player().x == 7 && classicOpening.player().y == 7);
+    assert(classicOpening.player().x == 4 && classicOpening.player().y == 9);
     assert(classicOpening.floor3TrapActive());
-    classicOpening.goUpFloor(7, 7, false);
+    classicOpening.goUpFloor(4, 9, false);
     assert(classicOpening.monsterAt(6, 7) != nullptr);
     assert(classicOpening.monsterAt(6, 7)->GetName() == "长崎素世·幻影");
     for (const auto& position : std::array<std::pair<int, int>, 4>{
