@@ -200,6 +200,9 @@ int main() {
     teleportNpc.setTile(4, 3, Tile_NPC);
     assert(teleportNpc.teleportPlayerTo(4, 3) == Game::Move_NPC);
     assert(teleportNpc.player().x == 4 && teleportNpc.player().y == 3);
+    teleportNpc.setTile(5, 3, Tile_Floor);
+    assert(teleportNpc.teleportPlayerTo(5, 3) == Game::Move_Ok);
+    assert(teleportNpc.player().x == 5 && teleportNpc.player().y == 3);
 
     Game teleportMonster;
     teleportMonster.player().x = 3;
@@ -208,6 +211,17 @@ int main() {
     teleportMonster.setTile(4, 3, Tile_Monster);
     assert(teleportMonster.teleportPlayerTo(4, 3) == Game::Move_Encounter);
     assert(teleportMonster.player().x == 4 && teleportMonster.player().y == 3);
+
+    // 鼠标瞬移到连通的有钥匙红门时，应开门、消耗钥匙并进入门格。
+    Game teleportDoor;
+    teleportDoor.player().x = 3;
+    teleportDoor.player().y = 3;
+    teleportDoor.player().AddKey(KeyType::Red);
+    teleportDoor.setTile(4, 3, Tile_DoorRed);
+    assert(teleportDoor.teleportPlayerTo(4, 3) == Game::Move_Ok);
+    assert(teleportDoor.player().x == 4 && teleportDoor.player().y == 3);
+    assert(teleportDoor.tileAt(4, 3) == Tile_Floor);
+    assert(teleportDoor.player().KeyCount(KeyType::Red) == 0);
 
     Game bombGame;
     bombGame.player().x = 5;

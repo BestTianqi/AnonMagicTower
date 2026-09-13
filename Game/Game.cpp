@@ -352,8 +352,17 @@ bool Game::isTeleportReachable(int targetX, int targetY) const
     const int targetTile = tileAt(targetX, targetY);
     const bool targetInteractable = targetTile == Tile_NPC || targetTile == Tile_Shop ||
                                     (targetTile == Tile_Monster && hasMonsterAt(targetX, targetY));
-    if (!walkable(targetTile) && !targetInteractable) return false;
-    if (!walkable(tileAt(m_player.x, m_player.y))) return false;
+    const bool targetDoorWithKey =
+        (targetTile == Tile_DoorRed && (m_player.HasKey(KeyType::Red) || m_player.magicKeyUses > 0)) ||
+        (targetTile == Tile_DoorBlue && (m_player.HasKey(KeyType::Blue) || m_player.magicKeyUses > 0)) ||
+        (targetTile == Tile_DoorGreen && (m_player.HasKey(KeyType::Green) || m_player.magicKeyUses > 0));
+    if (!walkable(targetTile) && !targetInteractable && !targetDoorWithKey) return false;
+    const int currentTile = tileAt(m_player.x, m_player.y);
+    const bool currentInteractable =
+        currentTile == Tile_NPC || currentTile == Tile_Shop ||
+        (currentTile == Tile_Monster && hasMonsterAt(m_player.x, m_player.y));
+    // 玩家可能正站在刚瞬移到的 NPC/商店格，仍应以该格为 BFS 起点。
+    if (!walkable(currentTile) && !currentInteractable) return false;
 
     std::vector<unsigned char> visited(static_cast<size_t>(m_width * m_height), 0);
     std::queue<std::pair<int, int>> pending;
@@ -412,6 +421,11 @@ Game::MoveResult Game::teleportPlayerTo(int targetX, int targetY)
         return Move_Shop;
     case Tile_Monster:
         return hasMonsterAt(targetX, targetY) ? Move_Encounter : Move_Ok;
+    case Tile_DoorRed:
+    case Tile_DoorBlue:
+    case Tile_DoorGreen:
+        // 复用普通移动的开门逻辑，确保钥匙/万能钥匙只消耗一次。
+        return tryMovePlayer(targetX, targetY);
     case Tile_StairsUp:
         return Move_StairsUp;
     case Tile_StairsDown:
