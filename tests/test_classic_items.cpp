@@ -297,6 +297,37 @@ int main() {
     assert(floor8FlowerDoor.fightAt(5, 5, floor8Log) == Game::Fight_PlayerWin);
     assert(floor8FlowerDoor.tileAt(4, 4) == Tile_Floor);
 
+    // 49层上下花门分别只检测各自正下方横向三格，互不共享守卫。
+    Game floor49FlowerDoors;
+    floor49FlowerDoors.initFloor(49);
+    floor49FlowerDoors.player().x = 7;
+    floor49FlowerDoors.player().y = 7;
+    floor49FlowerDoors.player().atk = 100000;
+    floor49FlowerDoors.player().hp = 1000000000;
+    floor49FlowerDoors.setTile(7, 8, Tile_DoorMagic);
+    floor49FlowerDoors.setTile(7, 10, Tile_DoorMagic);
+    const Monster floor49Guard("49层守卫", 1, 0, 0, 0);
+    floor49FlowerDoors.spawnMonster(6, 9, floor49Guard);
+    floor49FlowerDoors.spawnMonster(8, 9, floor49Guard);
+    floor49FlowerDoors.spawnMonster(6, 11, floor49Guard);
+    floor49FlowerDoors.spawnMonster(8, 11, floor49Guard);
+    floor49FlowerDoors.spawnMonster(3, 3, floor49Guard);
+    assert(floor49FlowerDoors.tryMovePlayer(7, 8) == Game::Move_DoorLocked);
+    std::vector<std::string> floor49Log;
+    assert(floor49FlowerDoors.fightAt(6, 9, floor49Log) == Game::Fight_PlayerWin);
+    assert(floor49FlowerDoors.tileAt(7, 8) == Tile_DoorMagic);
+    floor49Log.clear();
+    assert(floor49FlowerDoors.fightAt(8, 9, floor49Log) == Game::Fight_PlayerWin);
+    assert(floor49FlowerDoors.tileAt(7, 8) == Tile_Floor);
+    assert(floor49FlowerDoors.tileAt(7, 10) == Tile_DoorMagic);
+    floor49Log.clear();
+    assert(floor49FlowerDoors.fightAt(6, 11, floor49Log) == Game::Fight_PlayerWin);
+    assert(floor49FlowerDoors.tileAt(7, 10) == Tile_DoorMagic);
+    floor49Log.clear();
+    assert(floor49FlowerDoors.fightAt(8, 11, floor49Log) == Game::Fight_PlayerWin);
+    assert(floor49FlowerDoors.tileAt(7, 10) == Tile_Floor);
+    assert(floor49FlowerDoors.hasMonsterAt(3, 3));
+
     // 48 层原版花门是坏门，只能用镐破坏，不会因清怪自动开启。
     Game brokenFlowerDoor;
     brokenFlowerDoor.initFloor(48);

@@ -31,6 +31,25 @@ bool mechanismDoorReadyAt(int floorNumber, const FloorData& floor, int doorX, in
     if (floorNumber == 48) return false;
 
     if (floor.map[doorY * MAP_SIZE + doorX] == Tile_DoorMagic) {
+        if (floorNumber == 49) {
+            // 49层上下两扇花门各自只绑定门正下方横向三格（左、中、右）。
+            // 两扇门互不共享守卫，其他位置的同类怪物不参与判定。
+            bool hasBelowGuard = false;
+            for (int dx = -1; dx <= 1; ++dx) {
+                const int key = (doorY + 1) * MAP_SIZE + (doorX + dx);
+                if (floor.monsters.find(key) != floor.monsters.end()) {
+                    hasBelowGuard = true;
+                    break;
+                }
+            }
+            if (!hasBelowGuard) return true;
+            for (int dx = -1; dx <= 1; ++dx) {
+                const int key = (doorY + 1) * MAP_SIZE + (doorX + dx);
+                if (floor.monsters.find(key) != floor.monsters.end()) return false;
+            }
+            return true;
+        }
+
         // 花门只绑定自身周围八格的怪物：周围有一只或两只就只清理这一小组，
         // 同编号但位于楼层其他区域的怪物不参与本门判定。
         bool hasAdjacentMonster = false;
