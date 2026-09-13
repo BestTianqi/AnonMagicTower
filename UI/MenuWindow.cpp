@@ -137,14 +137,24 @@ void MenuWindow::onSettings()
     auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg);
     buttons->button(QDialogButtonBox::Ok)->setText(QString::fromUtf8("应用"));
     buttons->button(QDialogButtonBox::Cancel)->setText(QString::fromUtf8("取消"));
+    auto* exitButton = new QPushButton(QString::fromUtf8("退出游戏"), &dlg);
+    exitButton->setStyleSheet(QStringLiteral("QPushButton { color: #ff9a9a; }"));
     layout->addStretch();
     layout->addWidget(buttons);
+    layout->addWidget(exitButton);
     connect(buttons, &QDialogButtonBox::accepted, &dlg, [&]() {
         settings.setValue(QStringLiteral("movementAnimation"), animation->isChecked());
         settings.setValue(QStringLiteral("battleFeedback"), battle->isChecked());
         dlg.accept();
     });
     connect(buttons, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+    connect(exitButton, &QPushButton::clicked, &dlg, [&dlg]() {
+        if (QMessageBox::question(&dlg, QString::fromUtf8("退出游戏"),
+                QString::fromUtf8("确定要退出游戏吗？"),
+                QMessageBox::Yes | QMessageBox::No, QMessageBox::No) == QMessageBox::Yes) {
+            QApplication::quit();
+        }
+    });
     dlg.exec();
 }
 
