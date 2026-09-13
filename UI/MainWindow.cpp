@@ -1037,9 +1037,8 @@ void MainWindow::showOpeningFloorStory(int fromFloor, int toFloor)
         case 49: location = QStringLiteral("第四十九层的王座前，魔龙守卫挡住了最后的道路。"); warning = QStringLiteral("神圣剑、神圣盾或屠龙匕首，至少准备一样。"); portrait = QStringLiteral(":/images/characters/portraits/soyo_stage.png"); break;
         case 50: location = QStringLiteral("第五十层的顶灯全部亮起，长崎素世正在王座尽头等你。"); warning = QStringLiteral("走完最后一段路，完成这场属于 MyGO!!!!! 与 Ave Mujica 的演出。"); portrait = QStringLiteral(":/images/characters/portraits/soyo_stage.png"); break;
         default:
-            location = QStringLiteral("你来到了魔塔第 %1 层。新的敌人与机关正在前方展开。").arg(toFloor);
-            warning = QStringLiteral("观察墙壁、门和怪物的排列，寻找安全的路线。");
-            break;
+            // 未配置专属剧情的楼层保持原版静默，不显示通用旁白。
+            return;
         }
         pages = {
             {QString::fromUtf8("千早爱音"), location,
