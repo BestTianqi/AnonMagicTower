@@ -755,6 +755,63 @@ void MainWindow::showVisualNovelDialogue(const std::vector<VisualNovelPage>& pag
     dlg.exec();
 }
 
+bool MainWindow::showVisualNovelChoice(const QString& speaker, const QString& message,
+                                       const QString& portraitPath, const QString& yesText,
+                                       const QString& noText)
+{
+    QDialog dlg(this);
+    dlg.setWindowTitle(QString::fromUtf8("剧情选择"));
+    dlg.setModal(true);
+    dlg.setFixedSize(900, 310);
+    dlg.setWindowFlags(Qt::Dialog | Qt::FramelessWindowHint);
+    dlg.setStyleSheet(
+        "QDialog { background: rgba(14, 12, 28, 248); border: 2px solid #8c6ba8; }"
+        "QLabel#vnName { font-size: 20px; font-weight: 800; color: #ffb5d7; }"
+        "QLabel#vnText { color: #fff4e6; font-size: 18px; }"
+        "QPushButton { color: #fff7d0; background: #5f3d79; border: 1px solid #d5a8f0;"
+        " border-radius: 6px; padding: 8px 24px; font-size: 15px; font-weight: 700; }"
+        "QPushButton:hover { background: #79509a; }"
+    );
+    auto* root = new QVBoxLayout(&dlg);
+    root->setContentsMargins(18, 16, 18, 14);
+    auto* content = new QHBoxLayout();
+    content->setSpacing(18);
+    auto* portrait = new QLabel(&dlg);
+    portrait->setFixedSize(150, 220);
+    portrait->setAlignment(Qt::AlignCenter);
+    portrait->setStyleSheet("background: rgba(0,0,0,90); border: 1px solid #655275;");
+    const QPixmap image(portraitPath);
+    if (!image.isNull())
+        portrait->setPixmap(image.scaled(portrait->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    content->addWidget(portrait);
+    auto* column = new QVBoxLayout();
+    auto* name = new QLabel(speaker, &dlg);
+    name->setObjectName("vnName");
+    auto* text = new QLabel(message, &dlg);
+    text->setObjectName("vnText");
+    text->setWordWrap(true);
+    text->setAlignment(Qt::AlignLeft | Qt::AlignTop);
+    column->addWidget(name);
+    column->addWidget(text, 1);
+    content->addLayout(column, 1);
+    root->addLayout(content, 1);
+    auto* buttons = new QHBoxLayout();
+    buttons->addStretch();
+    auto* no = new QPushButton(noText, &dlg);
+    auto* yes = new QPushButton(yesText, &dlg);
+    no->setAutoDefault(false);
+    yes->setDefault(true);
+    buttons->addWidget(no);
+    buttons->addWidget(yes);
+    root->addLayout(buttons);
+    bool accepted = false;
+    connect(yes, &QPushButton::clicked, &dlg, [&]() { accepted = true; dlg.accept(); });
+    connect(no, &QPushButton::clicked, &dlg, &QDialog::reject);
+    dlg.move((width() - dlg.width()) / 2, (height() - dlg.height()) / 2);
+    dlg.exec();
+    return accepted;
+}
+
 void MainWindow::showOpeningPrisonStory()
 {
     showVisualNovelDialogue({
@@ -809,13 +866,9 @@ void MainWindow::showNPCDialog(int x, int y)
             ? QStringLiteral(":/images/characters/portraits/michelle.png")
             : QStringLiteral(":/images/characters/portraits/marina.png"));
     auto showNpcInfo = [&](const QString& title, const QString& text) {
-        QMessageBox box(this);
-        box.setWindowTitle(title);
-        box.setText(text);
-        QPixmap avatar(npcPortrait);
-        if (!avatar.isNull())
-            box.setIconPixmap(avatar.scaled(60, 60, Qt::KeepAspectRatio, Qt::FastTransformation));
-        box.exec();
+        showVisualNovelDialogue({
+            {title, text, npcPortrait, QStringLiteral("#ffb5d7")}
+        });
     };
 
     // 原版关键 NPC 事件（保留一次性状态）。
@@ -836,9 +889,9 @@ void MainWindow::showNPCDialog(int x, int y)
         return;
     }
     if (!npc->HasGivenReward() && classicId == 22) {
-        auto reply = QMessageBox::question(this, QString::fromUtf8("公主"),
-            QString::fromUtf8("谢谢你救了我！现在前往魔塔顶层吗？"), QMessageBox::Yes | QMessageBox::No);
-        if (reply == QMessageBox::Yes) {
+        if (showVisualNovelChoice(QString::fromUtf8("公主"),
+                                  QString::fromUtf8("谢谢你救了我！现在前往魔塔顶层吗？"),
+                                  npcPortrait, QString::fromUtf8("前往顶层"))) {
             npc->SetGiven(true);
             while (m_game->currentFloor() < 50) m_game->goUpFloor(p.x, p.y, false);
             showNpcInfo(QString::fromUtf8("公主"), QString::fromUtf8("我会在魔王身边等你。"));
@@ -847,20 +900,23 @@ void MainWindow::showNPCDialog(int x, int y)
         return;
     }
     if (!npc->HasGivenReward() && classicId == 10) {
-        auto reply = QMessageBox::question(this, QString::fromUtf8("不正经的商人"),
-            QString::fromUtf8("给我 1 金币，试试你的运气？（1% 获得 88 金币）"), QMessageBox::Yes | QMessageBox::No);
-        if (reply == QMessageBox::Yes && p.gold >= 1) {
+        const bool accepted = showVisualNovelChoice(QString::fromUtf8("不正经的商人"),
+            QString::fromUtf8("给我 1 金币，试试你的运气？（1% 获得 88 金币）"),
+            npcPortrait, QString::fromUtf8("试试运气"));
+        if (accepted && p.gold >= 1) {
             --p.gold;
             npc->SetGiven(true);
             if (QRandomGenerator::global()->bounded(100) == 0) p.gold += 88;
+        } else if (accepted) {
+            showNpcInfo(QString::fromUtf8("不正经的商人"), QString::fromUtf8("金币不够，等你准备好再来吧。"));
         }
         updateHUD();
         return;
     }
     if (!npc->HasGivenReward() && classicId == 24) {
-        auto reply = QMessageBox::question(this, QString::fromUtf8("神秘的商人"),
-            QString::fromUtf8("我会随机提升一项属性，同时扣除另一项属性，确定交易吗？"), QMessageBox::Yes | QMessageBox::No);
-        if (reply == QMessageBox::Yes) {
+        if (showVisualNovelChoice(QString::fromUtf8("神秘的商人"),
+            QString::fromUtf8("我会随机提升一项属性，同时扣除另一项属性，确定交易吗？"),
+            npcPortrait, QString::fromUtf8("接受交易"))) {
             int gain = QRandomGenerator::global()->bounded(3);
             int loss = QRandomGenerator::global()->bounded(3);
             if (gain == 0) p.hp += 100; else if (gain == 1) p.atk += 10; else p.def += 10;
@@ -896,8 +952,14 @@ void MainWindow::showNPCDialog(int x, int y)
         npc->SetGiven(true);
     }
 
-    // 交易NPC
-    if (npc->IsTrader() && !npc->IsTradeDone()) {
+    // 交易 NPC：每个 NPC 只允许完成一次交易，状态随存档保存。
+    if (npc->IsTrader()) {
+        if (npc->IsTradeDone()) {
+            showNpcInfo(QString::fromStdString(npc->GetName()),
+                QString::fromUtf8("这笔交易已经完成了。下次再见。"));
+            updateHUD();
+            return;
+        }
         const Item* tradeReward = npc->GetTradeReward();
         QString rewardDesc;
         if (tradeReward)
@@ -905,25 +967,20 @@ void MainWindow::showNPCDialog(int x, int y)
         else
             rewardDesc = QString::fromUtf8("(无)");
 
-        QString info = QString::fromUtf8(
-            "【%1】\n\n"
-            "交易物品: %2\n"
-            "所需金币: %3\n"
-            "你的金币: %4\n\n"
-            "是否交易？")
-            .arg(QString::fromStdString(npc->GetName()))
+        const QString info = QString::fromUtf8(
+            "我这里有 %1。\n\n"
+            "需要金币：%2\n"
+            "你当前有：%3\n\n"
+            "这位商人的交易只能完成一次。")
             .arg(rewardDesc)
             .arg(npc->GetTradeGoldCost())
             .arg(p.gold);
 
         bool canAfford = (npc->GetTradeGoldCost() <= p.gold);
+        const bool accepted = showVisualNovelChoice(QString::fromStdString(npc->GetName()), info,
+            npcPortrait, canAfford ? QString::fromUtf8("完成交易") : QString::fromUtf8("金币不足"));
 
-        auto reply = QMessageBox::question(this, QString::fromUtf8("交易"),
-            info,
-            canAfford ? (QMessageBox::Yes | QMessageBox::No) : QMessageBox::No,
-            QMessageBox::Yes);
-
-        if (reply == QMessageBox::Yes && canAfford) {
+        if (accepted && canAfford) {
             p.gold -= npc->GetTradeGoldCost();
             if (tradeReward) {
                 // 创建可应用的物品副本
@@ -934,17 +991,9 @@ void MainWindow::showNPCDialog(int x, int y)
 
             showNpcInfo(QString::fromStdString(npc->GetName()),
                 QString::fromUtf8("交易成功！获得了 %1。").arg(rewardDesc));
-        } else {
-            // 显示NPC对话
-            const auto& dialog = npc->Dialog();
-            if (!dialog.empty()) {
-                QString fullDialog;
-                for (size_t i = 0; i < dialog.size(); ++i) {
-                    fullDialog += QString::fromStdString(npc->GetName()) + ": " + QString::fromStdString(dialog[i]);
-                    if (i + 1 < dialog.size()) fullDialog += "\n";
-                }
-                showNpcInfo(QString::fromStdString(npc->GetName()), fullDialog);
-            }
+        } else if (accepted) {
+            showNpcInfo(QString::fromStdString(npc->GetName()),
+                QString::fromUtf8("金币不够，交易暂时无法完成。"));
         }
 
         ui.mapWidget->update();
@@ -960,12 +1009,17 @@ void MainWindow::showNPCDialog(int x, int y)
         showNpcInfo(QString::fromStdString(npc->GetName()), QString::fromStdString(reply));
     } else {
         const auto& dialog = npc->Dialog();
-        QString fullDialog;
+        std::vector<VisualNovelPage> pages;
         for (size_t i = 0; i < dialog.size(); ++i) {
-            fullDialog += QString::fromStdString(npc->GetName()) + ": " + QString::fromStdString(dialog[i]);
-            if (i + 1 < dialog.size()) fullDialog += "\n";
+            pages.push_back({QString::fromStdString(npc->GetName()),
+                             QString::fromStdString(dialog[i]), npcPortrait,
+                             QStringLiteral("#ffb5d7")});
         }
-        showNpcInfo(QString::fromStdString(npc->GetName()), fullDialog);
+        if (pages.empty())
+            pages.push_back({QString::fromStdString(npc->GetName()),
+                             QString::fromStdString(reply), npcPortrait,
+                             QStringLiteral("#ffb5d7")});
+        showVisualNovelDialogue(pages);
     }
 }
 
@@ -978,6 +1032,21 @@ void MainWindow::showShopDialog(int x, int y)
 
     // 原版固定兑换商人：钥匙数量与价格保持 50 层魔塔配置。
     const int classicId = shop->classicNpcId;
+    const QString shopPortrait = QStringLiteral(":/images/characters/portraits/ririko.png");
+    if (shop->classicPurchaseCount > 0) {
+        showVisualNovelDialogue({
+            {QString::fromUtf8("凛凛子"),
+             QString::fromUtf8("这个摊位的交易已经完成了，下次再来看看吧。"),
+             shopPortrait, QStringLiteral("#ffb5d7")}
+        });
+        updateHUD();
+        return;
+    }
+    showVisualNovelDialogue({
+        {QString::fromUtf8("凛凛子"),
+         QString::fromUtf8("欢迎来到现场补给站！按照魔塔规则，每个摊位只能交易一次。"),
+         shopPortrait, QStringLiteral("#ffb5d7")}
+    });
     struct FixedOffer { QString text; int cost; std::function<void()> grant; };
     FixedOffer offer;
     bool fixed = true;
@@ -995,10 +1064,25 @@ void MainWindow::showShopDialog(int x, int y)
     }
     if (fixed) {
         const bool canAfford = p.gold >= offer.cost;
-        auto reply = QMessageBox::question(this, QString::fromUtf8("原版商人"),
-            QString::fromUtf8("%1\n价格：%2 金币\n当前金币：%3\n购买吗？").arg(offer.text).arg(offer.cost).arg(p.gold),
-            canAfford ? (QMessageBox::Yes | QMessageBox::No) : QMessageBox::No);
-        if (reply == QMessageBox::Yes && canAfford) { p.gold -= offer.cost; offer.grant(); }
+        const bool accepted = showVisualNovelChoice(QString::fromUtf8("凛凛子"),
+            QString::fromUtf8("%1\n价格：%2 金币\n当前金币：%3\n每个摊位只能购买一次。")
+                .arg(offer.text).arg(offer.cost).arg(p.gold),
+            shopPortrait, canAfford ? QString::fromUtf8("购买") : QString::fromUtf8("金币不足"));
+        if (accepted && canAfford) {
+            p.gold -= offer.cost;
+            offer.grant();
+            shop->classicPurchaseCount = 1;
+            showVisualNovelDialogue({
+                {QString::fromUtf8("凛凛子"),
+                 QString::fromUtf8("交易完成！这是你的 %1。这个摊位不会再次出售。")
+                     .arg(offer.text), shopPortrait, QStringLiteral("#ffb5d7")}
+            });
+        } else if (accepted) {
+            showVisualNovelDialogue({
+                {QString::fromUtf8("凛凛子"), QString::fromUtf8("金币不够，等你准备好再来吧。"),
+                 shopPortrait, QStringLiteral("#ffb5d7")}
+            });
+        }
         updateHUD();
         return;
     }
@@ -1015,13 +1099,15 @@ void MainWindow::showShopDialog(int x, int y)
             {QString::fromUtf8("攻击力"), QString::fromUtf8("+%1").arg(offer.atk), [&]{ p.atk += offer.atk; }},
             {QString::fromUtf8("防御力"), QString::fromUtf8("+%1").arg(offer.def), [&]{ p.def += offer.def; }}
         };
+        bool purchased = false;
         for (const auto& item : offers) {
             auto* button = new QPushButton(QString::fromUtf8("购买 %1（%2）").arg(item.name, item.effect), &dlg);
             button->setEnabled(p.gold >= offer.price);
-            QObject::connect(button, &QPushButton::clicked, &dlg, [&dlg, &p, offer, item] {
+            QObject::connect(button, &QPushButton::clicked, &dlg, [&dlg, &p, &purchased, offer, item] {
                 p.gold -= offer.price;
                 item.apply();
                 ++p.shopUseCount;
+                purchased = true;
                 dlg.accept();
             });
             layout->addWidget(button);
@@ -1031,6 +1117,8 @@ void MainWindow::showShopDialog(int x, int y)
         layout->addWidget(leave);
         applyRuntimeArtSkin(dlg);
         dlg.exec();
+        if (purchased)
+            shop->classicPurchaseCount = 1;
         updateHUD();
         return;
     }
@@ -1078,6 +1166,9 @@ void MainWindow::showShopDialog(int x, int y)
     sep->setStyleSheet("color: #444;");
     layout->addWidget(sep);
 
+    bool purchased = false;
+    QString purchasedName;
+    QString purchasedEffect;
     for (auto& item : items) {
         auto* row = new QHBoxLayout();
         row->setSpacing(8);
@@ -1100,11 +1191,11 @@ void MainWindow::showShopDialog(int x, int y)
         );
         btn->setEnabled(item.basePrice > 0 && p.gold >= item.actualPrice);
 
-        connect(btn, &QPushButton::clicked, &dlg, [&dlg, &item]() {
+        connect(btn, &QPushButton::clicked, &dlg, [&dlg, &item, &purchased, &purchasedName, &purchasedEffect]() {
             item.apply();
-            QMessageBox::information(&dlg, QString::fromUtf8("购买成功"),
-                QString::fromUtf8("购买了 %1！%2（花费 %3 G）")
-                    .arg(item.name).arg(item.effectDesc).arg(item.actualPrice));
+            purchased = true;
+            purchasedName = item.name;
+            purchasedEffect = item.effectDesc;
             dlg.accept();
         });
         row->addWidget(btn);
@@ -1126,6 +1217,15 @@ void MainWindow::showShopDialog(int x, int y)
 
     applyRuntimeArtSkin(dlg);
     dlg.exec();
+    if (purchased) {
+        shop->classicPurchaseCount = 1;
+        showVisualNovelDialogue({
+            {QString::fromUtf8("凛凛子"),
+             QString::fromUtf8("购买了 %1！%2\n本摊位交易已完成。")
+                 .arg(purchasedName).arg(purchasedEffect),
+             shopPortrait, QStringLiteral("#ffb5d7")}
+        });
+    }
     updateHUD();
 }
 

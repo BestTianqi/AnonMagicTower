@@ -31,6 +31,9 @@ private:
     void showPrisonTrapPrompt();
     void showFloor3PrisonVisualNovel();
     void showVisualNovelDialogue(const std::vector<VisualNovelPage>& pages);
+    bool showVisualNovelChoice(const QString& speaker, const QString& text,
+                               const QString& portrait, const QString& yesText = QString::fromUtf8("确定"),
+                               const QString& noText = QString::fromUtf8("离开"));
     void showOpeningPrisonStory();
     void showStoryMessage(const QString& message);
     void showNPCDialog(int x, int y);
