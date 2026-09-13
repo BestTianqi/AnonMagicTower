@@ -205,11 +205,13 @@ MainWindow::MainWindow(Game* game, QWidget* parent)
         }
         case Game::Move_StairsUp:
             m_game->goUpFloor(x, y);
+            showOpeningFloorStory(floorBefore, m_game->currentFloor());
             ui.mapWidget->update();
             updateHUD();
             break;
         case Game::Move_StairsDown:
             m_game->goDownFloor(x, y);
+            showOpeningFloorStory(floorBefore, m_game->currentFloor());
             ui.mapWidget->update();
             updateHUD();
             break;
@@ -625,6 +627,28 @@ void MainWindow::showOpeningPrisonStory()
         "你在3层向前走时被守卫击晕，醒来后已经回到2层牢房。\n\n"
         "先去找小偷，他知道被夺走的铁剑和铁盾在哪里。"));
     box.exec();
+}
+
+void MainWindow::showOpeningFloorStory(int fromFloor, int toFloor)
+{
+    if (fromFloor == 1 && toFloor == 2 && !m_floor2OpeningShown) {
+        m_floor2OpeningShown = true;
+        QMessageBox box(this);
+        box.setWindowTitle(QString::fromUtf8("魔塔序章·二层"));
+        box.setText(QString::fromUtf8(
+            "爱音：这里就是魔塔二层……\n\n"
+            "听说被夺走的铁剑和铁盾分别藏在更高的楼层。\n"
+            "先去找牢房里的米歇尔，她知道通往暗道的方法。"));
+        box.exec();
+    } else if (fromFloor == 2 && toFloor == 3 && !m_floor3OpeningShown) {
+        m_floor3OpeningShown = true;
+        QMessageBox box(this);
+        box.setWindowTitle(QString::fromUtf8("魔塔序章·三层"));
+        box.setText(QString::fromUtf8(
+            "爱音：三层的空气好沉重……\n\n"
+            "前方似乎有守卫巡逻。小心前进，别被他们发现。"));
+        box.exec();
+    }
 }
 
 void MainWindow::showNPCDialog(int x, int y)
@@ -1488,16 +1512,18 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
     case Game::Move_Shop:
         showShopDialog(nx, ny);
         break;
-    case Game::Move_StairsUp:
-        m_game->goUpFloor(nx, ny);
-        ui.mapWidget->update();
-        updateHUD();
-        break;
-    case Game::Move_StairsDown:
-        m_game->goDownFloor(nx, ny);
-        ui.mapWidget->update();
-        updateHUD();
-        break;
+        case Game::Move_StairsUp:
+            m_game->goUpFloor(nx, ny);
+            showOpeningFloorStory(floorBefore, m_game->currentFloor());
+            ui.mapWidget->update();
+            updateHUD();
+            break;
+        case Game::Move_StairsDown:
+            m_game->goDownFloor(nx, ny);
+            showOpeningFloorStory(floorBefore, m_game->currentFloor());
+            ui.mapWidget->update();
+            updateHUD();
+            break;
     case Game::Move_PlayerDead:
         updateHUD();
         gameOver();

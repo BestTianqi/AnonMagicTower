@@ -18,6 +18,7 @@ private:
     void updateHUD();
     void updateMonsterPanel();
     void showInventory();
+    void showOpeningFloorStory(int fromFloor, int toFloor);
     void showOpeningPrisonStory();
     void showNPCDialog(int x, int y);
     void showShopDialog(int x, int y);
@@ -34,5 +35,7 @@ private:
     int m_pendingMoveDx = 0;
     int m_pendingMoveDy = 0;
     bool m_hasPendingMove = false;
+    bool m_floor2OpeningShown = false;
+    bool m_floor3OpeningShown = false;
     Ui::MainWindow ui;
 };

@@ -83,12 +83,6 @@ void MenuWindow::onNewGame()
 {
     auto* game = new Game();
     game->generateClassicTower();
-    QMessageBox::information(this,
-        QString::fromUtf8("梦限大魔塔"),
-        QString::fromUtf8("千早爱音踏入了被音乐诅咒的魔塔。\n\n"
-                          "击败沿途的成员形态，收集钥匙与强化道具，\n"
-                          "最终在镜厅面对长崎素世。\n\n"
-                          "方向键移动，靠近怪物即可战斗。"));
     enterGame(game);
 }
 
