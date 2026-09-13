@@ -30,6 +30,14 @@ bool mechanismDoorReadyAt(int floorNumber, const FloorData& floor, int doorX, in
     // 原版 48 层圣剑房花门是损坏的机关，清怪后仍不会自动开启。
     if (floorNumber == 48) return false;
 
+    // 第八层花门绑定原版 1–7 号怪物。即使门旁的怪物已经清空，
+    // 只要这组怪物仍有任何一只存活，花门就必须保持关闭。
+    if (floorNumber == 8) {
+        for (int id = 1; id <= 7; ++id)
+            if (hasClassicMonsterId(floor, id)) return false;
+        return true;
+    }
+
     // 优先按原版常见的“门周围八格”逐门判定：只要门周围存在怪物，
     // 必须全部清除后这扇门才会打开。这样同一楼层的多扇门可以分别解锁。
     bool hasAdjacentMonster = false;
