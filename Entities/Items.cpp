@@ -22,8 +22,8 @@ ClassicShopOffer classicShopOfferForFloor(int floor, int purchaseCount)
     // 20、40、80、140、220……（相邻差值每次增加 20）。
     // 楼层只影响本次提供的属性数值，不影响价格序列。
     const int price = 10 * priceCount * (priceCount + 1) + 20;
-    // 生命购买按全局购买序号计算：第 1 次 +10，第 2 次 +20，依此递增。
-    const int hp = 10 * (priceCount + 1);
+    // 生命购买按全局购买序号计算：第 1 次 +100，第 2 次 +200，依此递增。
+    const int hp = 100 * (priceCount + 1);
     return {hp, atk, def, price};
 }
 
