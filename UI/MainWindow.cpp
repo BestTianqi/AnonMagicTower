@@ -287,6 +287,17 @@ void MainWindow::showBattleFeedback(const QString& message)
     m_battleFeedbackTimer.start(3500);
 }
 
+void MainWindow::showStoryMessage(const QString& message)
+{
+    if (!ui.battleLabel) return;
+    // 序章文字直接落在主界面的事件提示条中，保持地图连续可见。
+    ui.battleLabel->setText(QString::fromUtf8("【剧情】\n%1").arg(message));
+    ui.battleLabel->setVisible(true);
+    m_battleFeedbackTimer.stop();
+    m_battleFeedbackTimer.setSingleShot(true);
+    m_battleFeedbackTimer.start(6500);
+}
+
 void MainWindow::loadAssets()
 {
     auto* mw = ui.mapWidget;
@@ -621,33 +632,24 @@ void MainWindow::showInventory()
 
 void MainWindow::showOpeningPrisonStory()
 {
-    QMessageBox box(this);
-    box.setWindowTitle(QString::fromUtf8("魔塔序章"));
-    box.setText(QString::fromUtf8(
+    showStoryMessage(QString::fromUtf8(
         "你在3层向前走时被守卫击晕，醒来后已经回到2层牢房。\n\n"
         "先去找小偷，他知道被夺走的铁剑和铁盾在哪里。"));
-    box.exec();
 }
 
 void MainWindow::showOpeningFloorStory(int fromFloor, int toFloor)
 {
     if (fromFloor == 1 && toFloor == 2 && !m_floor2OpeningShown) {
         m_floor2OpeningShown = true;
-        QMessageBox box(this);
-        box.setWindowTitle(QString::fromUtf8("魔塔序章·二层"));
-        box.setText(QString::fromUtf8(
+        showStoryMessage(QString::fromUtf8(
             "爱音：这里就是魔塔二层……\n\n"
             "听说被夺走的铁剑和铁盾分别藏在更高的楼层。\n"
             "先去找牢房里的米歇尔，她知道通往暗道的方法。"));
-        box.exec();
     } else if (fromFloor == 2 && toFloor == 3 && !m_floor3OpeningShown) {
         m_floor3OpeningShown = true;
-        QMessageBox box(this);
-        box.setWindowTitle(QString::fromUtf8("魔塔序章·三层"));
-        box.setText(QString::fromUtf8(
+        showStoryMessage(QString::fromUtf8(
             "爱音：三层的空气好沉重……\n\n"
             "前方似乎有守卫巡逻。小心前进，别被他们发现。"));
-        box.exec();
     }
 }
 

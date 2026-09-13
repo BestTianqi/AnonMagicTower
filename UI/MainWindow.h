@@ -20,6 +20,7 @@ private:
     void showInventory();
     void showOpeningFloorStory(int fromFloor, int toFloor);
     void showOpeningPrisonStory();
+    void showStoryMessage(const QString& message);
     void showNPCDialog(int x, int y);
     void showShopDialog(int x, int y);
     void showModifier();
