@@ -168,10 +168,13 @@ MainWindow::MainWindow(Game* game, QWidget* parent)
     ui.mapWidget->setFocusPolicy(Qt::NoFocus);
     connect(ui.mapWidget, &MapWidget::tileClicked, this, [this](int x, int y) {
         if (m_game->player().hp <= 0 || ui.mapWidget->isPlayerMoving()) return;
+        const int floorBefore = m_game->currentFloor();
         const auto result = m_game->teleportPlayerTo(x, y);
         switch (result) {
         case Game::Move_Pickup:
         case Game::Move_Ok:
+            if (floorBefore == 3 && m_game->currentFloor() == 2)
+                showOpeningPrisonStory();
             ui.mapWidget->update();
             updateHUD();
             break;
@@ -613,6 +616,16 @@ void MainWindow::showInventory()
     dlg.exec();
 }
 
+void MainWindow::showOpeningPrisonStory()
+{
+    QMessageBox box(this);
+    box.setWindowTitle(QString::fromUtf8("魔塔序章"));
+    box.setText(QString::fromUtf8(
+        "你在3层向前走时被守卫击晕，醒来后已经回到2层牢房。\n\n"
+        "先去找小偷，他知道被夺走的铁剑和铁盾在哪里。"));
+    box.exec();
+}
+
 void MainWindow::showNPCDialog(int x, int y)
 {
     NPC* npc = m_game->npcAt(x, y);
@@ -636,6 +649,13 @@ void MainWindow::showNPCDialog(int x, int y)
 
     // 原版关键 NPC 事件（保留一次性状态）。
     const int classicId = npc->ClassicId();
+    if (!npc->HasGivenReward() && classicId == 3) {
+        npc->Interact(p); // 领取怪物手册（主题名称：灯的歌词本）
+        showNpcInfo(QString::fromUtf8("怪物手册"),
+            QString::fromUtf8("这本怪物手册交给你。\n它能查看本层怪物的能力。"));
+        updateHUD();
+        return;
+    }
     if (!npc->HasGivenReward() && classicId == 33) {
         p.atk = (p.atk * 103 + 99) / 100;
         p.def = (p.def * 103 + 99) / 100;
@@ -679,7 +699,26 @@ void MainWindow::showNPCDialog(int x, int y)
         updateHUD();
         return;
     }
-    if (!npc->HasGivenReward() && (classicId == 13 || classicId == 14 || classicId == 25 || classicId == 31)) {
+    if (classicId == 13) {
+        // 原版2层小偷是两段式剧情：第一次确认主角醒来，第二次交代
+        // 铁剑/铁盾所在楼层；第一次对话同时打开身边的暗道。
+        if (!npc->HasGivenReward()) {
+            for (int dy = -1; dy <= 1; ++dy)
+                for (int dx = -1; dx <= 1; ++dx)
+                    if (std::abs(dx) + std::abs(dy) == 1 && m_game->tileAt(x + dx, y + dy) == Tile_DarkWall)
+                        m_game->setTile(x + dx, y + dy, Tile_Floor);
+            npc->SetGiven(true);
+            showNpcInfo(QString::fromUtf8("小偷"),
+                QString::fromUtf8("你清醒了吗？这里是魔塔2层的牢房。"));
+        } else {
+            showNpcInfo(QString::fromUtf8("小偷"),
+                QString::fromUtf8("你的剑和盾被警卫拿走了。铁剑在5层，铁盾在9层，先去找到它们。"));
+        }
+        ui.mapWidget->update();
+        updateHUD();
+        return;
+    }
+    if (!npc->HasGivenReward() && (classicId == 14 || classicId == 25 || classicId == 31)) {
         // 小偷事件：打开身边的隐藏墙，等价于原版暗道剧情。
         for (int dy = -1; dy <= 1; ++dy)
             for (int dx = -1; dx <= 1; ++dx)
@@ -1334,6 +1373,7 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
     int nx = m_game->player().x + dx;
     int ny = m_game->player().y + dy;
     ui.mapWidget->setPlayerDirection(dx, dy);
+    const int floorBefore = m_game->currentFloor();
     auto result = m_game->tryMovePlayer(nx, ny);
 
     switch (result) {
@@ -1350,6 +1390,8 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
         break;
     }
     case Game::Move_Ok:
+        if (floorBefore == 3 && m_game->currentFloor() == 2)
+            showOpeningPrisonStory();
         ui.mapWidget->update();
         updateHUD();
         break;

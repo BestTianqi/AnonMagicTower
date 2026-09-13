@@ -130,8 +130,10 @@ private:
     void openMechanismDoorsIfReady();
 
     // 10 层中央 Boss 区的骷髅士兵包围事件。
+    void triggerFloor3PrisonStoryIfNeeded();
     void triggerFloor10AmbushIfNeeded();
     void resolveFloor10AmbushIfCleared();
+    bool m_floor3PrisonTriggered = false;
     bool m_floor10AmbushTriggered = false;
     std::unordered_set<int> m_floor10AmbushMonsterKeys;
 };

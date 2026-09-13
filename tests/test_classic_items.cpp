@@ -334,6 +334,18 @@ int main() {
             floor10RewardShown = true;
     assert(floor10RewardShown);
 
+    // 前三层原版序章：3层向前走触发昏迷，被送回2层并停在小偷旁边。
+    Game openingStory;
+    openingStory.goUpFloor(2, 12, false);
+    openingStory.goUpFloor(2, 12, false);
+    openingStory.initFloor(3);
+    openingStory.player().x = 2;
+    openingStory.player().y = 12;
+    openingStory.setTile(3, 12, Tile_Floor);
+    assert(openingStory.tryMovePlayer(3, 12) == Game::Move_Ok);
+    assert(openingStory.currentFloor() == 2);
+    assert(openingStory.player().x == 3 && openingStory.player().y == 8);
+
     Game quakeGame;
     quakeGame.setTile(4, 4, Tile_Wall);
     quakeGame.setTile(5, 5, Tile_DarkWall);

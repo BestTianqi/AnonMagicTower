@@ -65,6 +65,7 @@ void Game::generateClassicTower()
 {
     m_floors.clear();
     m_floor = 1;
+    m_floor3PrisonTriggered = false;
     m_floor10AmbushTriggered = false;
     m_floor10AmbushMonsterKeys.clear();
     for (int floor = 1; floor <= 50; ++floor) {
@@ -210,7 +211,7 @@ void Game::generateClassicTower()
                 default: break;
                 }
                 std::unique_ptr<Item> reward;
-                if (id == 3) reward = std::make_unique<AnonGlasses>();
+                if (id == 3) reward = std::make_unique<NoteBook>();
                 else if (id == 18) reward = std::make_unique<HolyWater>();
                 else if (id == 32) reward = std::make_unique<Treasure>(1000);
                 NPC npc(name, dialog, std::move(reward), false, 0, nullptr, id);
@@ -275,6 +276,7 @@ void Game::initFloor(int floor)
 
 bool Game::loadDefaultMap()
 {
+    m_floor3PrisonTriggered = false;
     m_floor10AmbushTriggered = false;
     m_floor10AmbushMonsterKeys.clear();
     // 从嵌入资源加载默认地图
@@ -549,8 +551,24 @@ void Game::openMechanismDoorsIfReady()
     }
 }
 
+void Game::triggerFloor3PrisonStoryIfNeeded()
+{
+    if (m_floor != 3 || m_floor3PrisonTriggered || !m_currentFloor)
+        return;
+    // 3层下楼梯右侧第一格是原版“向前走触发昏迷”的剧情点。
+    if (m_player.x != 3 || m_player.y != 12)
+        return;
+
+    m_floor3PrisonTriggered = true;
+    goDownFloor(3, 12, false);
+    // 小偷位于2层左侧房间，剧情结束后主角站到其左侧。
+    m_player.x = 3;
+    m_player.y = 8;
+}
+
 void Game::triggerFloor10AmbushIfNeeded()
 {
+    triggerFloor3PrisonStoryIfNeeded();
     if (m_floor != 10 || m_floor10AmbushTriggered || !m_currentFloor)
         return;
 
@@ -1194,7 +1212,7 @@ bool Game::saveToFile(const std::string& path) const
         << m_player.hasCross << " " << m_player.hasDragonSlayer << " "
         << m_player.hasHolyShield << " " << m_player.freezeMagicUsed << " "
         << m_player.flyWandUses << " " << m_player.symmetryFlyerUses << " "
-        << m_floor10AmbushTriggered << "\n";
+        << m_floor10AmbushTriggered << " " << m_floor3PrisonTriggered << "\n";
 
     // 背包物品
     ofs << m_player.InventoryCount() << "\n";
@@ -1485,6 +1503,7 @@ bool Game::loadFromFile(const std::string& path)
     bool hasCross = false, hasDragonSlayer = false, hasHolyShield = false, freezeMagicUsed = false;
     int flyWandUses = 0, symmetryFlyerUses = 0;
     bool floor10AmbushTriggered = false;
+    bool floor3PrisonTriggered = false;
     std::string invToken;
     ifs >> invToken;
     if (invToken == "EXTRA") {
@@ -1497,6 +1516,8 @@ bool Game::loadFromFile(const std::string& path)
                     >> flyWandUses >> symmetryFlyerUses;
                 if (ifs.peek() != '\n' && ifs.peek() != '\r' && ifs.peek() != EOF)
                     ifs >> floor10AmbushTriggered;
+                if (ifs.peek() != '\n' && ifs.peek() != '\r' && ifs.peek() != EOF)
+                    ifs >> floor3PrisonTriggered;
             }
         }
         ifs >> invToken; // 下一个是背包数量
@@ -1529,6 +1550,7 @@ bool Game::loadFromFile(const std::string& path)
     m_player.flyWandUses = flyWandUses;
     m_player.symmetryFlyerUses = symmetryFlyerUses;
     m_floor10AmbushTriggered = floor10AmbushTriggered;
+    m_floor3PrisonTriggered = floor3PrisonTriggered;
     m_floor10AmbushMonsterKeys.clear();
 
     for (int i = 0; i < invCount; ++i) {

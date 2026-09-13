@@ -18,6 +18,7 @@ private:
     void updateHUD();
     void updateMonsterPanel();
     void showInventory();
+    void showOpeningPrisonStory();
     void showNPCDialog(int x, int y);
     void showShopDialog(int x, int y);
     void showModifier();
