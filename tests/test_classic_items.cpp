@@ -302,7 +302,7 @@ int main() {
         assert(audit.tileAt(4, 4) == Tile_Floor);
     }
 
-    // 第八层花门即使旁边的 1 号怪物先被击败，也必须等 1–7 号怪物全部清空。
+    // 第八层花门只需要击败两只三角初华，其他怪物不阻挡开门。
     Game floor8FlowerDoor;
     floor8FlowerDoor.initFloor(8);
     floor8FlowerDoor.player().x = 3;
@@ -310,14 +310,18 @@ int main() {
     floor8FlowerDoor.player().atk = 100000;
     floor8FlowerDoor.player().hp = 1000000000;
     floor8FlowerDoor.setTile(4, 4, Tile_DoorMagic);
-    floor8FlowerDoor.spawnMonster(5, 4, MonsterDB::getByIndex(0));
-    floor8FlowerDoor.spawnMonster(8, 4, MonsterDB::getByIndex(1));
+    floor8FlowerDoor.spawnMonster(5, 4, MonsterDB::getByIndex(6));
+    floor8FlowerDoor.spawnMonster(6, 4, MonsterDB::getByIndex(6));
+    floor8FlowerDoor.spawnMonster(8, 4, MonsterDB::getByIndex(0));
     assert(floor8FlowerDoor.tryMovePlayer(4, 4) == Game::Move_DoorLocked);
     std::vector<std::string> floor8Log;
     assert(floor8FlowerDoor.fightAt(5, 4, floor8Log) == Game::Fight_PlayerWin);
     assert(floor8FlowerDoor.tileAt(4, 4) == Tile_DoorMagic);
     floor8Log.clear();
     assert(floor8FlowerDoor.fightAt(8, 4, floor8Log) == Game::Fight_PlayerWin);
+    assert(floor8FlowerDoor.tileAt(4, 4) == Tile_DoorMagic);
+    floor8Log.clear();
+    assert(floor8FlowerDoor.fightAt(6, 4, floor8Log) == Game::Fight_PlayerWin);
     assert(floor8FlowerDoor.tileAt(4, 4) == Tile_Floor);
 
     // 48 层原版花门是坏门，只能用镐破坏，不会因清怪自动开启。
