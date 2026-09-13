@@ -275,6 +275,28 @@ int main() {
     assert(brokenFlowerDoor.tryMovePlayer(4, 3) == Game::Move_Ok);
     assert(brokenFlowerDoor.tileAt(4, 3) == Tile_Floor);
 
+    // 10 层花门事件：进入中央 Boss 区后花门立即开启，内部六只骷髅士兵
+    // 走到主角周围形成包围（事件只触发一次）。
+    Game floor10Ambush;
+    for (int i = 0; i < 9; ++i) floor10Ambush.goUpFloor(7, 12, false);
+    floor10Ambush.initFloor(10);
+    floor10Ambush.player().x = 7;
+    floor10Ambush.player().y = 10;
+    floor10Ambush.setTile(7, 9, Tile_Floor);
+    floor10Ambush.setTile(5, 5, Tile_DoorMagic);
+    floor10Ambush.setTile(9, 5, Tile_DoorMagic);
+    const Monster skeletonSoldier = MonsterDB::getByIndex(5);
+    for (int i = 0; i < 6; ++i)
+        floor10Ambush.spawnMonster(3 + i, 3, skeletonSoldier);
+    assert(floor10Ambush.tryMovePlayer(7, 9) == Game::Move_Ok);
+    assert(floor10Ambush.tileAt(5, 5) == Tile_Floor);
+    assert(floor10Ambush.tileAt(9, 5) == Tile_Floor);
+    int surrounded = 0;
+    for (int y = 7; y <= 11; ++y)
+        for (int x = 4; x <= 10; ++x)
+            if (floor10Ambush.hasMonsterAt(x, y)) ++surrounded;
+    assert(surrounded == 6);
+
     Game quakeGame;
     quakeGame.setTile(4, 4, Tile_Wall);
     quakeGame.setTile(5, 5, Tile_DarkWall);

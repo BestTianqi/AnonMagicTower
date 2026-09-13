@@ -9,6 +9,7 @@
 #include <fstream>
 #include <queue>
 #include <sstream>
+#include <unordered_set>
 
 namespace {
 
@@ -23,6 +24,8 @@ bool hasClassicMonsterId(const FloorData& floor, int id)
 
 bool mechanismDoorReady(int floorNumber, const FloorData& floor)
 {
+    // 10 层花门由进入中央 Boss 区的剧情事件开启，而不是清怪开启。
+    if (floorNumber == 10) return false;
     // 原版 48 层圣剑房花门是损坏的机关，清怪后仍不会自动开启。
     if (floorNumber == 48) return false;
 
@@ -31,7 +34,6 @@ bool mechanismDoorReady(int floorNumber, const FloorData& floor)
     static const std::unordered_map<int, std::vector<int>> guardGroups = {
         {2,  {21}},
         {8,  {1, 2, 3, 4, 5, 6, 7}},
-        {10, {6}},
         {11, {3, 9, 10, 11, 12}},
         {15, {3, 9, 10, 11, 12, 13}},
         {17, {7, 9, 10, 11, 12, 13}},
@@ -63,6 +65,7 @@ void Game::generateClassicTower()
 {
     m_floors.clear();
     m_floor = 1;
+    m_floor10AmbushTriggered = false;
     for (int floor = 1; floor <= 50; ++floor) {
         FloorData fd;
         fd.map.assign(m_width * m_height, Tile_Wall);
@@ -271,6 +274,7 @@ void Game::initFloor(int floor)
 
 bool Game::loadDefaultMap()
 {
+    m_floor10AmbushTriggered = false;
     // 从嵌入资源加载默认地图
     QFile res(":/map.txt");
     if (res.open(QIODevice::ReadOnly)) {
@@ -444,6 +448,7 @@ Game::MoveResult Game::teleportPlayerTo(int targetX, int targetY)
     const int tile = tileAt(targetX, targetY);
     m_player.x = targetX;
     m_player.y = targetY;
+    triggerFloor10AmbushIfNeeded();
 
     switch (tile) {
     case Tile_Item: {
@@ -538,6 +543,101 @@ void Game::openMechanismDoorsIfReady()
             if (tile == Tile_DoorMagic || tile == Tile_DoorIron)
                 setTile(x, y, Tile_Floor);
         }
+    }
+}
+
+void Game::triggerFloor10AmbushIfNeeded()
+{
+    if (m_floor != 10 || m_floor10AmbushTriggered || !m_currentFloor)
+        return;
+
+    // 原塔第 10 层的中央竖厅就是花门后的 Boss 区。底部红门进入
+    // (6..8, 4..9) 后触发一次，避免在两侧房间提前触发。
+    if (m_player.x < 6 || m_player.x > 8 || m_player.y < 4 || m_player.y > 9)
+        return;
+
+    bool hasFlowerDoor = false;
+    for (int y = 0; y < m_height && !hasFlowerDoor; ++y)
+        for (int x = 0; x < m_width; ++x)
+            if (tileAt(x, y) == Tile_DoorMagic) {
+                hasFlowerDoor = true;
+                break;
+            }
+    // 存档/编辑器若已把花门打开，不重复执行一次性包围事件。
+    if (!hasFlowerDoor) {
+        m_floor10AmbushTriggered = true;
+        return;
+    }
+
+    m_floor10AmbushTriggered = true;
+
+    // 花门属于剧情机关：进入 Boss 区时立即开启，不再等待清怪条件。
+    for (int y = 0; y < m_height; ++y)
+        for (int x = 0; x < m_width; ++x)
+            if (tileAt(x, y) == Tile_DoorMagic)
+                setTile(x, y, Tile_Floor);
+
+    // 取原版骷髅人/骷髅士兵（ID 5/6）中距离入口最近的六只，
+    // 清除旧格后放置到入口周围可行走位置，表现“走过来围住主角”。
+    std::vector<std::pair<int, Monster>> candidates;
+    for (const auto& entry : m_currentFloor->monsters) {
+        const int classicId = MonsterDB::indexOf(entry.second.GetName()) + 1;
+        if (classicId == 5 || classicId == 6)
+            candidates.emplace_back(entry.first, entry.second);
+    }
+    std::sort(candidates.begin(), candidates.end(), [this](const auto& lhs, const auto& rhs) {
+        const int lx = lhs.first % m_width, ly = lhs.first / m_width;
+        const int rx = rhs.first % m_width, ry = rhs.first / m_width;
+        const int ld = (lx - m_player.x) * (lx - m_player.x) + (ly - m_player.y) * (ly - m_player.y);
+        const int rd = (rx - m_player.x) * (rx - m_player.x) + (ry - m_player.y) * (ry - m_player.y);
+        return ld == rd ? lhs.first < rhs.first : ld < rd;
+    });
+    if (candidates.size() > 6) candidates.resize(6);
+
+    const std::unordered_set<int> selectedKeys = [&candidates]() {
+        std::unordered_set<int> keys;
+        for (const auto& candidate : candidates) keys.insert(candidate.first);
+        return keys;
+    }();
+    for (const auto& candidate : candidates) {
+        if (candidate.first >= 0 && candidate.first < static_cast<int>(m_currentFloor->map.size()) &&
+            m_currentFloor->map[candidate.first] == Tile_Monster)
+            m_currentFloor->map[candidate.first] = Tile_Floor;
+        m_currentFloor->monsters.erase(candidate.first);
+    }
+
+    std::vector<int> targets;
+    for (int radius = 1; radius <= 4; ++radius) {
+        for (int dy = -radius; dy <= radius; ++dy) {
+            for (int dx = -radius; dx <= radius; ++dx) {
+                if (std::abs(dx) + std::abs(dy) != radius) continue;
+                const int x = m_player.x + dx, y = m_player.y + dy;
+                if (x < 2 || y < 2 || x > m_width - 3 || y > m_height - 3) continue;
+                const int key = posKey(x, y);
+                const int tile = tileAt(x, y);
+                const bool freeSelected = selectedKeys.count(key) != 0;
+                if ((tile == Tile_Floor || freeSelected) &&
+                    m_currentFloor->items.count(key) == 0 &&
+                    m_currentFloor->npcs.count(key) == 0 && key != posKey(m_player.x, m_player.y))
+                    targets.push_back(key);
+            }
+        }
+    }
+
+    size_t targetIndex = 0;
+    for (const auto& candidate : candidates) {
+        while (targetIndex < targets.size() && m_currentFloor->monsters.count(targets[targetIndex]) != 0)
+            ++targetIndex;
+        if (targetIndex < targets.size()) {
+            const int key = targets[targetIndex++];
+            m_currentFloor->monsters[key] = candidate.second;
+            m_currentFloor->map[key] = Tile_Monster;
+            continue;
+        }
+        // 地图编辑器可能把周围铺满障碍，无法组成包围时保留原位置，
+        // 不让剧情事件凭空删除怪物。
+        m_currentFloor->monsters[candidate.first] = candidate.second;
+        m_currentFloor->map[candidate.first] = Tile_Monster;
     }
 }
 
@@ -645,6 +745,7 @@ Game::MoveResult Game::tryMovePlayer(int nx, int ny)
             if (breakWall(nx, ny)) {
                 m_player.wallBreakerUsed = false;
                 m_player.x = nx; m_player.y = ny;
+                triggerFloor10AmbushIfNeeded();
                 return Move_Ok;
             }
         }
@@ -655,6 +756,7 @@ Game::MoveResult Game::tryMovePlayer(int nx, int ny)
             m_player.freezeMagicUsed = false;
             setTile(nx, ny, Tile_Floor);
             m_player.x = nx; m_player.y = ny;
+            triggerFloor10AmbushIfNeeded();
             return Move_Ok;
         }
         return Move_Block;
@@ -669,11 +771,13 @@ Game::MoveResult Game::tryMovePlayer(int nx, int ny)
             m_player.wallBreakerUsed = false;
             setTile(nx, ny, Tile_Floor);
             m_player.x = nx; m_player.y = ny;
+            triggerFloor10AmbushIfNeeded();
             return Move_Ok;
         }
         if (!mechanismDoorReady(m_floor, *m_currentFloor)) return Move_DoorLocked;
         setTile(nx, ny, Tile_Floor);
         m_player.x = nx; m_player.y = ny;
+        triggerFloor10AmbushIfNeeded();
         return Move_Ok;
 
     case Tile_DarkWall:
@@ -682,6 +786,7 @@ Game::MoveResult Game::tryMovePlayer(int nx, int ny)
         if (m_player.wallBreakerUsed && breakWall(nx, ny)) {
             m_player.wallBreakerUsed = false;
             m_player.x = nx; m_player.y = ny;
+            triggerFloor10AmbushIfNeeded();
             return Move_Ok;
         }
         setTile(nx, ny, m_currentFloor->items.count(posKey(nx, ny)) ? Tile_Item : Tile_Floor);
@@ -689,6 +794,7 @@ Game::MoveResult Game::tryMovePlayer(int nx, int ny)
 
     case Tile_Floor:
         m_player.x = nx; m_player.y = ny;
+        triggerFloor10AmbushIfNeeded();
         return Move_Ok;
 
     case Tile_DoorRed:
@@ -701,6 +807,7 @@ Game::MoveResult Game::tryMovePlayer(int nx, int ny)
         }
         setTile(nx, ny, Tile_Floor);
         m_player.x = nx; m_player.y = ny;
+        triggerFloor10AmbushIfNeeded();
         return Move_Ok;
 
     case Tile_DoorBlue:
@@ -713,6 +820,7 @@ Game::MoveResult Game::tryMovePlayer(int nx, int ny)
         }
         setTile(nx, ny, Tile_Floor);
         m_player.x = nx; m_player.y = ny;
+        triggerFloor10AmbushIfNeeded();
         return Move_Ok;
 
     case Tile_DoorGreen:
@@ -725,6 +833,7 @@ Game::MoveResult Game::tryMovePlayer(int nx, int ny)
         }
         setTile(nx, ny, Tile_Floor);
         m_player.x = nx; m_player.y = ny;
+        triggerFloor10AmbushIfNeeded();
         return Move_Ok;
 
     case Tile_Monster:
@@ -732,6 +841,7 @@ Game::MoveResult Game::tryMovePlayer(int nx, int ny)
             return Move_Encounter;
         else {
             m_player.x = nx; m_player.y = ny;
+            triggerFloor10AmbushIfNeeded();
             return Move_Ok;
         }
 
@@ -748,10 +858,12 @@ Game::MoveResult Game::tryMovePlayer(int nx, int ny)
             }
             setTile(nx, ny, Tile_Floor);
             m_player.x = nx; m_player.y = ny;
+            triggerFloor10AmbushIfNeeded();
             return Move_Pickup;
         }
         setTile(nx, ny, Tile_Floor);
         m_player.x = nx; m_player.y = ny;
+        triggerFloor10AmbushIfNeeded();
         return Move_Ok;
     }
 
@@ -763,14 +875,17 @@ Game::MoveResult Game::tryMovePlayer(int nx, int ny)
 
     case Tile_StairsUp:
         m_player.x = nx; m_player.y = ny;
+        triggerFloor10AmbushIfNeeded();
         return Move_StairsUp;
 
     case Tile_StairsDown:
         m_player.x = nx; m_player.y = ny;
+        triggerFloor10AmbushIfNeeded();
         return Move_StairsDown;
 
     default:
         m_player.x = nx; m_player.y = ny;
+        triggerFloor10AmbushIfNeeded();
         return Move_Ok;
     }
 }
@@ -1002,7 +1117,8 @@ bool Game::saveToFile(const std::string& path) const
         << m_player.magicKeyUses << " " << m_player.tempShieldCharges << " "
         << m_player.hasCross << " " << m_player.hasDragonSlayer << " "
         << m_player.hasHolyShield << " " << m_player.freezeMagicUsed << " "
-        << m_player.flyWandUses << " " << m_player.symmetryFlyerUses << "\n";
+        << m_player.flyWandUses << " " << m_player.symmetryFlyerUses << " "
+        << m_floor10AmbushTriggered << "\n";
 
     // 背包物品
     ofs << m_player.InventoryCount() << "\n";
@@ -1292,6 +1408,7 @@ bool Game::loadFromFile(const std::string& path)
     bool wbUsed = false, suUsed = false, sdUsed = false;
     bool hasCross = false, hasDragonSlayer = false, hasHolyShield = false, freezeMagicUsed = false;
     int flyWandUses = 0, symmetryFlyerUses = 0;
+    bool floor10AmbushTriggered = false;
     std::string invToken;
     ifs >> invToken;
     if (invToken == "EXTRA") {
@@ -1302,6 +1419,8 @@ bool Game::loadFromFile(const std::string& path)
             if (ifs.peek() != '\n' && ifs.peek() != '\r' && ifs.peek() != EOF) {
                 ifs >> hasCross >> hasDragonSlayer >> hasHolyShield >> freezeMagicUsed
                     >> flyWandUses >> symmetryFlyerUses;
+                if (ifs.peek() != '\n' && ifs.peek() != '\r' && ifs.peek() != EOF)
+                    ifs >> floor10AmbushTriggered;
             }
         }
         ifs >> invToken; // 下一个是背包数量
@@ -1333,6 +1452,7 @@ bool Game::loadFromFile(const std::string& path)
     m_player.freezeMagicUsed = freezeMagicUsed;
     m_player.flyWandUses = flyWandUses;
     m_player.symmetryFlyerUses = symmetryFlyerUses;
+    m_floor10AmbushTriggered = floor10AmbushTriggered;
 
     for (int i = 0; i < invCount; ++i) {
         std::string iname; int ival;

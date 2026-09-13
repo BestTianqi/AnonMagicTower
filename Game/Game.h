@@ -127,4 +127,8 @@ private:
 
     // 按原版楼层事件检查机关门，并在满足条件时自动开门。
     void openMechanismDoorsIfReady();
+
+    // 10 层中央 Boss 区的骷髅士兵包围事件。
+    void triggerFloor10AmbushIfNeeded();
+    bool m_floor10AmbushTriggered = false;
 };
