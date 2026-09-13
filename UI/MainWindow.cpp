@@ -877,7 +877,8 @@ void MainWindow::showOpeningPrisonStory()
 
 void MainWindow::showOpeningFloorStory(int fromFloor, int toFloor)
 {
-    if (fromFloor == 1 && toFloor == 2 && !m_floor2OpeningShown) {
+    (void)fromFloor;
+    if (toFloor == 2 && !m_floor2OpeningShown) {
         m_floor2OpeningShown = true;
         showVisualNovelDialogue({
             {QString::fromUtf8("千早爱音"),
@@ -982,6 +983,39 @@ void MainWindow::showNPCDialog(int x, int y)
             m_game->setTile(3, 8, Tile_Floor);
             npc->SetGiven(true);
             showStoryMessage(QString::fromUtf8("铁剑在5层，铁盾在9层。先去把它们找回来。"));
+
+            // 米歇尔完成第一次情报对话后走到二层下楼梯处，短暂停留后离场。
+            // 楼梯底图保留，NPC 消失后玩家仍可正常使用楼梯。
+            FloorData& floor2 = m_game->currentFloorData();
+            const int sourceKey = m_game->posKey(x, y);
+            int stairKey = -1;
+            for (int sy = 0; sy < m_game->height() && stairKey < 0; ++sy) {
+                for (int sx = 0; sx < m_game->width(); ++sx) {
+                    if (floor2.map[sy * m_game->width() + sx] == Tile_StairsUp) {
+                        stairKey = m_game->posKey(sx, sy);
+                        break;
+                    }
+                }
+            }
+            auto movedIt = floor2.npcs.find(sourceKey);
+            if (stairKey >= 0 && movedIt != floor2.npcs.end()) {
+                const int originalStairTile = floor2.map[stairKey];
+                NPC moved = std::move(movedIt->second);
+                floor2.npcs.erase(movedIt);
+                floor2.map[sourceKey] = floor2.items.count(sourceKey) ? Tile_Item : Tile_Floor;
+                floor2.npcs.emplace(stairKey, std::move(moved));
+                floor2.map[stairKey] = Tile_NPC;
+                ui.mapWidget->update();
+                QTimer::singleShot(900, this, [this, stairKey, originalStairTile]() {
+                    if (m_game->currentFloor() != 2) return;
+                    FloorData& current = m_game->currentFloorData();
+                    auto it = current.npcs.find(stairKey);
+                    if (it == current.npcs.end() || it->second.ClassicId() != 13) return;
+                    current.npcs.erase(it);
+                    current.map[stairKey] = originalStairTile;
+                    ui.mapWidget->update();
+                });
+            }
         } else {
             if (m_game->floor3TrapActive())
                 m_game->clearFloor3Trap();
