@@ -169,7 +169,7 @@ MainWindow::MainWindow(Game* game, QWidget* parent)
     ui.mapWidget->setGame(m_game);
     ui.mapWidget->setFocusPolicy(Qt::NoFocus);
     connect(ui.mapWidget, &MapWidget::tileClicked, this, [this](int x, int y) {
-        if (m_game->player().hp <= 0 || ui.mapWidget->isPlayerMoving()) return;
+        if (m_game->player().hp <= 0 || ui.mapWidget->isSceneAnimating()) return;
         if (m_game->floor3PrisonStoryPending()) {
             m_game->resolveFloor3PrisonStory();
             showOpeningPrisonStory();
@@ -179,6 +179,7 @@ MainWindow::MainWindow(Game* game, QWidget* parent)
         }
         const int floorBefore = m_game->currentFloor();
         const auto result = m_game->teleportPlayerTo(x, y);
+        startMonsterMovementAnimation();
         switch (result) {
         case Game::Move_Pickup:
         case Game::Move_Ok:
@@ -278,7 +279,7 @@ MainWindow::MainWindow(Game* game, QWidget* parent)
 
 void MainWindow::flushPendingMove()
 {
-    if (!m_hasPendingMove || ui.mapWidget->isPlayerMoving()) return;
+    if (!m_hasPendingMove || ui.mapWidget->isSceneAnimating()) return;
     const int dx = m_pendingMoveDx;
     const int dy = m_pendingMoveDy;
     m_hasPendingMove = false;
@@ -286,6 +287,13 @@ void MainWindow::flushPendingMove()
                     dy < 0 ? Qt::Key_Up : Qt::Key_Down;
     QKeyEvent queued(QEvent::KeyPress, key, Qt::NoModifier);
     keyPressEvent(&queued);
+}
+
+void MainWindow::startMonsterMovementAnimation()
+{
+    const auto movements = m_game->takeFloor10AmbushMovementAnimations();
+    if (!movements.empty())
+        ui.mapWidget->playMonsterMovement(movements);
 }
 
 void MainWindow::showBattleFeedback(const QString& message)
@@ -1472,6 +1480,9 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
 
     // 游戏坐标已经按格更新；动画未结束前只缓存最后一次方向，动画结束后
     // 自动请求下一格，避免按住方向键时出现停顿或跨格插值。
+    if (ui.mapWidget->isMonsterMoving()) {
+        return;
+    }
     if (ui.mapWidget->isPlayerMoving()) {
         m_pendingMoveDx = dx;
         m_pendingMoveDy = dy;
@@ -1500,6 +1511,7 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
     ui.mapWidget->setPlayerDirection(dx, dy);
     const int floorBefore = m_game->currentFloor();
     auto result = m_game->tryMovePlayer(nx, ny);
+    startMonsterMovementAnimation();
 
     switch (result) {
     case Game::Move_Block:

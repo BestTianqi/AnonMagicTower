@@ -71,6 +71,7 @@ void Game::generateClassicTower()
     m_floor10AmbushTriggered = false;
     m_floor10AmbushMonsterKeys.clear();
     m_floor10AmbushDoorKeys.clear();
+    m_floor10AmbushMovements.clear();
     for (int floor = 1; floor <= 50; ++floor) {
         FloorData fd;
         fd.map.assign(m_width * m_height, Tile_Wall);
@@ -290,6 +291,7 @@ bool Game::loadDefaultMap()
     m_floor10AmbushTriggered = false;
     m_floor10AmbushMonsterKeys.clear();
     m_floor10AmbushDoorKeys.clear();
+    m_floor10AmbushMovements.clear();
     // 从嵌入资源加载默认地图
     QFile res(":/map.txt");
     if (res.open(QIODevice::ReadOnly)) {
@@ -680,6 +682,7 @@ void Game::triggerFloor10AmbushIfNeeded()
     m_floor10AmbushDoorKeys.clear();
     m_floor10AmbushDoorKeys.insert(posKey(7, 5));
     m_floor10AmbushDoorKeys.insert(posKey(7, 7));
+    m_floor10AmbushMovements.clear();
     m_floor10AmbushMonsterKeys.clear();
 
     // 取原版骷髅人/骷髅士兵（ID 5/6）中距离入口最近的六只，
@@ -739,6 +742,12 @@ void Game::triggerFloor10AmbushIfNeeded()
             m_currentFloor->monsters[key] = candidate.second;
             m_currentFloor->map[key] = Tile_Monster;
             m_floor10AmbushMonsterKeys.insert(key);
+            const int fromX = candidate.first % m_width;
+            const int fromY = candidate.first / m_width;
+            const int toX = key % m_width;
+            const int toY = key / m_width;
+            if (fromX != toX || fromY != toY)
+                m_floor10AmbushMovements.push_back({candidate.second, fromX, fromY, toX, toY});
             continue;
         }
         // 地图编辑器可能把周围铺满障碍，无法组成包围时保留原位置，
@@ -748,6 +757,13 @@ void Game::triggerFloor10AmbushIfNeeded()
         m_floor10AmbushMonsterKeys.insert(candidate.first);
     }
     resolveFloor10AmbushIfCleared();
+}
+
+std::vector<Game::MonsterMovementAnimation> Game::takeFloor10AmbushMovementAnimations()
+{
+    auto movements = std::move(m_floor10AmbushMovements);
+    m_floor10AmbushMovements.clear();
+    return movements;
 }
 
 void Game::resolveFloor10AmbushIfCleared()
@@ -1639,6 +1655,7 @@ bool Game::loadFromFile(const std::string& path)
     m_floor3TrapActive = floor3TrapActive;
     m_floor10AmbushMonsterKeys.clear();
     m_floor10AmbushDoorKeys.clear();
+    m_floor10AmbushMovements.clear();
 
     for (int i = 0; i < invCount; ++i) {
         std::string iname; int ival;

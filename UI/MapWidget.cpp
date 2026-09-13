@@ -17,6 +17,7 @@ MapWidget::MapWidget(Game* game, QWidget* parent)
     generatePlaceholders();
     m_motionTimer.setInterval(16);
     m_motionClock.start();
+    m_monsterMotionClock.start();
     connect(&m_motionTimer, &QTimer::timeout, this, &MapWidget::advancePlayerMotion);
     m_motionTimer.start();
 }
@@ -229,6 +230,7 @@ void MapWidget::advancePlayerMotion()
 {
     const qint64 elapsedMs = std::clamp<qint64>(m_motionClock.restart(), 1, 50);
     syncPlayerMotionTarget();
+    advanceMonsterMotion();
     if (!m_motionInitialized) return;
     const bool wasMoving = m_playerMotion.isMoving();
     if (wasMoving) {
@@ -241,6 +243,34 @@ void MapWidget::advancePlayerMotion()
         }
         update();
     }
+}
+
+void MapWidget::playMonsterMovement(const std::vector<Game::MonsterMovementAnimation>& movements)
+{
+    m_monsterMotions.clear();
+    for (const auto& movement : movements) {
+        m_monsterMotions.push_back({
+            movement.monster.GetName(),
+            QPointF(movement.fromX, movement.fromY),
+            QPointF(movement.toX, movement.toY)});
+    }
+    if (m_monsterMotions.empty()) {
+        m_monsterMotionActive = false;
+        return;
+    }
+    m_monsterMotionClock.restart();
+    m_monsterMotionActive = true;
+    update();
+}
+
+void MapWidget::advanceMonsterMotion()
+{
+    if (!m_monsterMotionActive) return;
+    if (m_monsterMotionClock.elapsed() >= 320) {
+        m_monsterMotions.clear();
+        m_monsterMotionActive = false;
+    }
+    update();
 }
 
 void MapWidget::loadItemImage(const std::string& name, const QString& path)
@@ -854,12 +884,30 @@ void MapWidget::paintEvent(QPaintEvent*)
                 Monster* m = m_game->monsterAt(x, y);
                 if (m) {
                     monsterName = m->GetName();
-                    auto it = m_monsterPix.find(monsterName);
-                    if (it != m_monsterPix.end()) {
-                        pix = &it->second;
+                    bool animatedTarget = false;
+                    if (m_monsterMotionActive) {
+                        for (const auto& motion : m_monsterMotions) {
+                            if (qRound(motion.to.x()) == x && qRound(motion.to.y()) == y) {
+                                animatedTarget = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (!animatedTarget) {
+                        auto it = m_monsterPix.find(monsterName);
+                        if (it != m_monsterPix.end()) {
+                            pix = &it->second;
+                        }
                     }
                 }
                 if (!pix) pix = &m_defaultMonsterPix;
+                if (m_monsterMotionActive && pix == &m_defaultMonsterPix) {
+                    for (const auto& motion : m_monsterMotions)
+                        if (qRound(motion.to.x()) == x && qRound(motion.to.y()) == y) {
+                            pix = nullptr;
+                            break;
+                        }
+                }
             }
 
             // NPC 图块按角色名称选择素材；普通 NPC 仍回退到 Tile_NPC 默认图。
@@ -899,6 +947,20 @@ void MapWidget::paintEvent(QPaintEvent*)
                 painter.drawPixmap(r, *pix);
 
             // 门、楼梯、商店等均由素材本身表达，不再叠加代码绘制的标签底条。
+        }
+    }
+
+    // 十层包围事件：逻辑坐标已切换到目标格，画面用插值把怪物从第三/第四排
+    // 移动到侧翼，避免出现瞬移。目标格的静态怪物在上方循环中暂时隐藏。
+    if (m_monsterMotionActive) {
+        const qreal progress = std::clamp<qreal>(m_monsterMotionClock.elapsed() / 320.0, 0.0, 1.0);
+        const qreal eased = progress * progress * (3.0 - 2.0 * progress);
+        for (const auto& motion : m_monsterMotions) {
+            const qreal x = motion.from.x() + (motion.to.x() - motion.from.x()) * eased;
+            const qreal y = motion.from.y() + (motion.to.y() - motion.from.y()) * eased;
+            auto it = m_monsterPix.find(motion.name);
+            const QPixmap* pix = it != m_monsterPix.end() ? &it->second : &m_defaultMonsterPix;
+            painter.drawPixmap(QPointF(x * TILE_SIZE, y * TILE_SIZE), *pix);
         }
     }
 

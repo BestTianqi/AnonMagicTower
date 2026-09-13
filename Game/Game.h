@@ -55,6 +55,14 @@ struct FloorData {
 
 class Game {
 public:
+    struct MonsterMovementAnimation {
+        Monster monster;
+        int fromX = 0;
+        int fromY = 0;
+        int toX = 0;
+        int toY = 0;
+    };
+
     Game();
     bool loadDefaultMap();
     void generateClassicTower();
@@ -83,6 +91,7 @@ public:
     MoveResult teleportPlayerTo(int targetX, int targetY);
     // 管理员调试传送：绕过可达性、钥匙和剧情触发，只校验楼层/坐标边界。
     bool debugTeleport(int floor, int x, int y);
+    std::vector<MonsterMovementAnimation> takeFloor10AmbushMovementAnimations();
 
     enum FightResult { Fight_PlayerWin, Fight_PlayerDead, Fight_GameWin, Fight_Stalemate };
     FightResult fightAt(int x, int y, std::vector<std::string>& outLog);
@@ -145,4 +154,5 @@ private:
     bool m_floor10AmbushTriggered = false;
     std::unordered_set<int> m_floor10AmbushMonsterKeys;
     std::unordered_set<int> m_floor10AmbushDoorKeys;
+    std::vector<MonsterMovementAnimation> m_floor10AmbushMovements;
 };

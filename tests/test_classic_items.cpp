@@ -299,6 +299,12 @@ int main() {
     assert(floor10Ambush.tileAt(9, 5) == Tile_Floor);
     assert(floor10Ambush.tileAt(7, 5) == Tile_DoorMagic);
     assert(floor10Ambush.tileAt(7, 7) == Tile_DoorMagic);
+    const auto ambushMovement = floor10Ambush.takeFloor10AmbushMovementAnimations();
+    assert(ambushMovement.size() == 6);
+    for (const auto& movement : ambushMovement) {
+        assert(movement.fromY == 3 || movement.fromY == 4);
+        assert(movement.fromX != movement.toX || movement.fromY != movement.toY);
+    }
     assert(floor10Ambush.monsterAt(7, 2) != nullptr);
     assert(floor10Ambush.monsterAt(7, 2)->GetName() == "八幡海铃·骷髅队长");
     int surrounded = 0;

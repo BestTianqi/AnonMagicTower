@@ -29,6 +29,7 @@ private:
     void gameWin();
     QString getItemDescription(const Item* item) const;
     void showBattleFeedback(const QString& message);
+    void startMonsterMovementAnimation();
     void flushPendingMove();
 
     Game* m_game;

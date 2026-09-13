@@ -28,6 +28,9 @@ public:
     void loadPlayerSpriteSheet(const QString& path);
     void setPlayerDirection(int dx, int dy);
     bool isPlayerMoving() const { return m_motionInitialized && m_playerMotion.isMoving(); }
+    void playMonsterMovement(const std::vector<Game::MonsterMovementAnimation>& movements);
+    bool isMonsterMoving() const { return m_monsterMotionActive; }
+    bool isSceneAnimating() const { return isPlayerMoving() || isMonsterMoving(); }
     void loadBackgroundImage(const QString& path);
     QSize sizeHint() const override;
 
@@ -42,7 +45,14 @@ protected:
 private:
     void generatePlaceholders();
     void advancePlayerMotion();
+    void advanceMonsterMotion();
     void syncPlayerMotionTarget();
+
+    struct MonsterMotion {
+        std::string name;
+        QPointF from;
+        QPointF to;
+    };
 
     Game* m_game;
 
@@ -71,4 +81,7 @@ private:
     PlayerMotionState m_playerMotion;
     QTimer m_motionTimer;
     QElapsedTimer m_motionClock;
+    QElapsedTimer m_monsterMotionClock;
+    std::vector<MonsterMotion> m_monsterMotions;
+    bool m_monsterMotionActive = false;
 };
