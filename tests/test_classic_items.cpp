@@ -7,9 +7,11 @@
 #include "Entities/Player.h"
 #include "Entities/MonsterDB.h"
 #include "Game/Game.h"
+#include "UI/MapEditor.h"
 
 int main() {
     const auto roster = MonsterDB::all();
+    assert(MapEditor::kMaxEditableFloor == 50);
     assert(roster.size() == 34);
     assert(roster[0].GetName() == "要乐奈·绿色史莱姆");
     assert(roster[14].GetName() == "宫永ののかSP·巨型章鱼");

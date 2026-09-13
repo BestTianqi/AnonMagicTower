@@ -156,6 +156,7 @@ class MapEditor : public QWidget {
     Q_OBJECT
 public:
     explicit MapEditor(QWidget* parent = nullptr);
+    static constexpr int kMaxEditableFloor = 50;
 
 private:
     void onSave();
@@ -163,6 +164,7 @@ private:
     void onNewMap();
     void onSaveAsDefault();
     void onTestPlay();
+    void onPreviewFloor();
     void onExportFloor();
     bool saveToPath(const QString& path);
     void onTileTypeChanged(int id);

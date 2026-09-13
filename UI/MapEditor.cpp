@@ -11,6 +11,7 @@
 #include <QFileDialog>
 #include <QDir>
 #include <QMessageBox>
+#include <QDialog>
 #include <QFile>
 #include <QTextStream>
 #include <QFrame>
@@ -608,7 +609,7 @@ MapEditor::MapEditor(QWidget* parent)
     auto* prevBtn = new QPushButton(QString::fromUtf8("<"), floorGroup);
     prevBtn->setFixedWidth(30);
     m_floorSpin = new QSpinBox(floorGroup);
-    m_floorSpin->setRange(1, 20);
+    m_floorSpin->setRange(1, kMaxEditableFloor);
     m_floorSpin->setValue(1);
     m_floorSpin->setStyleSheet("QSpinBox { background: #222; color: #fff; border: 1px solid #555; padding: 4px; font-size: 14px; }");
     auto* nextBtn = new QPushButton(QString::fromUtf8(">"), floorGroup);
@@ -1011,6 +1012,11 @@ MapEditor::MapEditor(QWidget* parent)
     testBtn->setStyleSheet(btnStyle + "QPushButton { background: #5a3a1a; color: #ffd; font-weight: bold; }");
     rightLayout->addWidget(testBtn);
 
+    auto* previewBtn = new QPushButton(QString::fromUtf8("预览当前层"), rightPanel);
+    previewBtn->setStyleSheet(btnStyle + "QPushButton { background: #294a62; color: #dff5ff; font-weight: bold; }");
+    previewBtn->setToolTip(QString::fromUtf8("打开只读预览，可在 1-50 层之间快速跳转"));
+    rightLayout->addWidget(previewBtn);
+
     auto* clearBtn = new QPushButton(QString::fromUtf8("清空当前层"), rightPanel);
     clearBtn->setStyleSheet(btnStyle + "QPushButton { background: #5a3a3a; color: #d0d0d0; }");
     rightLayout->addWidget(clearBtn);
@@ -1028,7 +1034,7 @@ MapEditor::MapEditor(QWidget* parent)
     connect(nextBtn, &QPushButton::clicked, this, [this]() {
         int maxFloor = 1;
         for (auto& kv : m_floors) if (kv.first > maxFloor) maxFloor = kv.first;
-        if (m_currentFloor < maxFloor || (int)m_floors.size() < 20)
+        if (m_currentFloor < maxFloor || (int)m_floors.size() < kMaxEditableFloor)
             switchToFloor(m_currentFloor + 1);
     });
     connect(addFloorBtn, &QPushButton::clicked, this, &MapEditor::addFloor);
@@ -1128,6 +1134,7 @@ MapEditor::MapEditor(QWidget* parent)
     connect(loadBtn,    &QPushButton::clicked, this, &MapEditor::onLoad);
     connect(defaultBtn, &QPushButton::clicked, this, &MapEditor::onSaveAsDefault);
     connect(testBtn,    &QPushButton::clicked, this, &MapEditor::onTestPlay);
+    connect(previewBtn, &QPushButton::clicked, this, &MapEditor::onPreviewFloor);
     connect(clearBtn,   &QPushButton::clicked, m_edit, &MapEditWidget::clearFloor);
 
     // 点击图块时反写面板
@@ -1180,8 +1187,8 @@ void MapEditor::addFloor()
     int newFloor = 1;
     while (m_floors.find(newFloor) != m_floors.end())
         newFloor++;
-    if (newFloor > 20) {
-        QMessageBox::warning(this, QString::fromUtf8("上限"), QString::fromUtf8("最多支持 20 层。"));
+    if (newFloor > kMaxEditableFloor) {
+        QMessageBox::warning(this, QString::fromUtf8("上限"), QString::fromUtf8("最多支持 50 层。"));
         return;
     }
     storeCurrentFloor();
@@ -1202,7 +1209,7 @@ void MapEditor::removeFloor()
     // 找到最近楼层
     int nearest = 1;
     for (auto& kv : m_floors) { nearest = kv.first; break; }
-    m_floorSpin->setMaximum(20);
+    m_floorSpin->setMaximum(kMaxEditableFloor);
     switchToFloor(nearest, false);  // 不保存旧数据，已被删除
 }
 
@@ -1807,6 +1814,73 @@ void MapEditor::onLoad()
 }
 
 // ====== 测试游玩 ======
+
+void MapEditor::onPreviewFloor()
+{
+    // 预览只读副本，避免打开窗口后误改当前编辑层。
+    storeCurrentFloor();
+
+    auto* dialog = new QDialog(this);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    dialog->setWindowTitle(QString::fromUtf8("地图预览"));
+    dialog->setMinimumSize(980, 980);
+
+    auto* layout = new QVBoxLayout(dialog);
+    auto* controls = new QHBoxLayout();
+    auto* prev = new QPushButton(QString::fromUtf8("上一层"), dialog);
+    auto* next = new QPushButton(QString::fromUtf8("下一层"), dialog);
+    auto* floorSpin = new QSpinBox(dialog);
+    floorSpin->setRange(1, kMaxEditableFloor);
+    floorSpin->setValue(m_currentFloor);
+    auto* floorLabel = new QLabel(dialog);
+    auto* close = new QPushButton(QString::fromUtf8("关闭"), dialog);
+    controls->addWidget(prev);
+    controls->addWidget(new QLabel(QString::fromUtf8("第"), dialog));
+    controls->addWidget(floorSpin);
+    controls->addWidget(new QLabel(QString::fromUtf8("层"), dialog));
+    controls->addWidget(floorLabel, 1);
+    controls->addWidget(next);
+    controls->addWidget(close);
+    layout->addLayout(controls);
+
+    auto* preview = new MapEditWidget(dialog);
+    preview->setAttribute(Qt::WA_TransparentForMouseEvents, true);
+    layout->addWidget(preview, 0, Qt::AlignCenter);
+
+    const auto emptyFloor = []() {
+        EditorFloor floor;
+        floor.tiles.assign(225, {Tile_Wall, ""});
+        for (int y = 2; y < 13; ++y)
+            for (int x = 2; x < 13; ++x)
+                floor.tiles[y * 15 + x].type = Tile_Floor;
+        return floor;
+    };
+    const auto loadFloor = [this, preview, floorSpin, floorLabel, dialog, emptyFloor](int floor) {
+        const auto it = m_floors.find(floor);
+        const bool exists = it != m_floors.end();
+        preview->setFloor(exists ? it->second : emptyFloor());
+        floorSpin->blockSignals(true);
+        floorSpin->setValue(floor);
+        floorSpin->blockSignals(false);
+        floorLabel->setText(exists
+            ? QString::fromUtf8("已创建 · 可编辑器返回修改")
+            : QString::fromUtf8("未创建 · 当前为空白层"));
+        dialog->setWindowTitle(QString::fromUtf8("地图预览 · 第 %1 层").arg(floor));
+    };
+    connect(floorSpin, QOverload<int>::of(&QSpinBox::valueChanged), loadFloor);
+    connect(prev, &QPushButton::clicked, dialog, [floorSpin]() {
+        floorSpin->setValue(std::max(1, floorSpin->value() - 1));
+    });
+    connect(next, &QPushButton::clicked, dialog, [floorSpin]() {
+        floorSpin->setValue(std::min(MapEditor::kMaxEditableFloor, floorSpin->value() + 1));
+    });
+    connect(close, &QPushButton::clicked, dialog, &QDialog::close);
+
+    loadFloor(m_currentFloor);
+    dialog->show();
+    dialog->raise();
+    dialog->activateWindow();
+}
 
 void MapEditor::onTestPlay()
 {
