@@ -30,38 +30,35 @@ bool mechanismDoorReadyAt(int floorNumber, const FloorData& floor, int doorX, in
     // 原版 48 层圣剑房花门是损坏的机关，清怪后仍不会自动开启。
     if (floorNumber == 48) return false;
 
-    // 第八层花门只绑定两只三角初华（初级卫兵）；其他怪物不参与开门条件。
-    if (floorNumber == 8) {
-        for (const auto& entry : floor.monsters)
-            if (entry.second.GetName().find("三角初华") != std::string::npos)
-                return false;
-        return true;
-    }
-
-    // 优先按原版常见的“门周围八格”逐门判定：只要门周围存在怪物，
-    // 必须全部清除后这扇门才会打开。这样同一楼层的多扇门可以分别解锁。
-    bool hasAdjacentMonster = false;
-    for (int dy = -1; dy <= 1; ++dy) {
-        for (int dx = -1; dx <= 1; ++dx) {
-            if (dx == 0 && dy == 0) continue;
-            const int x = doorX + dx;
-            const int y = doorY + dy;
-            const int key = y * MAP_SIZE + x;
-            if (floor.monsters.find(key) != floor.monsters.end()) {
-                hasAdjacentMonster = true;
-                break;
-            }
-        }
-        if (hasAdjacentMonster) break;
-    }
-    if (hasAdjacentMonster) {
+    if (floor.map[doorY * MAP_SIZE + doorX] == Tile_DoorMagic) {
+        // 花门只绑定自身周围八格的怪物：周围有一只或两只就只清理这一小组，
+        // 同编号但位于楼层其他区域的怪物不参与本门判定。
+        bool hasAdjacentMonster = false;
         for (int dy = -1; dy <= 1; ++dy) {
             for (int dx = -1; dx <= 1; ++dx) {
                 if (dx == 0 && dy == 0) continue;
-                const int key = (doorY + dy) * MAP_SIZE + (doorX + dx);
-                if (floor.monsters.find(key) != floor.monsters.end()) return false;
+                const int x = doorX + dx;
+                const int y = doorY + dy;
+                const int key = y * MAP_SIZE + x;
+                if (floor.monsters.find(key) != floor.monsters.end()) {
+                    hasAdjacentMonster = true;
+                    break;
+                }
             }
+            if (hasAdjacentMonster) break;
         }
+        if (hasAdjacentMonster) {
+            for (int dy = -1; dy <= 1; ++dy) {
+                for (int dx = -1; dx <= 1; ++dx) {
+                    if (dx == 0 && dy == 0) continue;
+                    const int key = (doorY + dy) * MAP_SIZE + (doorX + dx);
+                    if (floor.monsters.find(key) != floor.monsters.end()) return false;
+                }
+            }
+            return true;
+        }
+
+        // 花门没有邻近守卫时直接开放；全楼层指定怪物组只用于铁门等原版特殊门。
         return true;
     }
 

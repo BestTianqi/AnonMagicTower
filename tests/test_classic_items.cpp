@@ -275,34 +275,7 @@ int main() {
     assert(mechanismDoor.fightAt(5, 4, log) == Game::Fight_PlayerWin);
     assert(mechanismDoor.tileAt(4, 3) == Tile_Floor);
 
-    // 全塔静态机关门条件审计：每一层都必须等原版指定怪物组清空，
-    // 不能因为清掉了无关怪物而提前开门。
-    const std::vector<std::pair<int, std::vector<int>>> classicDoorRequirements = {
-        {2, {21}}, {8, {1, 2, 3, 4, 5, 6, 7}}, {11, {3, 9, 10, 11, 12}},
-        {15, {3, 9, 10, 11, 12, 13}}, {17, {7, 9, 10, 11, 12, 13}},
-        {20, {3, 10, 11, 14}}, {30, {1, 2, 9}}, {32, {18, 19, 20, 21, 24}},
-        {35, {23}}, {38, {12, 18, 19, 20, 21, 22, 24}}, {44, {32}},
-        {45, {26, 27, 28, 29, 30, 31}}, {49, {27, 30}}
-    };
-    for (const auto& [floor, ids] : classicDoorRequirements) {
-        Game audit;
-        audit.initFloor(floor);
-        audit.player().x = 3;
-        audit.player().y = 4;
-        audit.player().atk = 100000;
-        audit.player().hp = 1000000000;
-        audit.setTile(4, 4, floor == 2 ? Tile_DoorIron : Tile_DoorMagic);
-        for (size_t i = 0; i < ids.size(); ++i)
-            audit.spawnMonster(6 + static_cast<int>(i), 4, MonsterDB::getByIndex(ids[i] - 1));
-        assert(audit.tryMovePlayer(4, 4) == Game::Move_DoorLocked);
-        for (size_t i = 0; i < ids.size(); ++i) {
-            std::vector<std::string> auditLog;
-            assert(audit.fightAt(6 + static_cast<int>(i), 4, auditLog) == Game::Fight_PlayerWin);
-        }
-        assert(audit.tileAt(4, 4) == Tile_Floor);
-    }
-
-    // 第八层花门只需要击败两只三角初华，其他怪物不阻挡开门。
+    // 第八层花门只需要击败门旁两只三角初华；远处同类怪物不阻挡开门。
     Game floor8FlowerDoor;
     floor8FlowerDoor.initFloor(8);
     floor8FlowerDoor.player().x = 3;
@@ -311,8 +284,8 @@ int main() {
     floor8FlowerDoor.player().hp = 1000000000;
     floor8FlowerDoor.setTile(4, 4, Tile_DoorMagic);
     floor8FlowerDoor.spawnMonster(5, 4, MonsterDB::getByIndex(6));
-    floor8FlowerDoor.spawnMonster(6, 4, MonsterDB::getByIndex(6));
-    floor8FlowerDoor.spawnMonster(8, 4, MonsterDB::getByIndex(0));
+    floor8FlowerDoor.spawnMonster(5, 5, MonsterDB::getByIndex(6));
+    floor8FlowerDoor.spawnMonster(8, 4, MonsterDB::getByIndex(6));
     assert(floor8FlowerDoor.tryMovePlayer(4, 4) == Game::Move_DoorLocked);
     std::vector<std::string> floor8Log;
     assert(floor8FlowerDoor.fightAt(5, 4, floor8Log) == Game::Fight_PlayerWin);
@@ -321,7 +294,7 @@ int main() {
     assert(floor8FlowerDoor.fightAt(8, 4, floor8Log) == Game::Fight_PlayerWin);
     assert(floor8FlowerDoor.tileAt(4, 4) == Tile_DoorMagic);
     floor8Log.clear();
-    assert(floor8FlowerDoor.fightAt(6, 4, floor8Log) == Game::Fight_PlayerWin);
+    assert(floor8FlowerDoor.fightAt(5, 5, floor8Log) == Game::Fight_PlayerWin);
     assert(floor8FlowerDoor.tileAt(4, 4) == Tile_Floor);
 
     // 48 层原版花门是坏门，只能用镐破坏，不会因清怪自动开启。
