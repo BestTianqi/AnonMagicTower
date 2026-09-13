@@ -144,4 +144,5 @@ private:
     bool m_floor3TrapActive = false;
     bool m_floor10AmbushTriggered = false;
     std::unordered_set<int> m_floor10AmbushMonsterKeys;
+    std::unordered_set<int> m_floor10AmbushDoorKeys;
 };

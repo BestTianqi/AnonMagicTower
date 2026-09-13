@@ -70,6 +70,7 @@ void Game::generateClassicTower()
     m_floor3TrapActive = false;
     m_floor10AmbushTriggered = false;
     m_floor10AmbushMonsterKeys.clear();
+    m_floor10AmbushDoorKeys.clear();
     for (int floor = 1; floor <= 50; ++floor) {
         FloorData fd;
         fd.map.assign(m_width * m_height, Tile_Wall);
@@ -288,6 +289,7 @@ bool Game::loadDefaultMap()
     m_floor3TrapActive = false;
     m_floor10AmbushTriggered = false;
     m_floor10AmbushMonsterKeys.clear();
+    m_floor10AmbushDoorKeys.clear();
     // 从嵌入资源加载默认地图
     QFile res(":/map.txt");
     if (res.open(QIODevice::ReadOnly)) {
@@ -650,8 +652,8 @@ void Game::triggerFloor10AmbushIfNeeded()
 
     m_floor10AmbushTriggered = true;
 
-    // 八幡海铃退到中央通道最上方，原位置与主角身后的格子临时上锁。
-    // 两扇侧面的花门也保持关闭，直到包围怪全部击败。
+    // 八幡海铃退到中央通道最上方；侧翼门在进入陷阱时打开，
+    // 主角上下两格新增机关门，必须清完侧翼怪才能通过。
     const int oldCaptainKey = posKey(7, 5);
     int captainKey = oldCaptainKey;
     auto captainIt = m_currentFloor->monsters.find(captainKey);
@@ -671,8 +673,13 @@ void Game::triggerFloor10AmbushIfNeeded()
         m_currentFloor->monsters[topKey] = captain;
         setTile(7, 2, Tile_Monster);
     }
+    setTile(5, 5, Tile_Floor);
+    setTile(9, 5, Tile_Floor);
     setTile(7, 5, Tile_DoorMagic);
     setTile(7, 7, Tile_DoorMagic);
+    m_floor10AmbushDoorKeys.clear();
+    m_floor10AmbushDoorKeys.insert(posKey(7, 5));
+    m_floor10AmbushDoorKeys.insert(posKey(7, 7));
     m_floor10AmbushMonsterKeys.clear();
 
     // 取原版骷髅人/骷髅士兵（ID 5/6）中距离入口最近的六只，
@@ -680,7 +687,8 @@ void Game::triggerFloor10AmbushIfNeeded()
     std::vector<std::pair<int, Monster>> candidates;
     for (const auto& entry : m_currentFloor->monsters) {
         const int classicId = MonsterDB::indexOf(entry.second.GetName()) + 1;
-        if (classicId == 5 || classicId == 6)
+        const int sourceY = entry.first / m_width;
+        if ((sourceY == 3 || sourceY == 4) && (classicId == 5 || classicId == 6))
             candidates.emplace_back(entry.first, entry.second);
     }
     std::sort(candidates.begin(), candidates.end(), [this](const auto& lhs, const auto& rhs) {
@@ -769,10 +777,18 @@ void Game::resolveFloor10AmbushIfCleared()
     }
     if (guardsRemain) return;
 
-    for (int y = 0; y < m_height; ++y)
-        for (int x = 0; x < m_width; ++x)
-            if (tileAt(x, y) == Tile_DoorMagic)
-                setTile(x, y, Tile_Floor);
+    if (m_floor10AmbushDoorKeys.empty()) {
+        // 旧存档未保存门集合时，按十层事件的固定上下两门恢复。
+        m_floor10AmbushDoorKeys.insert(posKey(7, 5));
+        m_floor10AmbushDoorKeys.insert(posKey(7, 7));
+    }
+    for (const int key : m_floor10AmbushDoorKeys) {
+        const int x = key % m_width;
+        const int y = key / m_width;
+        if (tileAt(x, y) == Tile_DoorMagic || tileAt(x, y) == Tile_DoorIron)
+            setTile(x, y, Tile_Floor);
+    }
+    m_floor10AmbushDoorKeys.clear();
     m_floor10AmbushMonsterKeys.clear();
 }
 
@@ -1622,6 +1638,7 @@ bool Game::loadFromFile(const std::string& path)
     m_floor3PrisonStoryPending = floor3PrisonStoryPending;
     m_floor3TrapActive = floor3TrapActive;
     m_floor10AmbushMonsterKeys.clear();
+    m_floor10AmbushDoorKeys.clear();
 
     for (int i = 0; i < invCount; ++i) {
         std::string iname; int ival;

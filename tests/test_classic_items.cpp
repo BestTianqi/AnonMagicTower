@@ -276,8 +276,8 @@ int main() {
     assert(brokenFlowerDoor.tryMovePlayer(4, 3) == Game::Move_Ok);
     assert(brokenFlowerDoor.tileAt(4, 3) == Tile_Floor);
 
-    // 10 层完整 Boss 事件：到达八幡海铃前一格后，海铃退到顶部，
-    // 上下通路锁定，六只侧翼怪物包围；清完包围怪后花门开启，
+    // 10 层完整 Boss 事件：到达八幡海铃前一格后，第三/第四排怪物
+    // 移动到侧翼，侧翼门打开，上下门锁定；清完侧翼怪后上下门开启，
     // 击败海铃会出现奖励提示与向上楼梯。
     Game floor10Ambush;
     for (int i = 0; i < 9; ++i) floor10Ambush.goUpFloor(7, 12, false);
@@ -295,8 +295,8 @@ int main() {
     floor10Ambush.player().atk = 1000;
     floor10Ambush.player().hp = 10000;
     assert(floor10Ambush.tryMovePlayer(7, 6) == Game::Move_Ok);
-    assert(floor10Ambush.tileAt(5, 5) == Tile_DoorMagic);
-    assert(floor10Ambush.tileAt(9, 5) == Tile_DoorMagic);
+    assert(floor10Ambush.tileAt(5, 5) == Tile_Floor);
+    assert(floor10Ambush.tileAt(9, 5) == Tile_Floor);
     assert(floor10Ambush.tileAt(7, 5) == Tile_DoorMagic);
     assert(floor10Ambush.tileAt(7, 7) == Tile_DoorMagic);
     assert(floor10Ambush.monsterAt(7, 2) != nullptr);
