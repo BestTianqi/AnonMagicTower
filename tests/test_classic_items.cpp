@@ -326,7 +326,8 @@ int main() {
     assert(floor10Ambush.tileAt(7, 7) == Tile_Floor);
     log.clear();
     assert(floor10Ambush.fightAt(7, 2, log) == Game::Fight_PlayerWin);
-    assert(floor10Ambush.tileAt(7, 2) == Tile_StairsUp);
+    assert(floor10Ambush.tileAt(7, 12) == Tile_StairsUp);
+    assert(floor10Ambush.tileAt(7, 2) == Tile_Floor);
     bool floor10RewardShown = false;
     for (const auto& line : log)
         if (line.find("奖励") != std::string::npos || line.find("楼梯") != std::string::npos)

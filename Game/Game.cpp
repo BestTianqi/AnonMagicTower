@@ -1056,8 +1056,9 @@ Game::FightResult Game::fightAt(int x, int y, std::vector<std::string>& outLog)
             ss << "你击败了 " << bossName << " 并获得 " << gold << " 金币。";
             outLog.push_back(ss.str());
             if (m_floor == 10 && bossName == "八幡海铃·骷髅队长") {
-                setTile(x, y, Tile_StairsUp);
-                outLog.push_back("剧情奖励：10层向上的楼梯出现！");
+                // 原版奖励楼梯固定出现在地图正中间最下方。
+                setTile(m_width / 2, m_height - 3, Tile_StairsUp);
+                outLog.push_back("剧情奖励：10层地图正中间下方出现向上楼梯！");
             }
             if (hasShield) m_player.tempShieldCharges--;
             if (bossName == "长崎素世·本体")
