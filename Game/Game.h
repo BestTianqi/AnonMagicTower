@@ -146,6 +146,7 @@ private:
 
     // 10 层中央 Boss 区的骷髅士兵包围事件。
     void triggerFloor3PrisonStoryIfNeeded();
+    void prepareFloor3PrisonCell();
     void triggerFloor10AmbushIfNeeded();
     void resolveFloor10AmbushIfCleared();
     bool m_floor3PrisonTriggered = false;

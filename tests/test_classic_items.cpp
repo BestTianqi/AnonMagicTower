@@ -374,6 +374,8 @@ int main() {
     openingStory.player().y = 12;
     openingStory.player().x = 5;
     openingStory.player().y = 9;
+    assert(openingStory.tileAt(6, 7) == Tile_DarkWall);
+    assert(openingStory.monsterAt(6, 7) == nullptr);
     openingStory.setTile(6, 9, Tile_Floor);
     assert(openingStory.tryMovePlayer(6, 9) == Game::Move_Ok);
     assert(openingStory.currentFloor() == 3);
@@ -396,6 +398,8 @@ int main() {
     assert(classicOpening.currentFloor() == 3);
     classicOpening.player().x = 5;
     classicOpening.player().y = 9;
+    assert(classicOpening.tileAt(6, 7) == Tile_DarkWall);
+    assert(classicOpening.monsterAt(6, 7) == nullptr);
     classicOpening.setTile(6, 9, Tile_Floor);
     assert(classicOpening.tryMovePlayer(6, 9) == Game::Move_Ok);
     assert(classicOpening.currentFloor() == 3);
@@ -404,6 +408,7 @@ int main() {
     assert(classicOpening.player().atk == 100);
     assert(classicOpening.player().def == 100);
     assert(classicOpening.floor3TrapActive());
+    assert(classicOpening.tileAt(6, 7) == Tile_Monster);
     assert(classicOpening.monsterAt(6, 7) != nullptr);
     assert(classicOpening.monsterAt(6, 7)->GetName() == "长崎素世·幻影");
     for (const auto& position : std::array<std::pair<int, int>, 4>{

@@ -299,6 +299,7 @@ void Game::generateClassicTower()
     for (const auto& point : guardPositions)
         spawnEventMonster(49, point[0], point[1], 31);
 
+    prepareFloor3PrisonCell();
     m_currentFloor = &m_floors[m_floor];
     m_player = Player();
     m_player.x = 7;
@@ -330,6 +331,7 @@ void Game::initFloor(int floor)
         m_floors[floor] = std::move(fd);
     }
     m_currentFloor = &m_floors[floor];
+    prepareFloor3PrisonCell();
 }
 
 bool Game::loadDefaultMap()
@@ -351,8 +353,10 @@ bool Game::loadDefaultMap()
             tmp.close();
         }
         res.close();
-        if (loadFromFile(tmpPath.toStdString()))
+        if (loadFromFile(tmpPath.toStdString())) {
+            prepareFloor3PrisonCell();
             return true;
+        }
     }
 
     // 后备：空地图
@@ -630,6 +634,19 @@ void Game::openMechanismDoorsIfReady()
     }
 }
 
+void Game::prepareFloor3PrisonCell()
+{
+    if (m_floor3PrisonTriggered || m_floor3PrisonStoryPending) return;
+    auto floorIt = m_floors.find(3);
+    if (floorIt == m_floors.end()) return;
+    FloorData& floor3 = floorIt->second;
+    const int key = posKey(6, 7);
+    // 剧情触发前，素世所在格是不可直接进入的暗墙；不保留静态地图上
+    // 可能落在该格的普通怪物，触发时再由事件显现素世与四名警卫。
+    floor3.monsters.erase(key);
+    floor3.map[key] = Tile_DarkWall;
+}
+
 void Game::triggerFloor3PrisonStoryIfNeeded()
 {
     if (m_floor != 3 || m_floor3PrisonTriggered || m_floor3PrisonStoryPending || !m_currentFloor)
@@ -641,6 +658,7 @@ void Game::triggerFloor3PrisonStoryIfNeeded()
     m_floor3PrisonTriggered = true;
     m_floor3PrisonStoryPending = true;
     m_floor3TrapActive = true;
+    // 将素世所在的暗墙格替换为事件怪物，再显现四名魔法警卫。
     // 先在三层留下事件现场：长崎素世位于主角上方，四名魔法警卫
     // 围住触发格的四个方向。战斗结束后仍可返回三层查看现场。
     const auto placeTrapMonster = [this](int x, int y, const Monster& monster) {
@@ -846,6 +864,7 @@ void Game::goUpFloor(int srcX, int srcY, bool findStairs)
         initFloor(m_floor);
     }
     m_currentFloor = &m_floors[m_floor];
+    prepareFloor3PrisonCell();
 
     if (!findStairs) {
         // 上楼器：传送到当前位置
@@ -876,6 +895,7 @@ void Game::goDownFloor(int srcX, int srcY, bool findStairs)
     if (m_floor <= 1) return;
     m_floor--;
     m_currentFloor = &m_floors[m_floor];
+    prepareFloor3PrisonCell();
 
     if (!findStairs) {
         // 下楼器：传送到当前位置
