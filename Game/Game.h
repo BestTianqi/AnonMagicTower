@@ -143,6 +143,8 @@ private:
 
     // 按原版楼层事件检查机关门，并在满足条件时自动开门。
     void openMechanismDoorsIfReady();
+    // 39层左上房间的两扇黄门开启后生成对称飞行器。
+    void resolveFloor39SymmetryFlyer();
 
     // 10 层中央 Boss 区的骷髅士兵包围事件。
     void triggerFloor3PrisonStoryIfNeeded();

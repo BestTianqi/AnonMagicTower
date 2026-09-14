@@ -290,7 +290,7 @@ void Game::generateClassicTower()
                 case 35: dialog = {"秘宝被藏在更高的楼层。"}; break;
                 case 37:
                     dialog = (level == 39)
-                        ? std::vector<std::string>{"这是镜面舞台票，使用后可以左右对称移动三次。"}
+                        ? std::vector<std::string>{"打开左上房间12点和3点方向的两扇黄门，镜面舞台票就会出现。"}
                         : std::vector<std::string>{"翡翠剑的房间需要用镐破墙进入。"};
                     break;
                 case 39: dialog = {"通往异界的入口就在不远处。"}; break;
@@ -303,7 +303,6 @@ void Game::generateClassicTower()
                 if (id == 3) reward = std::make_unique<NoteBook>();
                 else if (id == 18) reward = std::make_unique<HolyWater>();
                 else if (id == 32) reward = std::make_unique<Treasure>(1000);
-                else if (level == 39 && id == 37) reward = std::make_unique<SymmetryFlyer>();
                 NPC npc(name, dialog, std::move(reward), false, 0, nullptr, id);
                 fd.npcs.emplace(key, std::move(npc));
             }
@@ -665,6 +664,25 @@ void Game::openMechanismDoorsIfReady()
                 setTile(x, y, Tile_Floor);
         }
     }
+}
+
+void Game::resolveFloor39SymmetryFlyer()
+{
+    if (m_floor != 39 || !m_currentFloor) return;
+
+    // 原版提示中的“12点”和“3点”分别对应左上房间的上方中门
+    // (5,3) 与右侧中门 (7,5)。两扇黄门都打开后，中心格 (5,5)
+    // 才生成对称飞行器；重复检查不会重复生成。
+    const int twelveOClock = posKey(5, 3);
+    const int threeOClock = posKey(7, 5);
+    const int rewardKey = posKey(5, 5);
+    if (m_currentFloor->map[twelveOClock] != Tile_Floor ||
+        m_currentFloor->map[threeOClock] != Tile_Floor ||
+        m_currentFloor->items.find(rewardKey) != m_currentFloor->items.end()) {
+        return;
+    }
+    m_currentFloor->items.emplace(rewardKey, std::make_unique<SymmetryFlyer>());
+    setTile(5, 5, Tile_Item);
 }
 
 void Game::prepareFloor3PrisonCell()
@@ -1049,6 +1067,7 @@ Game::MoveResult Game::tryMovePlayer(int nx, int ny)
         }
         setTile(nx, ny, Tile_Floor);
         m_player.x = nx; m_player.y = ny;
+        resolveFloor39SymmetryFlyer();
         triggerFloor10AmbushIfNeeded();
         return Move_Ok;
 

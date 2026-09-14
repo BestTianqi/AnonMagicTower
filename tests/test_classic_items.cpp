@@ -490,6 +490,20 @@ int main() {
     assert(openingStory.currentFloor() == 2);
     assert(openingStory.player().x == 4 && openingStory.player().y == 9);
 
+    // 39层对称飞行器：只有打开左上房间12点、3点两扇黄门后才生成。
+    Game symmetryEvent;
+    symmetryEvent.debugTeleport(39, 5, 4);
+    symmetryEvent.setTile(5, 3, Tile_DoorGreen);
+    symmetryEvent.setTile(7, 5, Tile_DoorGreen);
+    symmetryEvent.player().AddKey(KeyType::Green, 2);
+    assert(symmetryEvent.tryMovePlayer(5, 3) == Game::Move_Ok);
+    assert(symmetryEvent.itemAt(5, 5) == nullptr);
+    symmetryEvent.player().x = 6;
+    symmetryEvent.player().y = 5;
+    assert(symmetryEvent.tryMovePlayer(7, 5) == Game::Move_Ok);
+    assert(symmetryEvent.itemAt(5, 5) != nullptr);
+    assert(symmetryEvent.itemAt(5, 5)->GetName() == "Mujica镜面舞台票");
+
     // 真实经典塔序章：三层入口触发围攻、固定伤害、攻防降至10并回到二层小偷下方。
     Game classicOpening;
     classicOpening.generateClassicTower();
