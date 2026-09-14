@@ -1182,6 +1182,40 @@ void MainWindow::showNPCDialog(int x, int y)
                 if (std::abs(dx) + std::abs(dy) == 1 && m_game->tileAt(x + dx, y + dy) == Tile_DarkWall)
                     m_game->setTile(x + dx, y + dy, Tile_Floor);
         npc->SetGiven(true);
+
+        // 29层的米歇尔是一次性剧情 NPC：完成对话后离场，并移除她正下方
+        // 的墙（原版暗道入口）。该事件必须在对话窗口关闭后才清除 NPC，
+        // 避免立绘在剧情尚未结束时突然消失。
+        if (classicId == 25 && m_game->currentFloor() == 29) {
+            if (m_game->tileAt(x, y + 1) == Tile_Wall ||
+                m_game->tileAt(x, y + 1) == Tile_DarkWall) {
+                m_game->setTile(x, y + 1, Tile_Floor);
+            }
+
+            std::vector<VisualNovelPage> pages;
+            for (const auto& line : npc->Dialog()) {
+                pages.push_back({QString::fromStdString(npc->GetName()),
+                                 QString::fromStdString(line), npcPortrait,
+                                 QStringLiteral("#ffb5d7")});
+            }
+            if (pages.empty()) {
+                pages.push_back({QString::fromStdString(npc->GetName()),
+                                 QString::fromUtf8("暗道已经打开了。"), npcPortrait,
+                                 QStringLiteral("#ffb5d7")});
+            }
+            showVisualNovelDialogue(pages);
+
+            FloorData& floor = m_game->currentFloorData();
+            const int npcKey = m_game->posKey(x, y);
+            auto it = floor.npcs.find(npcKey);
+            if (it != floor.npcs.end() && it->second.ClassicId() == classicId) {
+                floor.npcs.erase(it);
+                floor.map[npcKey] = floor.items.count(npcKey) ? Tile_Item : Tile_Floor;
+            }
+            ui.mapWidget->update();
+            updateHUD();
+            return;
+        }
     }
 
     // 交易 NPC：每个 NPC 只允许完成一次交易，状态随存档保存。
