@@ -327,7 +327,8 @@ void Game::generateClassicTower()
     m_floors[20].map[(7 - (-3)) * m_width + (0 + 7)] = Tile_DoorMagic;
     // 48层左上角的藤都子SP是开启圣剑房花门的专属守卫。
     spawnEventMonster(48, -5, 5, 31);
-    spawnEventMonster(49, 0, 3, 33);
+    // 49层魔王初始处于封印状态：先用墙体占位，击败四名封印守卫后才显现。
+    m_floors[49].map[(7 - 3) * m_width + (0 + 7)] = Tile_Wall;
     const int guardPositions[][2] = {
         {-1, 4}, {0, 4}, {1, 4}, {-1, 3}, {1, 3}, {-1, 2}, {0, 2}, {1, 2}
     };
@@ -1133,6 +1134,10 @@ Game::FightResult Game::fightAt(int x, int y, std::vector<std::string>& outLog)
 {
     Monster* m = monsterAt(x, y);
     if (!m) {
+        if (m_floor == 49 && x == 7 && y == 4 && tileAt(x, y) == Tile_Wall) {
+            outLog.push_back("长崎素世·幻影仍被四名魔法警卫封印，先击败封印守卫才能解除魔王封印。");
+            return Fight_Stalemate;
+        }
         outLog.push_back(std::string("没有怪物。"));
         return Fight_PlayerWin;
     }
@@ -1233,7 +1238,8 @@ Game::FightResult Game::fightAt(int x, int y, std::vector<std::string>& outLog)
                     const int bossKey = eventKey(0, 3);
                     m_currentFloor->monsters[bossKey] =
                         Monster("长崎素世·幻影", 800, 500, 100, 500);
-                    outLog.push_back("四名魔法警卫形成的封印生效，长崎素世·幻影的属性降为原来的十分之一！");
+                    setTile(7, 4, Tile_Monster);
+                    outLog.push_back("四名魔法警卫被击败，魔王封印解除；长崎素世·幻影以封印削弱后的属性出现！");
                 }
             }
             if (m_floor == 49 && bossName == "长崎素世·幻影") {

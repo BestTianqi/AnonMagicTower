@@ -337,7 +337,33 @@ int main() {
     assert(floor49FlowerDoors.tileAt(7, 10) == Tile_Floor);
     assert(floor49FlowerDoors.hasMonsterAt(3, 3));
 
-    // 48 层原版花门是坏门，只能用镐破坏，不会因清怪自动开启。
+    // 49层魔王封印：四名中央封印守卫全部击败后，封印墙才显现削弱后的魔王幻影。
+    Game floor49Seal;
+    floor49Seal.debugTeleport(49, 7, 5);
+    floor49Seal.player().atk = 100000;
+    floor49Seal.player().hp = 1000000000;
+    floor49Seal.setTile(7, 4, Tile_Wall);
+    const std::array<std::pair<int, int>, 4> sealGuards = {
+        std::pair<int, int>{7, 3}, std::pair<int, int>{6, 4},
+        std::pair<int, int>{8, 4}, std::pair<int, int>{7, 5}};
+    for (const auto& position : sealGuards) {
+        floor49Seal.setTile(position.first, position.second, Tile_Monster);
+        floor49Seal.spawnMonster(position.first, position.second,
+                                 MonsterDB::getByIndex(30));
+    }
+    assert(floor49Seal.tryMovePlayer(7, 4) == Game::Move_Block);
+    std::vector<std::string> sealLog;
+    for (const auto& position : sealGuards) {
+        sealLog.clear();
+        assert(floor49Seal.fightAt(position.first, position.second, sealLog) == Game::Fight_PlayerWin);
+    }
+    assert(floor49Seal.tileAt(7, 4) == Tile_Monster);
+    assert(floor49Seal.monsterAt(7, 4) != nullptr);
+    assert(floor49Seal.monsterAt(7, 4)->GetName() == "长崎素世·幻影");
+    sealLog.clear();
+    assert(floor49Seal.fightAt(7, 4, sealLog) == Game::Fight_PlayerWin);
+
+    // 48 层未触发专属守卫事件时，花门仍可由破墙道具破坏。
     Game brokenFlowerDoor;
     brokenFlowerDoor.initFloor(48);
     brokenFlowerDoor.player().x = 3;
