@@ -503,6 +503,18 @@ int main() {
     assert(symmetryEvent.tryMovePlayer(7, 5) == Game::Move_Ok);
     assert(symmetryEvent.itemAt(5, 5) != nullptr);
     assert(symmetryEvent.itemAt(5, 5)->GetName() == "Mujica镜面舞台票");
+    assert(symmetryEvent.itemAt(5, 5)->GetValue() == 3);
+    symmetryEvent.player().x = 5;
+    symmetryEvent.player().y = 6;
+    assert(symmetryEvent.tryMovePlayer(5, 5) == Game::Move_Pickup);
+    assert(symmetryEvent.player().InventoryCount() == 1);
+    assert(symmetryEvent.player().UseItem(0));
+    assert(symmetryEvent.player().symmetryFlyerUses == 2);
+    assert(symmetryEvent.player().UseItem(0));
+    assert(symmetryEvent.player().symmetryFlyerUses == 1);
+    assert(symmetryEvent.player().UseItem(0));
+    assert(symmetryEvent.player().symmetryFlyerUses == 0);
+    assert(symmetryEvent.player().InventoryCount() == 0);
 
     // 真实经典塔序章：三层入口触发围攻、固定伤害、攻防降至10并回到二层小偷下方。
     Game classicOpening;
