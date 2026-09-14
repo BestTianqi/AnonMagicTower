@@ -467,7 +467,7 @@ int main() {
     assert(countItem(floor40Boss, "舞台蓝宝石") == 3);
     assert(countItem(floor40Boss, "黄色Live票") == 3);
     assert(countItem(floor40Boss, "爱音能量饮") == 3);
-    assert(floor40Boss.tileAt(7, 12) == Tile_StairsUp);
+    assert(floor40Boss.tileAt(7, 2) == Tile_StairsUp);
 
     // 前三层原版序章：3层先显现包围怪物，等待点击确认后才传送回2层。
     Game openingStory;

@@ -1210,7 +1210,7 @@ Game::FightResult Game::fightAt(int x, int y, std::vector<std::string>& outLog)
             std::vector<std::unique_ptr<Item>> bossRewards;
             std::string rewardSummary;
             const int rewardStairX = m_width / 2;
-            const int rewardStairY = m_height - 3;
+            const int rewardStairY = m_floor == 40 ? 2 : m_height - 3;
             const auto appendClassicBossRewards = [&](const ClassicItemTier& tier) {
                 for (int i = 0; i < 3; ++i) {
                     bossRewards.emplace_back(std::make_unique<RubyGem>(tier.rubyAttack, "舞台红宝石"));
@@ -1264,7 +1264,7 @@ Game::FightResult Game::fightAt(int x, int y, std::vector<std::string>& outLog)
                     setTile(rx, ry, Tile_Item);
                 }
                 setTile(rewardStairX, rewardStairY, Tile_StairsUp);
-                outLog.push_back("Boss奖励：" + rewardSummary + "；地图正中间下方出现向上楼梯！");
+                outLog.push_back("Boss奖励：" + rewardSummary + "；地图正中间出现向上楼梯！");
             }
             if (hasShield) m_player.tempShieldCharges--;
             if (bossName == "长崎素世·本体")

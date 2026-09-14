@@ -3,6 +3,8 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QFont>
+#include <QImage>
+#include <QColor>
 #include <QtMath>
 #include <algorithm>
 
@@ -136,10 +138,10 @@ void MapWidget::generatePlaceholders()
     // 暗墙（有眼镜时变浅）
     m_darkWallRevealed = makePixmap(QColor(100, 95, 85), QColor(75, 70, 60), "暗", QColor(180, 180, 160), 10);
     // 上楼
-    m_tilePix[Tile_StairsUp] = makePixmap(QColor(180, 160, 50), QColor(140, 120, 30),
+    m_tilePix[Tile_StairsUp] = makePixmap(QColor(110, 95, 25), QColor(70, 58, 12),
         QString::fromUtf8("↑"), Qt::black, 20);
     // 下楼
-    m_tilePix[Tile_StairsDown] = makePixmap(QColor(160, 100, 180), QColor(120, 70, 140),
+    m_tilePix[Tile_StairsDown] = makePixmap(QColor(95, 55, 125), QColor(55, 30, 80),
         QString::fromUtf8("↓"), Qt::white, 20);
     // 道具
     m_tilePix[Tile_Item] = makePixmap(QColor(60, 170, 60), QColor(40, 130, 40),
@@ -218,6 +220,19 @@ void MapWidget::loadTileImage(int tileType, const QString& path)
 {
     QPixmap px(path);
     if (!px.isNull()) {
+        if (tileType == Tile_StairsUp || tileType == Tile_StairsDown) {
+            QImage image = px.toImage().convertToFormat(QImage::Format_ARGB32);
+            for (int y = 0; y < image.height(); ++y) {
+                for (int x = 0; x < image.width(); ++x) {
+                    const QColor color = QColor::fromRgba(image.pixel(x, y));
+                    image.setPixelColor(x, y, QColor(color.red() * 0.68,
+                                                     color.green() * 0.68,
+                                                     color.blue() * 0.68,
+                                                     color.alpha()));
+                }
+            }
+            px = QPixmap::fromImage(image);
+        }
         // Pixel-art assets must remain crisp; nearest-neighbor scaling also avoids
         // filtering work on every custom tile during startup.
         m_tilePix[tileType] = px.scaled(TILE_SIZE, TILE_SIZE, Qt::IgnoreAspectRatio, Qt::FastTransformation);

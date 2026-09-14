@@ -18,6 +18,8 @@
 #include <QScrollArea>
 #include <QApplication>
 #include <QHash>
+#include <QImage>
+#include <QColor>
 #include <algorithm>
 
 // ==================== MapEditWidget ====================
@@ -25,9 +27,24 @@
 static QPixmap editorAsset(const QString& path)
 {
     static QHash<QString, QPixmap> cache;
-    if (!cache.contains(path))
-        cache.insert(path, QPixmap(path).scaled(60, 60, Qt::IgnoreAspectRatio,
-                                                 Qt::FastTransformation));
+    if (!cache.contains(path)) {
+        QPixmap source(path);
+        if (path.contains("/stairs_")) {
+            QImage image = source.toImage().convertToFormat(QImage::Format_ARGB32);
+            for (int y = 0; y < image.height(); ++y) {
+                for (int x = 0; x < image.width(); ++x) {
+                    const QColor color = QColor::fromRgba(image.pixel(x, y));
+                    image.setPixelColor(x, y, QColor(color.red() * 0.68,
+                                                     color.green() * 0.68,
+                                                     color.blue() * 0.68,
+                                                     color.alpha()));
+                }
+            }
+            source = QPixmap::fromImage(image);
+        }
+        cache.insert(path, source.scaled(60, 60, Qt::IgnoreAspectRatio,
+                                         Qt::FastTransformation));
+    }
     return cache.value(path);
 }
 
@@ -328,8 +345,8 @@ void MapEditWidget::paintEvent(QPaintEvent*)
             case Tile_Wall:       fill = QColor(55, 55, 60);   break;
             case Tile_DarkWall:   fill = QColor(30, 30, 35);   label = QString::fromUtf8("暗墙"); break;
             case Tile_Floor:      fill = QColor(180, 170, 150); break;
-            case Tile_StairsUp:   fill = QColor(180, 160, 50);  label = QString::fromUtf8("↑上"); break;
-            case Tile_StairsDown: fill = QColor(160, 100, 180); label = QString::fromUtf8("↓下"); break;
+            case Tile_StairsUp:   fill = QColor(110, 95, 25);  label = QString::fromUtf8("↑上"); break;
+            case Tile_StairsDown: fill = QColor(95, 55, 125); label = QString::fromUtf8("↓下"); break;
             case Tile_DoorRed:    fill = QColor(180, 60, 50);   label = QString::fromUtf8("红门"); break;
             case Tile_DoorBlue:   fill = QColor(50, 70, 180);   label = QString::fromUtf8("蓝门"); break;
             case Tile_DoorGreen:  fill = QColor(50, 160, 70);   label = QString::fromUtf8("绿门"); break;
@@ -639,8 +656,8 @@ MapEditor::MapEditor(QWidget* parent)
     TileBtn btns[] = {
         { Tile_Wall,       QString::fromUtf8(" 墙 "),      "#666" },
         { Tile_Floor,      QString::fromUtf8(" 地板 "),    "#4a4" },
-        { Tile_StairsUp,   QString::fromUtf8(" 上楼梯 "),  "#bb0" },
-        { Tile_StairsDown, QString::fromUtf8(" 下楼梯 "),  "#b6b" },
+        { Tile_StairsUp,   QString::fromUtf8(" 上楼梯 "),  "#665500" },
+        { Tile_StairsDown, QString::fromUtf8(" 下楼梯 "),  "#5b2c66" },
         { Tile_Monster,    QString::fromUtf8(" 怪物 "),    "#d44" },
         { Tile_Item,       QString::fromUtf8(" 道具 "),    "#4c4" },
         { Tile_DoorRed,    QString::fromUtf8(" 红门 "),    "#d33" },
