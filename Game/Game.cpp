@@ -327,8 +327,9 @@ void Game::generateClassicTower()
     m_floors[20].map[(7 - (-3)) * m_width + (0 + 7)] = Tile_DoorMagic;
     // 48层左上角的藤都子SP是开启圣剑房花门的专属守卫。
     spawnEventMonster(48, -5, 5, 31);
-    // 49层魔王初始处于封印状态：先用墙体占位，击败四名封印守卫后才显现。
-    m_floors[49].map[(7 - 3) * m_width + (0 + 7)] = Tile_Wall;
+    // 49层假魔王一开始就出现，但处于未封印的满属性状态；
+    // 只有击败其上下左右四名魔法警卫后，封印才会生效并削弱魔王。
+    spawnEventMonster(49, 0, 3, 33);
     const int guardPositions[][2] = {
         {-1, 4}, {0, 4}, {1, 4}, {-1, 3}, {1, 3}, {-1, 2}, {0, 2}, {1, 2}
     };
@@ -1134,15 +1135,16 @@ Game::FightResult Game::fightAt(int x, int y, std::vector<std::string>& outLog)
 {
     Monster* m = monsterAt(x, y);
     if (!m) {
-        if (m_floor == 49 && x == 7 && y == 4 && tileAt(x, y) == Tile_Wall) {
-            outLog.push_back("长崎素世·幻影仍被四名魔法警卫封印，先击败封印守卫才能解除魔王封印。");
-            return Fight_Stalemate;
-        }
         outLog.push_back(std::string("没有怪物。"));
         return Fight_PlayerWin;
     }
 
     std::string bossName = m->GetName();
+    if (m_floor == 49 && x == 7 && y == 4 && bossName == "长崎素世·幻影" &&
+        m->GetHP() >= 8000) {
+        outLog.push_back("长崎素世·幻影尚未解除封印，先击败她上下左右的四名魔法警卫！");
+        return Fight_Stalemate;
+    }
     if (m_floor == 10 && bossName == "八幡海铃·骷髅队长" && !m_floor10AmbushTriggered) {
         outLog.push_back("八幡海铃挡在花门前，先触发包围事件才能挑战她。");
         return Fight_Stalemate;
@@ -1236,10 +1238,13 @@ Game::FightResult Game::fightAt(int x, int y, std::vector<std::string>& outLog)
                     !m_currentFloor->monsters.count(eventKey(0, 2));
                 if (sealComplete) {
                     const int bossKey = eventKey(0, 3);
-                    m_currentFloor->monsters[bossKey] =
-                        Monster("长崎素世·幻影", 800, 500, 100, 500);
-                    setTile(7, 4, Tile_Monster);
-                    outLog.push_back("四名魔法警卫被击败，魔王封印解除；长崎素世·幻影以封印削弱后的属性出现！");
+                    auto bossIt = m_currentFloor->monsters.find(bossKey);
+                    if (bossIt != m_currentFloor->monsters.end() &&
+                        bossIt->second.GetName() == "长崎素世·幻影" &&
+                        bossIt->second.GetHP() >= 8000) {
+                        bossIt->second = Monster("长崎素世·幻影", 800, 500, 100, 500);
+                        outLog.push_back("四名魔法警卫被击败，魔王封印解除；长崎素世·幻影的属性降为原来的十分之一！");
+                    }
                 }
             }
             if (m_floor == 49 && bossName == "长崎素世·幻影") {

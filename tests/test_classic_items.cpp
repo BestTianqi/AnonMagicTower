@@ -337,12 +337,13 @@ int main() {
     assert(floor49FlowerDoors.tileAt(7, 10) == Tile_Floor);
     assert(floor49FlowerDoors.hasMonsterAt(3, 3));
 
-    // 49层魔王封印：四名中央封印守卫全部击败后，封印墙才显现削弱后的魔王幻影。
+    // 49层魔王封印：魔王先以满属性出现，禁止先战；击败上下左右四名守卫后才削弱。
     Game floor49Seal;
     floor49Seal.debugTeleport(49, 7, 5);
     floor49Seal.player().atk = 100000;
     floor49Seal.player().hp = 1000000000;
-    floor49Seal.setTile(7, 4, Tile_Wall);
+    floor49Seal.setTile(7, 4, Tile_Monster);
+    floor49Seal.spawnMonster(7, 4, MonsterDB::get("长崎素世·幻影"));
     const std::array<std::pair<int, int>, 4> sealGuards = {
         std::pair<int, int>{7, 3}, std::pair<int, int>{6, 4},
         std::pair<int, int>{8, 4}, std::pair<int, int>{7, 5}};
@@ -351,8 +352,8 @@ int main() {
         floor49Seal.spawnMonster(position.first, position.second,
                                  MonsterDB::getByIndex(30));
     }
-    assert(floor49Seal.tryMovePlayer(7, 4) == Game::Move_Block);
     std::vector<std::string> sealLog;
+    assert(floor49Seal.fightAt(7, 4, sealLog) == Game::Fight_Stalemate);
     for (const auto& position : sealGuards) {
         sealLog.clear();
         assert(floor49Seal.fightAt(position.first, position.second, sealLog) == Game::Fight_PlayerWin);
@@ -360,6 +361,9 @@ int main() {
     assert(floor49Seal.tileAt(7, 4) == Tile_Monster);
     assert(floor49Seal.monsterAt(7, 4) != nullptr);
     assert(floor49Seal.monsterAt(7, 4)->GetName() == "长崎素世·幻影");
+    assert(floor49Seal.monsterAt(7, 4)->GetHP() == 800);
+    assert(floor49Seal.monsterAt(7, 4)->GetATK() == 500);
+    assert(floor49Seal.monsterAt(7, 4)->GetDEF() == 100);
     sealLog.clear();
     assert(floor49Seal.fightAt(7, 4, sealLog) == Game::Fight_PlayerWin);
 
