@@ -1208,43 +1208,55 @@ Game::FightResult Game::fightAt(int x, int y, std::vector<std::string>& outLog)
             // 原版阶段 Boss 击败后会留下固定奖励并开启通往上一层的出口。
             // 奖励按原版掉落组合放在 Boss 周围，避免覆盖地图上的其他静态物件。
             std::vector<std::unique_ptr<Item>> bossRewards;
-            std::vector<std::string> rewardNames;
+            std::string rewardSummary;
             const int rewardStairX = m_width / 2;
             const int rewardStairY = m_height - 3;
+            const auto appendClassicBossRewards = [&](const ClassicItemTier& tier) {
+                for (int i = 0; i < 3; ++i) {
+                    bossRewards.emplace_back(std::make_unique<RubyGem>(tier.rubyAttack, "舞台红宝石"));
+                    bossRewards.emplace_back(std::make_unique<SapphireGem>(tier.sapphireDefense, "舞台蓝宝石"));
+                    bossRewards.emplace_back(std::make_unique<Key>(KeyType::Green));
+                    bossRewards.emplace_back(std::make_unique<LargePotion>(tier.largePotionHp));
+                }
+                rewardSummary = "舞台红宝石×3、舞台蓝宝石×3、黄色Live票×3、爱音能量饮×3";
+            };
             if (m_floor == 10 && bossName == "八幡海铃·骷髅队长") {
                 const auto tier = classicItemTierForFloor(m_floor);
-                bossRewards.emplace_back(std::make_unique<RubyGem>(tier.rubyAttack, "舞台红宝石"));
-                bossRewards.emplace_back(std::make_unique<SapphireGem>(tier.sapphireDefense, "舞台蓝宝石"));
-                bossRewards.emplace_back(std::make_unique<Key>(KeyType::Green));
-                bossRewards.emplace_back(std::make_unique<LargePotion>(tier.largePotionHp));
-                rewardNames = {"舞台红宝石", "舞台蓝宝石", "黄色Live票", "爱音能量饮"};
+                appendClassicBossRewards(tier);
             } else if (m_floor == 20 && bossName == "凑友希那·吸血鬼") {
                 const auto tier = classicItemTierForFloor(m_floor);
-                bossRewards.emplace_back(std::make_unique<RubyGem>(tier.rubyAttack, "舞台红宝石"));
-                bossRewards.emplace_back(std::make_unique<SapphireGem>(tier.sapphireDefense, "舞台蓝宝石"));
-                bossRewards.emplace_back(std::make_unique<Key>(KeyType::Green));
-                bossRewards.emplace_back(std::make_unique<LargePotion>(tier.largePotionHp));
-                rewardNames = {"舞台红宝石", "舞台蓝宝石", "黄色Live票", "爱音能量饮"};
+                appendClassicBossRewards(tier);
             } else if (m_floor == 40 && bossName == "幼年长崎素世·骑士队长") {
                 const auto tier = classicItemTierForFloor(m_floor);
-                bossRewards.emplace_back(std::make_unique<RubyGem>(tier.rubyAttack, "舞台红宝石"));
-                bossRewards.emplace_back(std::make_unique<SapphireGem>(tier.sapphireDefense, "舞台蓝宝石"));
-                bossRewards.emplace_back(std::make_unique<Key>(KeyType::Green));
-                rewardNames = {"舞台红宝石", "舞台蓝宝石", "黄色Live票"};
+                appendClassicBossRewards(tier);
             }
             if (!bossRewards.empty()) {
                 const std::array<std::pair<int, int>, 9> offsets = {{
                     {0, 0}, {1, 0}, {-1, 0}, {0, 1}, {0, -1},
                     {1, 1}, {-1, 1}, {1, -1}, {-1, -1}
                 }};
+                std::vector<std::pair<int, int>> candidates;
+                std::unordered_set<int> seen;
+                const auto appendCandidate = [&](int rx, int ry) {
+                    if (rx < 2 || rx > m_width - 3 || ry < 2 || ry > m_height - 3) return;
+                    if (seen.insert(posKey(rx, ry)).second) candidates.emplace_back(rx, ry);
+                };
+                for (const auto& offset : offsets) appendCandidate(x + offset.first, y + offset.second);
+                for (int radius = 2; radius <= m_width + m_height; ++radius) {
+                    for (int dy = -radius; dy <= radius; ++dy) {
+                        const int dx = radius - std::abs(dy);
+                        appendCandidate(x + dx, y + dy);
+                        if (dx != 0) appendCandidate(x - dx, y + dy);
+                    }
+                }
                 size_t placed = 0;
-                for (const auto& offset : offsets) {
+                for (const auto& candidate : candidates) {
                     if (placed >= bossRewards.size()) break;
-                    const int rx = x + offset.first;
-                    const int ry = y + offset.second;
+                    const int rx = candidate.first;
+                    const int ry = candidate.second;
                     const int key = posKey(rx, ry);
-                    if (rx < 2 || rx > m_width - 3 || ry < 2 || ry > m_height - 3 ||
-                        (rx == rewardStairX && ry == rewardStairY) ||
+                    if ((rx == rewardStairX && ry == rewardStairY) ||
+                        tileAt(rx, ry) != Tile_Floor ||
                         m_currentFloor->monsters.count(key) != 0 ||
                         m_currentFloor->items.count(key) != 0)
                         continue;
@@ -1252,12 +1264,7 @@ Game::FightResult Game::fightAt(int x, int y, std::vector<std::string>& outLog)
                     setTile(rx, ry, Tile_Item);
                 }
                 setTile(rewardStairX, rewardStairY, Tile_StairsUp);
-                std::string joinedRewards;
-                for (const auto& name : rewardNames) {
-                    if (!joinedRewards.empty()) joinedRewards += "、";
-                    joinedRewards += name;
-                }
-                outLog.push_back("Boss奖励：" + joinedRewards + "；地图正中间下方出现向上楼梯！");
+                outLog.push_back("Boss奖励：" + rewardSummary + "；地图正中间下方出现向上楼梯！");
             }
             if (hasShield) m_player.tempShieldCharges--;
             if (bossName == "长崎素世·本体")

@@ -23,6 +23,15 @@ int main() {
     assert(roster[33].GetName() == "长崎素世·本体");
     assert(roster[15].GetHP() == 444 && roster[15].GetATK() == 199 &&
            roster[15].GetDEF() == 66 && roster[15].GetGold() == 144);
+    const auto countItem = [](const Game& game, const std::string& name) {
+        int count = 0;
+        for (int y = 2; y <= 12; ++y)
+            for (int x = 2; x <= 12; ++x) {
+                const Item* item = game.itemAt(x, y);
+                if (item && item->GetName() == name) ++count;
+            }
+        return count;
+    };
 
     assert(classicItemTierForFloor(1).rubyAttack == 1);
     assert(classicItemTierForFloor(10).largePotionHp == 200);
@@ -402,6 +411,10 @@ int main() {
     assert(floor10Ambush.itemAt(8, 2)->GetName() == "舞台蓝宝石");
     assert(floor10Ambush.itemAt(6, 2)->GetName() == "黄色Live票");
     assert(floor10Ambush.itemAt(7, 3)->GetName() == "爱音能量饮");
+    assert(countItem(floor10Ambush, "舞台红宝石") == 3);
+    assert(countItem(floor10Ambush, "舞台蓝宝石") == 3);
+    assert(countItem(floor10Ambush, "黄色Live票") == 3);
+    assert(countItem(floor10Ambush, "爱音能量饮") == 3);
     bool floor10RewardShown = false;
     for (const auto& line : log)
         if (line.find("奖励") != std::string::npos || line.find("楼梯") != std::string::npos)
@@ -426,6 +439,10 @@ int main() {
     assert(floor20Boss.itemAt(8, 6)->GetName() == "舞台蓝宝石");
     assert(floor20Boss.itemAt(6, 6)->GetName() == "黄色Live票");
     assert(floor20Boss.itemAt(7, 7)->GetName() == "爱音能量饮");
+    assert(countItem(floor20Boss, "舞台红宝石") == 3);
+    assert(countItem(floor20Boss, "舞台蓝宝石") == 3);
+    assert(countItem(floor20Boss, "黄色Live票") == 3);
+    assert(countItem(floor20Boss, "爱音能量饮") == 3);
     assert(floor20Boss.tileAt(7, 12) == Tile_StairsUp);
 
     // 40层 Boss 击败后生成原版红蓝宝石和黄钥匙奖励与向上楼梯。
@@ -445,6 +462,11 @@ int main() {
     assert(floor40Boss.itemAt(7, 6)->GetName() == "舞台红宝石");
     assert(floor40Boss.itemAt(8, 6)->GetName() == "舞台蓝宝石");
     assert(floor40Boss.itemAt(6, 6)->GetName() == "黄色Live票");
+    assert(floor40Boss.itemAt(7, 7)->GetName() == "爱音能量饮");
+    assert(countItem(floor40Boss, "舞台红宝石") == 3);
+    assert(countItem(floor40Boss, "舞台蓝宝石") == 3);
+    assert(countItem(floor40Boss, "黄色Live票") == 3);
+    assert(countItem(floor40Boss, "爱音能量饮") == 3);
     assert(floor40Boss.tileAt(7, 12) == Tile_StairsUp);
 
     // 前三层原版序章：3层先显现包围怪物，等待点击确认后才传送回2层。
