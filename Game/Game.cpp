@@ -232,6 +232,9 @@ void Game::generateClassicTower()
             else if (id == 4 || id == 5 || id == 18 || id == 20 ||
                      id == 22 || id == 26 || id == 34) tile = Tile_DoorMagic;
             else if (id == 9 || id == 11) tile = Tile_DoorIron;
+            // 40层 Boss 区入口原本标为花门，按当前流程改为红门，
+            // 由红钥匙开启，不再参与花门的清怪判定。
+            else if (id == 30 && level == 40) tile = Tile_DoorRed;
             fd.map[key] = tile;
         } else if (type == 1) {
             fd.items[key] = makeClassicItem(level, id);
@@ -285,7 +288,11 @@ void Game::generateClassicTower()
                 case 30: dialog = {"救救我！这里的牢门似乎能被打开。"}; break;
                 case 34: dialog = {"前方的道路需要更高级的装备。"}; break;
                 case 35: dialog = {"秘宝被藏在更高的楼层。"}; break;
-                case 37: dialog = {"翡翠剑的房间需要用镐破墙进入。"}; break;
+                case 37:
+                    dialog = (level == 39)
+                        ? std::vector<std::string>{"这是镜面舞台票，使用后可以左右对称移动三次。"}
+                        : std::vector<std::string>{"翡翠剑的房间需要用镐破墙进入。"};
+                    break;
                 case 39: dialog = {"通往异界的入口就在不远处。"}; break;
                 case 40: dialog = {"44层被藏在异界，只有通过秘宝才能到达。"}; break;
                 case 42: dialog = {"神圣盾能免疫魔法攻击，但它被藏在异界内。"}; break;
@@ -296,6 +303,7 @@ void Game::generateClassicTower()
                 if (id == 3) reward = std::make_unique<NoteBook>();
                 else if (id == 18) reward = std::make_unique<HolyWater>();
                 else if (id == 32) reward = std::make_unique<Treasure>(1000);
+                else if (level == 39 && id == 37) reward = std::make_unique<SymmetryFlyer>();
                 NPC npc(name, dialog, std::move(reward), false, 0, nullptr, id);
                 fd.npcs.emplace(key, std::move(npc));
             }
