@@ -516,6 +516,18 @@ int main() {
     assert(symmetryEvent.player().symmetryFlyerUses == 0);
     assert(symmetryEvent.player().InventoryCount() == 0);
 
+    // 48层左上角藤都子SP被击败后，圣剑房花门（9,9）解锁。
+    Game floor48FlowerDoor;
+    floor48FlowerDoor.debugTeleport(48, 2, 3);
+    floor48FlowerDoor.player().atk = 100000;
+    floor48FlowerDoor.player().hp = 1000000000;
+    floor48FlowerDoor.setTile(2, 2, Tile_Monster);
+    floor48FlowerDoor.spawnMonster(2, 2, MonsterDB::get("藤都子SP·魔法警卫"));
+    floor48FlowerDoor.setTile(9, 9, Tile_DoorMagic);
+    std::vector<std::string> floor48Log;
+    assert(floor48FlowerDoor.fightAt(2, 2, floor48Log) == Game::Fight_PlayerWin);
+    assert(floor48FlowerDoor.tileAt(9, 9) == Tile_Floor);
+
     // 真实经典塔序章：三层入口触发围攻、固定伤害、攻防降至10并回到二层小偷下方。
     Game classicOpening;
     classicOpening.generateClassicTower();

@@ -28,7 +28,8 @@ bool mechanismDoorReadyAt(int floorNumber, const FloorData& floor, int doorX, in
 {
     // 10 层花门由进入中央 Boss 区的剧情事件开启，而不是清怪开启。
     if (floorNumber == 10) return false;
-    // 原版 48 层圣剑房花门是损坏的机关，清怪后仍不会自动开启。
+    // 48层圣剑房花门由左上角藤都子SP的专属事件开启，
+    // 不参与通用机关门清怪判定。
     if (floorNumber == 48) return false;
 
     if (floor.map[doorY * MAP_SIZE + doorX] == Tile_DoorMagic) {
@@ -324,6 +325,8 @@ void Game::generateClassicTower()
     // 原版脚本动态生成、因而不在静态 mapinfo 中的关键战斗。
     spawnEventMonster(20, 0, 0, 16);
     m_floors[20].map[(7 - (-3)) * m_width + (0 + 7)] = Tile_DoorMagic;
+    // 48层左上角的藤都子SP是开启圣剑房花门的专属守卫。
+    spawnEventMonster(48, -5, 5, 31);
     spawnEventMonster(49, 0, 3, 33);
     const int guardPositions[][2] = {
         {-1, 4}, {0, 4}, {1, 4}, {-1, 3}, {1, 3}, {-1, 2}, {0, 2}, {1, 2}
@@ -1000,7 +1003,8 @@ Game::MoveResult Game::tryMovePlayer(int nx, int ny)
     case Tile_DoorMagic:
     case Tile_DoorIron:
         // 机关门不消耗钥匙，击败本楼层指定守卫后自动打开。
-        // 48 层圣剑房为原版损坏花门，只能用镐破坏。
+        // 48层圣剑房花门未触发专属事件前仍只能用镐破坏；
+        // 左上角藤都子SP被击败后由事件直接解锁。
         if (m_floor == 48 && m_player.wallBreakerUsed) {
             m_player.wallBreakerUsed = false;
             setTile(nx, ny, Tile_Floor);
@@ -1197,6 +1201,15 @@ Game::FightResult Game::fightAt(int x, int y, std::vector<std::string>& outLog)
             m_currentFloor->monsters.erase(key);
             setTile(x, y, m_currentFloor->items.count(key) ? Tile_Item : Tile_Floor);
             openMechanismDoorsIfReady();
+            if (m_floor == 48 && x == 2 && y == 2 &&
+                bossName == "藤都子SP·魔法警卫") {
+                // 48层圣剑房花门只由这只左上角藤都子SP解锁，
+                // 不受其他魔法门的通用清怪规则影响。
+                if (tileAt(9, 9) == Tile_DoorMagic) {
+                    setTile(9, 9, Tile_Floor);
+                    outLog.push_back("藤都子SP被击败，48层圣剑房花门已解锁！");
+                }
+            }
             if (m_floor == 10 && m_floor10AmbushTriggered &&
                 bossName != "八幡海铃·骷髅队长")
                 m_floor10AmbushMonsterKeys.erase(key);
