@@ -398,13 +398,17 @@ int main() {
     assert(floor10Ambush.tileAt(7, 12) == Tile_StairsUp);
     assert(floor10Ambush.tileAt(7, 2) == Tile_Item);
     assert(floor10Ambush.itemAt(7, 2) != nullptr);
+    assert(floor10Ambush.itemAt(7, 2)->GetName() == "舞台红宝石");
+    assert(floor10Ambush.itemAt(8, 2)->GetName() == "舞台蓝宝石");
+    assert(floor10Ambush.itemAt(6, 2)->GetName() == "黄色Live票");
+    assert(floor10Ambush.itemAt(7, 3)->GetName() == "爱音能量饮");
     bool floor10RewardShown = false;
     for (const auto& line : log)
         if (line.find("奖励") != std::string::npos || line.find("楼梯") != std::string::npos)
             floor10RewardShown = true;
     assert(floor10RewardShown);
 
-    // 20层 Boss 击败后生成蓝宝石奖励与向上楼梯。
+    // 20层 Boss 击败后生成原版四件奖励与向上楼梯。
     Game floor20Boss;
     for (int i = 0; i < 19; ++i) floor20Boss.goUpFloor(7, 12, false);
     floor20Boss.initFloor(20);
@@ -418,9 +422,13 @@ int main() {
     assert(floor20Boss.fightAt(7, 6, log) == Game::Fight_PlayerWin);
     assert(floor20Boss.tileAt(7, 6) == Tile_Item);
     assert(floor20Boss.itemAt(7, 6) != nullptr);
+    assert(floor20Boss.itemAt(7, 6)->GetName() == "舞台红宝石");
+    assert(floor20Boss.itemAt(8, 6)->GetName() == "舞台蓝宝石");
+    assert(floor20Boss.itemAt(6, 6)->GetName() == "黄色Live票");
+    assert(floor20Boss.itemAt(7, 7)->GetName() == "爱音能量饮");
     assert(floor20Boss.tileAt(7, 12) == Tile_StairsUp);
 
-    // 40层 Boss 击败后生成圣水奖励与向上楼梯。
+    // 40层 Boss 击败后生成原版红蓝宝石和黄钥匙奖励与向上楼梯。
     Game floor40Boss;
     for (int i = 0; i < 39; ++i) floor40Boss.goUpFloor(7, 12, false);
     floor40Boss.initFloor(40);
@@ -434,6 +442,9 @@ int main() {
     assert(floor40Boss.fightAt(7, 6, log) == Game::Fight_PlayerWin);
     assert(floor40Boss.tileAt(7, 6) == Tile_Item);
     assert(floor40Boss.itemAt(7, 6) != nullptr);
+    assert(floor40Boss.itemAt(7, 6)->GetName() == "舞台红宝石");
+    assert(floor40Boss.itemAt(8, 6)->GetName() == "舞台蓝宝石");
+    assert(floor40Boss.itemAt(6, 6)->GetName() == "黄色Live票");
     assert(floor40Boss.tileAt(7, 12) == Tile_StairsUp);
 
     // 前三层原版序章：3层先显现包围怪物，等待点击确认后才传送回2层。
