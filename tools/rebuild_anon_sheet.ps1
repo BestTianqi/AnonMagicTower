@@ -16,14 +16,38 @@ $gfx.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::Half
 try {
     for ($row = 0; $row -lt 8; $row++) {
         for ($col = 0; $col -lt 8; $col++) {
-            # Trim the generated cell before scaling so every output frame has
-            # a deterministic transparent guard and cannot touch its neighbor.
-            $left = [int][math]::Floor($col * $srcBmp.Width / 8) + 8
-            $top = [int][math]::Floor($row * $srcBmp.Height / 8) + 8
-            $right = [int][math]::Floor(($col + 1) * $srcBmp.Width / 8) - 8
-            $bottom = [int][math]::Floor(($row + 1) * $srcBmp.Height / 8) - 8
-            $sourceRect = [System.Drawing.Rectangle]::new($left, $top, $right - $left, $bottom - $top)
-            $destinationRect = [System.Drawing.Rectangle]::new($col * 60, $row * 60, 60, 60)
+            # Ignore the generated cell's outer pixels, then find the actual
+            # character bounds and fit that character into a 52px interior.
+            # This gives every frame the same baseline and prevents any source
+            # frame from contributing pixels to a neighboring frame.
+            $cellLeft = [int][math]::Floor($col * $srcBmp.Width / 8) + 12
+            $cellTop = [int][math]::Floor($row * $srcBmp.Height / 8) + 12
+            $cellRight = [int][math]::Floor(($col + 1) * $srcBmp.Width / 8) - 12
+            $cellBottom = [int][math]::Floor(($row + 1) * $srcBmp.Height / 8) - 12
+            $minX = $cellRight
+            $minY = $cellBottom
+            $maxX = $cellLeft - 1
+            $maxY = $cellTop - 1
+            for ($y = $cellTop; $y -lt $cellBottom; $y++) {
+                for ($x = $cellLeft; $x -lt $cellRight; $x++) {
+                    if ($srcBmp.GetPixel($x, $y).A -gt 0) {
+                        $minX = [math]::Min($minX, $x)
+                        $minY = [math]::Min($minY, $y)
+                        $maxX = [math]::Max($maxX, $x)
+                        $maxY = [math]::Max($maxY, $y)
+                    }
+                }
+            }
+            if ($maxX -lt $minX -or $maxY -lt $minY) { continue }
+            $sourceWidth = $maxX - $minX + 1
+            $sourceHeight = $maxY - $minY + 1
+            $scale = [math]::Min(52.0 / $sourceWidth, 52.0 / $sourceHeight)
+            $destWidth = [math]::Max(1, [int][math]::Round($sourceWidth * $scale))
+            $destHeight = [math]::Max(1, [int][math]::Round($sourceHeight * $scale))
+            $destX = $col * 60 + [int][math]::Round((60 - $destWidth) / 2.0)
+            $destY = $row * 60 + 56 - $destHeight
+            $sourceRect = [System.Drawing.Rectangle]::new($minX, $minY, $sourceWidth, $sourceHeight)
+            $destinationRect = [System.Drawing.Rectangle]::new($destX, $destY, $destWidth, $destHeight)
             $gfx.DrawImage($srcBmp, $destinationRect, $sourceRect.X, $sourceRect.Y,
                 $sourceRect.Width, $sourceRect.Height, [System.Drawing.GraphicsUnit]::Pixel)
         }
