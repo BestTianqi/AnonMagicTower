@@ -333,13 +333,31 @@ void MapWidget::loadPlayerSpriteSheet(const QString& path)
     if (sheet.width() < TILE_SIZE * columns || sheet.height() < TILE_SIZE * rows)
         return;
 
+    const int frameWidth = sheet.width() / columns;
+    const int frameHeight = sheet.height() / rows;
+    if (frameWidth <= 0 || frameHeight <= 0)
+        return;
+
+    const QImage source = sheet.toImage().convertToFormat(QImage::Format_ARGB32);
     for (auto& frame : m_playerFrames)
         frame = QPixmap();
     for (int row = 0; row < rows; ++row) {
         for (int col = 0; col < columns; ++col) {
             const int index = row * columns + col;
-            m_playerFrames[static_cast<size_t>(index)] =
-                sheet.copy(col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+            QImage frame = source.copy(col * frameWidth, row * frameHeight,
+                                       frameWidth, frameHeight);
+            // Keep a hard transparent guard around every frame. This prevents
+            // a foot at the bottom of one cell from bleeding into the head of
+            // the next cell when a generated sheet is scaled or filtered.
+            const int guard = std::min(2, std::min(frame.width(), frame.height()) / 2);
+            for (int y = 0; y < frame.height(); ++y) {
+                for (int x = 0; x < frame.width(); ++x) {
+                    if (x < guard || y < guard ||
+                        x >= frame.width() - guard || y >= frame.height() - guard)
+                        frame.setPixel(x, y, qRgba(0, 0, 0, 0));
+                }
+            }
+            m_playerFrames[static_cast<size_t>(index)] = QPixmap::fromImage(frame);
         }
     }
     m_playerSheetColumns = columns;
