@@ -693,9 +693,6 @@ void MainWindow::loadAssets()
     mw->loadPlayerOutfitSpriteSheet("mygo_stage", ":/images/characters/player_outfits/anon_mygo_stage_8x8.png");
     mw->loadPlayerOutfitSpriteSheet("mujica_stage", ":/images/characters/player_outfits/anon_mujica_stage_8x8.png");
     mw->loadPlayerOutfitSpriteSheet("summer", ":/images/characters/player_outfits/anon_summer_8x8.png");
-    mw->loadPlayerOutfitSpriteSheet("school_actions", ":/images/characters/player_outfits/anon_school_actions_8x8.png");
-    mw->loadPlayerOutfitSpriteSheet("casual_actions", ":/images/characters/player_outfits/anon_casual_actions_8x8.png");
-    mw->loadPlayerOutfitSpriteSheet("mygo_stage_actions", ":/images/characters/player_outfits/anon_stage_actions_8x8.png");
     mw->setPlayerOutfit("reference_walk");
     mw->loadBackgroundImage(":/images/backgrounds/bangdream_gbp_cover.jpg");
 

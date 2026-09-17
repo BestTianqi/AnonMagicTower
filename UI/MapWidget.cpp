@@ -369,7 +369,10 @@ void MapWidget::loadPlayerSpriteSheet(const QString& path)
 void MapWidget::loadPlayerOutfitSpriteSheet(const QString& outfitId, const QString& path)
 {
     const std::string id = outfitId.toStdString();
-    if (id.empty() || path.isEmpty())
+    // *_actions sheets contain isolated gesture poses rather than a
+    // directional walk cycle; never expose them as movement outfits.
+    if (id.empty() || path.isEmpty() ||
+        outfitId.endsWith(QStringLiteral("_actions"), Qt::CaseInsensitive))
         return;
     m_playerOutfitPaths[id] = path;
     if (m_activePlayerOutfit.empty())

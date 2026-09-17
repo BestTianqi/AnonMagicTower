@@ -43,5 +43,9 @@ if ($mapSource -notmatch 'frameWidth\s*=\s*sheet\.width\(\)\s*/\s*columns' -or
     $mapSource -notmatch 'frameHeight\s*=\s*sheet\.height\(\)\s*/\s*rows') {
     throw 'sprite slicing must derive frame dimensions from the source sheet'
 }
+if ($source -match 'loadPlayerOutfitSpriteSheet\("[^"]*_actions"' -or
+    $mapSource -notmatch 'endsWith\(QStringLiteral\("_actions"\).*CaseInsensitive') {
+    throw 'action-only sheets must not be selectable as walking outfits'
+}
 
 'PASS: player sprite layout'
