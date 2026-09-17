@@ -1183,9 +1183,18 @@ void MapWidget::paintEvent(QPaintEvent*)
             if (t == Tile_NPC) {
                 actorSprite = true;
                 if (NPC* npc = m_game->npcAt(x, y)) {
-                    auto npcImage = m_npcPix.find(npc->GetName());
+                    auto npcImage = m_npcPix.find(npc->IsTrader() ? "麻里奈" : npc->GetName());
                     if (npcImage != m_npcPix.end())
                         pix = &npcImage->second;
+                }
+            }
+
+            if (t == Tile_Shop) {
+                actorSprite = true;
+                if (ShopData* shop = m_game->shopAt(x, y)) {
+                    const bool attributeShop = shop->classicShopFloor > 0 && shop->classicShopFloor != 28;
+                    const auto shopImage = m_npcPix.find(attributeShop ? "弦卷心" : "麻里奈");
+                    if (shopImage != m_npcPix.end()) pix = &shopImage->second;
                 }
             }
 
@@ -1217,6 +1226,23 @@ void MapWidget::paintEvent(QPaintEvent*)
                 painter.drawPixmap(actorSprite ? r : tileRect, *pix);
 
             // 门、楼梯、商店等均由素材本身表达，不再叠加代码绘制的标签底条。
+        }
+    }
+
+    // 在会实际触发魔法领域/警卫夹击的可行走格上显示当前生命损失。
+    // 数值随当前 HP 变化；神圣盾生效时 Game 返回 0，因此标记立即清除。
+    for (int y = 0; y < h; ++y) {
+        for (int x = 0; x < w; ++x) {
+            const int tile = m_game->tileAt(x, y);
+            const bool walkable = tile == Tile_Floor || tile == Tile_Item ||
+                                  tile == Tile_NPC || tile == Tile_Shop ||
+                                  tile == Tile_StairsUp || tile == Tile_StairsDown;
+            if (!walkable) continue;
+            const int damage = m_game->previewApproachHazardDamageAt(x, y);
+            if (damage <= 0) continue;
+            drawOverlayText(painter,
+                            QRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE),
+                            QStringLiteral("-%1").arg(damage), 11, true);
         }
     }
 

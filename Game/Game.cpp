@@ -172,6 +172,8 @@ void Game::generateClassicTower()
     m_pendingTeleportPath.clear();
     m_pendingTeleportTargetX = -1;
     m_pendingTeleportTargetY = -1;
+    m_pendingMageFieldEvents = 0;
+    m_pendingMagicGuardFlankEvents = 0;
     m_visitedFloors.clear();
     m_visitedFloors.insert(1);
     m_floor = 1;
@@ -314,9 +316,9 @@ void Game::generateClassicTower()
             m_floors[32].shops.erase(key);
             m_floors[32].map[key] = Tile_Wall;
         }
-        for (const auto& wall : std::array<std::pair<int, int>, 12>{{
-                 {3, 6}, {4, 6}, {5, 6}, {9, 6}, {10, 6}, {11, 6},
-                 {3, 8}, {4, 8}, {5, 8}, {9, 8}, {10, 8}, {11, 8}}})
+        for (const auto& wall : std::array<std::pair<int, int>, 16>{{
+                 {3, 5}, {4, 5}, {5, 5}, {6, 5}, {8, 5}, {9, 5}, {10, 5}, {11, 5},
+                 {3, 9}, {4, 9}, {5, 9}, {6, 9}, {8, 9}, {9, 9}, {10, 9}, {11, 9}}})
             m_floors[36].map[posKey(wall.first, wall.second)] = Tile_DarkWall;
     };
 
@@ -558,11 +560,11 @@ void Game::generateClassicTower()
         m_floors[32].map[key] = Tile_Wall;
     }
 
-    // 原版36层的四条对称暗道：左右两侧、上下各一条，每条三格。
+    // 原版36层的四条对称暗道：四块墙阵各有一条四格横向通道。
     // 导入资源把这些格子误标为普通墙，因此在脚本层恢复为暗墙。
-    const std::array<std::pair<int, int>, 12> floor36DarkWalls{{
-        {3, 6}, {4, 6}, {5, 6}, {9, 6}, {10, 6}, {11, 6},
-        {3, 8}, {4, 8}, {5, 8}, {9, 8}, {10, 8}, {11, 8}
+    const std::array<std::pair<int, int>, 16> floor36DarkWalls{{
+        {3, 5}, {4, 5}, {5, 5}, {6, 5}, {8, 5}, {9, 5}, {10, 5}, {11, 5},
+        {3, 9}, {4, 9}, {5, 9}, {6, 9}, {8, 9}, {9, 9}, {10, 9}, {11, 9}
     }};
     for (const auto& wall : floor36DarkWalls)
         m_floors[36].map[posKey(wall.first, wall.second)] = Tile_DarkWall;
@@ -627,63 +629,10 @@ void Game::initFloor(int floor)
 
 bool Game::loadDefaultMap()
 {
-    m_lastTeleportPath.clear();
-    m_pendingTeleportPath.clear();
-    m_pendingTeleportTargetX = -1;
-    m_pendingTeleportTargetY = -1;
-    m_visitedFloors.clear();
-    m_visitedFloors.insert(1);
-    m_floor3PrisonTriggered = false;
-    m_floor3PrisonStoryPending = false;
-    m_floor3TrapActive = false;
-    m_princessDollRescued = false;
-    m_floor20VampireTriggered = false;
-    m_floor20VampireStoryShown = false;
-    m_floor14RedKeyRewardGranted = false;
-    m_floor32KnightTriggered = false;
-    m_floor32KnightStoryPending = false;
-    m_floor42KnightStoryTriggered = false;
-    m_floor42KnightStoryPending = false;
-    m_floor34RewardGranted = false;
-    m_floor35RewardsHidden = false;
-    m_floor40BossDefeated = false;
-    m_floor40RewardsGranted = false;
-    m_floor32KnightMovements.clear();
-    m_floor33TrapTriggered = false;
-    m_michelleRescued = false;
-    m_michelleGuardDefeated = false;
-    m_floor38FlowerTriggered = false;
-    m_floor43MiyakoRetreated = false;
-    m_storyOnceKeys.clear();
-    m_floor10AmbushTriggered = false;
-    m_floor10AmbushMonsterKeys.clear();
-    m_floor10AmbushDoorKeys.clear();
-    m_floor10AmbushMovements.clear();
-    // 从嵌入资源加载默认地图
-    QFile res(":/map.txt");
-    if (res.open(QIODevice::ReadOnly)) {
-        QString tmpPath = QDir::tempPath() + "/mota_default_map.txt";
-        QFile tmp(tmpPath);
-        if (tmp.open(QIODevice::WriteOnly)) {
-            tmp.write(res.readAll());
-            tmp.close();
-        }
-        res.close();
-        if (loadFromFile(tmpPath.toStdString())) {
-            prepareFloor3PrisonCell();
-            return true;
-        }
-    }
-
-    // 后备：空地图
-    m_floor = 1;
-    initFloor(1);
-    m_player.x   = 2;
-    m_player.y   = 3;
-    m_player.hp  = 100;
-    m_player.atk = 10;
-    m_player.def = 5;
-
+    // “默认地图”现在就是随程序发布的经典50层塔。主菜单新游戏、
+    // 死亡重开和通关重开必须走同一个初始化源，避免旧 :/map.txt
+    // 与当前地图、剧情修正和初始属性逐渐分叉。
+    generateClassicTower();
     return true;
 }
 
@@ -965,11 +914,86 @@ int Game::applyApproachHazardsAt(int x, int y)
     const bool horizontalPair = isMagicGuard(x - 1, y) && isMagicGuard(x + 1, y);
     const bool verticalPair = isMagicGuard(x, y - 1) && isMagicGuard(x, y + 1);
     const int beforeDamage = m_player.hp;
-    if (mageDamage > 0) m_player.hp = std::max(0, m_player.hp - mageDamage);
+    if (mageDamage > 0) {
+        ++m_pendingMageFieldEvents;
+        m_player.hp = std::max(0, m_player.hp - mageDamage);
+    }
     const int beforeHalving = m_player.hp;
-    if (horizontalPair || verticalPair) m_player.hp /= 2;
+    if (horizontalPair || verticalPair) {
+        ++m_pendingMagicGuardFlankEvents;
+        m_player.hp /= 2;
+    }
     const int lost = (beforeDamage - m_player.hp);
     return lost;
+}
+
+int Game::takePendingMageFieldEvents()
+{
+    const int count = m_pendingMageFieldEvents;
+    m_pendingMageFieldEvents = 0;
+    return count;
+}
+
+int Game::takePendingMagicGuardFlankEvents()
+{
+    const int count = m_pendingMagicGuardFlankEvents;
+    m_pendingMagicGuardFlankEvents = 0;
+    return count;
+}
+
+std::vector<Monster> Game::uniqueMonsterTypesOnCurrentFloor() const
+{
+    std::vector<Monster> result;
+    if (!m_currentFloor) return result;
+    std::unordered_set<std::string> seen;
+    for (const auto& entry : m_currentFloor->monsters) {
+        const Monster& monster = entry.second;
+        if (seen.insert(monster.GetName()).second)
+            result.push_back(monster);
+    }
+    std::sort(result.begin(), result.end(), [](const Monster& lhs, const Monster& rhs) {
+        const int lhsIndex = MonsterDB::indexOf(lhs.GetName());
+        const int rhsIndex = MonsterDB::indexOf(rhs.GetName());
+        if (lhsIndex != rhsIndex) return lhsIndex < rhsIndex;
+        return lhs.GetName() < rhs.GetName();
+    });
+    return result;
+}
+
+int Game::previewApproachHazardDamageAt(int x, int y) const
+{
+    if (!m_currentFloor || m_player.hasHolyShield ||
+        x < 0 || y < 0 || x >= m_width || y >= m_height)
+        return 0;
+    const auto monsterAtConst = [this](int mx, int my) -> const Monster* {
+        if (mx < 0 || my < 0 || mx >= m_width || my >= m_height) return nullptr;
+        const auto it = m_currentFloor->monsters.find(posKey(mx, my));
+        return it == m_currentFloor->monsters.end() ? nullptr : &it->second;
+    };
+
+    int mageDamage = 0;
+    static constexpr int directions[][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+    for (const auto& direction : directions) {
+        const Monster* nearby = monsterAtConst(x + direction[0], y + direction[1]);
+        if (!nearby) continue;
+        const std::string& name = nearby->GetName();
+        if (name.find("高级巫师") != std::string::npos)
+            mageDamage += 200;
+        else if (name.find("初级巫师") != std::string::npos)
+            mageDamage += 100;
+    }
+    const auto isMagicGuard = [&monsterAtConst](int gx, int gy) {
+        const Monster* guard = monsterAtConst(gx, gy);
+        return guard && guard->GetName().find("魔法警卫") != std::string::npos;
+    };
+    const bool guardFlank =
+        (isMagicGuard(x - 1, y) && isMagicGuard(x + 1, y)) ||
+        (isMagicGuard(x, y - 1) && isMagicGuard(x, y + 1));
+
+    const int hpBefore = std::max(0, m_player.hp);
+    int hpAfter = std::max(0, hpBefore - mageDamage);
+    if (guardFlank) hpAfter /= 2;
+    return hpBefore - hpAfter;
 }
 
 std::vector<std::pair<int, int>> Game::takeLastTeleportPath()
@@ -1187,6 +1211,8 @@ bool Game::debugTeleport(int floor, int x, int y)
     m_pendingTeleportTargetX = -1;
     m_pendingTeleportTargetY = -1;
     m_lastTeleportNeedsAnimation = false;
+    m_pendingMageFieldEvents = 0;
+    m_pendingMagicGuardFlankEvents = 0;
     m_visitedFloors.insert(m_floor);
     m_player.x = x;
     m_player.y = y;
@@ -1488,6 +1514,30 @@ void Game::triggerFloor42KnightIfNeeded()
     m_floor42KnightStoryTriggered = true;
     m_floor42KnightStoryPending = true;
 
+    // 纯剧情演员：小素世从黄色楼梯逃入中央，随后魔王与四名警卫合围。
+    // 不把它们写入地图实体，动画结束后道路仍保持原样。
+    const Monster childSoyo = MonsterDB::get("幼年长崎素世·骑士队长");
+    const Monster demonKing = MonsterDB::get("长崎素世·本体");
+    const Monster guard = MonsterDB::get("藤都子SP·魔法警卫");
+    const auto appendRoute = [this](const Monster& actor,
+                                    std::initializer_list<std::pair<int, int>> route) {
+        if (route.size() < 2) return;
+        auto it = route.begin();
+        auto previous = *it++;
+        for (; it != route.end(); ++it) {
+            m_scriptedMonsterMovements.push_back(
+                {actor, previous.first, previous.second, it->first, it->second});
+            previous = *it;
+        }
+    };
+    appendRoute(childSoyo, {{12, 2}, {11, 2}, {10, 2}, {9, 2}, {8, 2}, {7, 2},
+                            {7, 3}, {7, 4}, {7, 5}, {7, 6}, {7, 7}, {7, 8}, {7, 9}});
+    appendRoute(demonKing, {{7, 2}, {7, 3}, {7, 4}, {7, 5}, {7, 6}, {7, 7}});
+    appendRoute(guard, {{4, 9}, {5, 9}, {6, 9}});
+    appendRoute(guard, {{10, 9}, {9, 9}, {8, 9}});
+    appendRoute(guard, {{6, 7}, {6, 8}});
+    appendRoute(guard, {{8, 11}, {8, 10}});
+
     // 首次抵达42层时，骑士队长逃跑并被魔王抓住；
     // 由界面播放魔王与四名魔法警卫夹击的剧情，结束后仍留在42层。
     const int knightKey = posKey(7, 11);
@@ -1574,8 +1624,8 @@ void Game::spawnFloor40DeferredRewards()
     const ClassicItemTier tier = classicItemTierForFloor(40);
     std::vector<std::unique_ptr<Item>> rewards;
     for (int i = 0; i < 3; ++i) {
-        rewards.emplace_back(std::make_unique<RubyGem>(tier.rubyAttack, "舞台红宝石"));
-        rewards.emplace_back(std::make_unique<SapphireGem>(tier.sapphireDefense, "舞台蓝宝石"));
+        rewards.emplace_back(std::make_unique<RubyGem>(tier.rubyAttack));
+        rewards.emplace_back(std::make_unique<SapphireGem>(tier.sapphireDefense));
         rewards.emplace_back(std::make_unique<Key>(KeyType::Green));
         rewards.emplace_back(std::make_unique<LargePotion>(tier.largePotionHp));
     }
@@ -1790,7 +1840,7 @@ void Game::triggerFloor10AmbushIfNeeded()
 void Game::triggerFloor33TrapIfNeeded()
 {
     if (m_floor != 33 || m_floor33TrapTriggered || !m_currentFloor) return;
-    if (m_player.x != 11 || m_player.y != 7) return;
+    if (m_player.x != 11 || m_player.y != 6) return;
     m_floor33TrapTriggered = true;
     setTile(11, 5, Tile_DoorMagic);
     setTile(11, 9, Tile_DoorMagic);
@@ -2417,12 +2467,12 @@ Game::FightResult Game::fightAt(int x, int y, std::vector<std::string>& outLog)
             const int rewardStairY = (m_floor == 20 || m_floor == 40) ? 2 : m_height - 3;
             const auto appendClassicBossRewards = [&](const ClassicItemTier& tier) {
                 for (int i = 0; i < 3; ++i) {
-                    bossRewards.emplace_back(std::make_unique<RubyGem>(tier.rubyAttack, "舞台红宝石"));
-                    bossRewards.emplace_back(std::make_unique<SapphireGem>(tier.sapphireDefense, "舞台蓝宝石"));
+                    bossRewards.emplace_back(std::make_unique<RubyGem>(tier.rubyAttack));
+                    bossRewards.emplace_back(std::make_unique<SapphireGem>(tier.sapphireDefense));
                     bossRewards.emplace_back(std::make_unique<Key>(KeyType::Green));
                     bossRewards.emplace_back(std::make_unique<LargePotion>(tier.largePotionHp));
                 }
-                rewardSummary = "舞台红宝石×3、舞台蓝宝石×3、黄色Live票×3、爱音能量饮×3";
+                rewardSummary = "MyGO应援红章×3、Mujica应援蓝章×3、黄色Live票×3、爱音能量饮×3";
             };
             if (m_floor == 10 && bossName == "八幡海铃·骷髅队长") {
                 const auto tier = classicItemTierForFloor(m_floor);
@@ -2462,13 +2512,13 @@ Game::FightResult Game::fightAt(int x, int y, std::vector<std::string>& outLog)
             } else if (m_floor == 49 && bossName == "长崎素世·幻影") {
                 const auto tier = classicItemTierForFloor(m_floor);
                 for (int i = 0; i < 3; ++i) {
-                    bossRewards.emplace_back(std::make_unique<RubyGem>(tier.rubyAttack, "舞台红宝石"));
-                    bossRewards.emplace_back(std::make_unique<SapphireGem>(tier.sapphireDefense, "舞台蓝宝石"));
+                    bossRewards.emplace_back(std::make_unique<RubyGem>(tier.rubyAttack));
+                    bossRewards.emplace_back(std::make_unique<SapphireGem>(tier.sapphireDefense));
                     bossRewards.emplace_back(std::make_unique<LargePotion>(tier.largePotionHp));
                 }
                 bossRewards.emplace_back(std::make_unique<Key>(KeyType::Red));
                 bossRewards.emplace_back(std::make_unique<DragonSlayer>());
-                rewardSummary = "舞台红宝石×3、舞台蓝宝石×3、爱音能量饮×3、红色Live票×1、祥子指挥棒×1";
+                rewardSummary = "MyGO应援红章×3、Mujica应援蓝章×3、爱音能量饮×3、红色Live票×1、祥子指挥棒×1";
             }
             if (!bossRewards.empty()) {
                 const std::array<std::pair<int, int>, 9> offsets = {{
@@ -2835,6 +2885,8 @@ bool Game::loadFromFile(const std::string& path)
     m_pendingTeleportTargetX = -1;
     m_pendingTeleportTargetY = -1;
     m_lastTeleportNeedsAnimation = false;
+    m_pendingMageFieldEvents = 0;
+    m_pendingMagicGuardFlankEvents = 0;
     // 读档前清空运行时隐藏奖励，避免把上一个游戏实例的状态带入当前存档。
     m_floor35HiddenItems.clear();
 

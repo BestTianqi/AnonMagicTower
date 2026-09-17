@@ -119,7 +119,7 @@ void MenuWindow::onNewGame()
 {
     auto* game = new Game();
     game->generateClassicTower();
-    enterGame(game);
+    enterGame(game, true);
 }
 
 void MenuWindow::onLoadGame()
@@ -137,7 +137,7 @@ void MenuWindow::onLoadGame()
         delete game;
         return;
     }
-    enterGame(game);
+    enterGame(game, false);
 }
 
 void MenuWindow::onMapEditor()
@@ -188,14 +188,14 @@ void MenuWindow::onSettings()
     dlg.exec();
 }
 
-void MenuWindow::enterGame(Game* game)
+void MenuWindow::enterGame(Game* game, bool isNewGame)
 {
     if (m_gameWindow) {
         delete game;
         return;
     }
     // MainWindow 作为菜单窗口的子页面显示，不再创建第二个顶层窗口。
-    m_gameWindow = new MainWindow(game, this);
+    m_gameWindow = new MainWindow(game, this, isNewGame);
     m_gameWindow->setWindowFlags(Qt::Widget);
     m_gameWindow->setAttribute(Qt::WA_DeleteOnClose);
     m_gameWindow->setGeometry(rect());

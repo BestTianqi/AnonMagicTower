@@ -20,6 +20,7 @@
         <file>images/characters/portraits/marina.png</file>
         <file>images/characters/portraits/michelle.png</file>
         <file>images/characters/portraits/ririko.png</file>
+        <file>images/characters/portraits/kokoro_shop.png</file>
         <!-- 玩家 -->
         <file>images/player.png</file>
         <!-- 18种怪物 -->
@@ -163,6 +164,18 @@
         <file>images/characters/npcs/marina_icon.png</file>
         <file>images/characters/npcs/michelle_icon.png</file>
         <file>images/characters/npcs/ririko_icon.png</file>
+        <file>images/runtime/cg/soyo_defeated_ending.png</file>
+        <file>images/runtime/cg/floor01_arrival.png</file>
+        <file>images/runtime/cg/floor03_ambush.png</file>
+        <file>images/runtime/cg/floor10_ambush.png</file>
+        <file>images/runtime/cg/floor32_child_soyo_charge.png</file>
+        <file>images/runtime/cg/floor33_trap.png</file>
+        <file>images/runtime/cg/floor42_child_soyo_capture.png</file>
+        <file>images/runtime/cg/floor50_michelle_reveal.png</file>
+        <file>images/runtime/cg/mage_field_encirclement.png</file>
+        <file>images/runtime/cg/magic_guard_flank.png</file>
+        <file>images/runtime/cg/miyako_guard_reveal.png</file>
+        <file>images/runtime/cg/miyako_kuji_spell.png</file>
         <!-- 主题背景与地图图块图集 -->
         <file>images/backgrounds/tower_hub.png</file>
         <file>images/backgrounds/bangdream_gbp_cover.jpg</file>

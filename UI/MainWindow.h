@@ -13,7 +13,8 @@
 class MainWindow : public QWidget {
     Q_OBJECT
 public:
-    explicit MainWindow(Game* game, QWidget* parent = nullptr);
+    explicit MainWindow(Game* game, QWidget* parent = nullptr,
+                        bool playFirstFloorOpening = false);
     void loadAssets();
 
 protected:
@@ -25,6 +26,7 @@ private:
         QString text;
         QString portrait;
         QString accent;
+        QString cg;
     };
 
     void updateHUD();
@@ -34,12 +36,16 @@ private:
     void updateItemPanel();
     void showOpeningFloorStory(int fromFloor, int toFloor);
     void showFloor20VampireStoryIfNeeded(int floorBefore);
+    void showFloor10AmbushStoryIfNeeded();
     void showFloor33TrapStoryIfNeeded(int floorBefore);
     void showFloor32KnightStoryIfNeeded(int floorBefore);
     void showFloor32KnightStoryAfterMovement(int floorBefore);
+    void showFloor42CaptureStory();
+    void showPendingApproachHazardCgs();
     void showPrisonTrapPrompt();
     void showFloor3PrisonVisualNovel();
     void showVisualNovelDialogue(const std::vector<VisualNovelPage>& pages);
+    void showFirstFloorOpeningStory();
     bool showVisualNovelChoice(const QString& speaker, const QString& text,
                                const QString& portrait, const QString& yesText = QString::fromUtf8("确定"),
                                const QString& noText = QString::fromUtf8("离开"));
@@ -90,6 +96,8 @@ private:
     bool m_prisonReturnStoryShown = false;
     bool m_floor33TrapStoryShown = false;
     int m_floor32KnightStoryFloor = -1;
+    bool m_floor42CaptureStoryQueued = false;
+    bool m_playFirstFloorOpening = false;
     std::unordered_set<int> m_floorStoriesShown;
     Ui::MainWindow ui;
 };

@@ -139,6 +139,7 @@ class Weapon : public Item {
 public:
     Weapon(int atkBonus, const std::string& displayName = "Weapon");
     void Apply(Player& player) const override;
+    bool IsPassiveEffect() const override { return true; }
     int AtkBonus() const { return m_atk; }
 private:
     int m_atk;
@@ -148,6 +149,7 @@ class Armor : public Item {
 public:
     Armor(int defBonus, const std::string& displayName = "Armor");
     void Apply(Player& player) const override;
+    bool IsPassiveEffect() const override { return true; }
     int DefBonus() const { return m_def; }
 private:
     int m_def;

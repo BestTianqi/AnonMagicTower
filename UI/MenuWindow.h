@@ -22,7 +22,7 @@ private slots:
     void onSettings();
 
 private:
-    void enterGame(class Game* game);
+    void enterGame(class Game* game, bool isNewGame = false);
     void setMenuControlsVisible(bool visible);
     void positionMenuPortraits();
 

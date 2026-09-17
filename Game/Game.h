@@ -76,6 +76,7 @@ public:
     bool floor3TrapActive() const { return m_floor3TrapActive; }
     void clearFloor3Trap() { m_floor3TrapActive = false; }
     bool floor3PrisonStoryPending() const { return m_floor3PrisonStoryPending; }
+    bool floor10AmbushTriggered() const { return m_floor10AmbushTriggered; }
     bool princessDollPassageUnlocked() const { return m_princessDollRescued; }
     bool floor20VampireTriggered() const { return m_floor20VampireTriggered; }
     bool floor20VampireStoryShown() const { return m_floor20VampireStoryShown; }
@@ -180,6 +181,14 @@ public:
     FloorData& currentFloorData() { return *m_currentFloor; }
     const FloorData& currentFloorData() const { return *m_currentFloor; }
 
+    // UI 消费本次移动中实际触发的危险次数；瞬移经过多个危险格时逐次播放 CG。
+    int takePendingMageFieldEvents();
+    int takePendingMagicGuardFlankEvents();
+    // 怪物手册只展示当前楼层的唯一怪物类型。
+    std::vector<Monster> uniqueMonsterTypesOnCurrentFloor() const;
+    // 预览踏入指定格时魔法领域与警卫夹击造成的当前实际生命损失。
+    int previewApproachHazardDamageAt(int x, int y) const;
+
 private:
     int m_width;
     int m_height;
@@ -197,7 +206,6 @@ private:
     bool isTeleportStoryPoint(int x, int y) const;
     // 经典魔塔的魔法领域/夹击伤害，在玩家每经过一个格子时结算。
     int applyApproachHazardsAt(int x, int y);
-
     // 10 层中央 Boss 区的骷髅士兵包围事件。
     void triggerFloor3PrisonStoryIfNeeded();
     void prepareFloor3PrisonCell();
@@ -248,4 +256,6 @@ private:
     int m_pendingTeleportTargetX = -1;
     int m_pendingTeleportTargetY = -1;
     bool m_lastTeleportNeedsAnimation = false;
+    int m_pendingMageFieldEvents = 0;
+    int m_pendingMagicGuardFlankEvents = 0;
 };
