@@ -249,6 +249,16 @@ MainWindow::MainWindow(Game* game, QWidget* parent)
     ui.mapWidget->setFocusPolicy(Qt::NoFocus);
     QSettings settings(QStringLiteral("MyGO-Mota"), QStringLiteral("MyGO-Mota"));
     m_battleFeedbackEnabled = settings.value(QStringLiteral("battleFeedback"), true).toBool();
+    // Re-enable animation once for the regenerated 8x8 walk sheet. The user
+    // can still turn it off afterwards; this only migrates older saved settings
+    // that may have disabled animation while the previous sheet was broken.
+    constexpr int walkAnimationAssetVersion = 2;
+    if (settings.value(QStringLiteral("walkAnimationAssetVersion"), 0).toInt() <
+        walkAnimationAssetVersion) {
+        settings.setValue(QStringLiteral("movementAnimation"), true);
+        settings.setValue(QStringLiteral("walkAnimationAssetVersion"),
+                          walkAnimationAssetVersion);
+    }
     ui.mapWidget->setMovementAnimationEnabled(
         settings.value(QStringLiteral("movementAnimation"), true).toBool());
     connect(ui.mapWidget, &MapWidget::tileClicked, this, [this](int x, int y) {

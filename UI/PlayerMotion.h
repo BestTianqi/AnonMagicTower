@@ -11,6 +11,7 @@ public:
         m_y = m_targetY = static_cast<float>(tileY);
         m_elapsedMs = 0.0f;
         m_durationMs = 0.0f;
+        m_walkElapsedMs = 0.0f;
     }
 
     void begin(int tileX, int tileY, float pixelsPerSecond) {
@@ -47,7 +48,9 @@ public:
 
     bool advance(float elapsedMs) {
         if (!isMoving()) return false;
-        m_elapsedMs = std::min(m_durationMs, m_elapsedMs + std::max(0.0f, elapsedMs));
+        const float stepMs = std::max(0.0f, elapsedMs);
+        m_walkElapsedMs += stepMs;
+        m_elapsedMs = std::min(m_durationMs, m_elapsedMs + stepMs);
         // 跨格使用恒速插值。每格边界会立即衔接下一格，避免 smoothstep
         // 在终点减速到零后造成明显停顿；逻辑坐标仍由 Game 独立维护。
         const float t = progress();
@@ -68,8 +71,11 @@ public:
     int walkingFrame(int frameCount = 4) const {
         if (frameCount <= 1) return 0;
         if (!isMoving()) return std::min(1, frameCount - 1);
-        return std::min(frameCount - 1,
-                        static_cast<int>(progress() * static_cast<float>(frameCount)));
+        // Keep a steady animation cadence across tile boundaries. Tying the
+        // frame to per-tile progress restarts the cycle every step and makes
+        // held movement look like it pauses on each grid line.
+        constexpr float frameDurationMs = 50.0f;
+        return static_cast<int>(m_walkElapsedMs / frameDurationMs) % frameCount;
     }
     float x() const { return m_x; }
     float y() const { return m_y; }
@@ -83,4 +89,5 @@ private:
     float m_targetY = 0.0f;
     float m_elapsedMs = 0.0f;
     float m_durationMs = 0.0f;
+    float m_walkElapsedMs = 0.0f;
 };

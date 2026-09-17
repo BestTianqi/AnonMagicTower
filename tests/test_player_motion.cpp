@@ -12,7 +12,7 @@ int main() {
     assert(std::fabs(motion.progress() - 0.30f) < 0.001f);
     // 连续移动采用恒速插值，避免每个格子边界因减速而产生卡顿。
     assert(std::fabs(motion.x() - 2.300f) < 0.002f);
-    assert(motion.walkingFrame() == 1);
+    assert(motion.walkingFrame() == 2);
     assert(motion.isMoving());
     motion.advance(240);
     assert(!motion.isMoving());
@@ -29,6 +29,9 @@ int main() {
     assert(!motion.isMoving());
     assert(motion.beginGridStep(3, 3, 4, 3, 260.0f));
     assert(motion.isMoving());
+    motion.advance(50);
+    // The walk cycle continues across tile boundaries instead of restarting.
+    assert(motion.walkingFrame(8) == 6);
 
     // 游戏位置始终按格计算：只有相邻格才播放移动动画，传送等跨格变化直接吸附。
     motion.snapTo(2, 3);
