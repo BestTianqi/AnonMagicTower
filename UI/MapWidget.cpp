@@ -3,11 +3,130 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QFont>
+#include <QImage>
+#include <QColor>
 #include <QtMath>
 #include <algorithm>
 
 namespace {
 constexpr float kPlayerWalkSpeed = 260.0f;
+// 逻辑格仍保持 60×60；贴图向相邻格轻微溢出，覆盖素材透明边缘造成的缝隙。
+constexpr int kTileRenderBleed = 6;
+constexpr int kTileRenderSize = TILE_SIZE + kTileRenderBleed * 2;
+
+QRect tileRenderRect(int x, int y)
+{
+    return QRect(x * TILE_SIZE - kTileRenderBleed,
+                 y * TILE_SIZE - kTileRenderBleed,
+                 kTileRenderSize, kTileRenderSize);
+}
+
+QColor tileSeamColor(int tileType)
+{
+    switch (tileType) {
+    case Tile_Wall:
+        return QColor(18, 22, 32);       // 墙：深色，强化边界
+    case Tile_DarkWall:
+        return QColor(58, 62, 72);       // 暗墙：比普通墙略浅，仍保持墙体辨识度
+    case Tile_Lava:
+        return QColor(112, 30, 18);
+    case Tile_StarRiver:
+        return QColor(20, 25, 72);
+    case Tile_Floor:
+    case Tile_Item:
+    case Tile_Monster:
+    case Tile_NPC:
+    case Tile_Shop:
+    case Tile_StairsUp:
+    case Tile_StairsDown:
+    case Tile_DoorRed:
+    case Tile_DoorBlue:
+    case Tile_DoorGreen:
+    case Tile_DoorMagic:
+    case Tile_DoorIron:
+        return QColor(196, 190, 177);     // 地板与可行走格：浅色连续底
+    default:
+        return QColor(28, 31, 43);
+    }
+}
+
+struct MonsterCombatHint {
+    int hpLoss = -1;
+    int attackDelta = -1;
+};
+
+MonsterCombatHint monsterCombatHint(const Player& player, const Monster& monster)
+{
+    const std::string& name = monster.GetName();
+    const bool vampireOrOrc = name.find("吸血") != std::string::npos ||
+                              name.find("兽人") != std::string::npos;
+    const bool dragon = name.find("魔龙") != std::string::npos ||
+                        name.find("龙") != std::string::npos;
+    const bool magicAttacker = name.find("法师") != std::string::npos ||
+                               name.find("巫师") != std::string::npos ||
+                               name.find("大法师") != std::string::npos ||
+                               name.find("魔法") != std::string::npos;
+    const int attackMultiplier = (player.hasCross && vampireOrOrc) ||
+                                 (player.hasDragonSlayer && dragon) ? 2 : 1;
+    int incoming = std::max(0, monster.GetATK() - player.def -
+                            (player.tempShieldCharges > 0 ? 50 : 0));
+    if (player.hasHolyShield && magicAttacker) incoming = 0;
+    if (player.hasPenguinDoll &&
+        (name.find("高松灯") != std::string::npos || name.find("企鹅") != std::string::npos))
+        incoming /= 2;
+    if (player.hasMatchaParfait &&
+        (name.find("要乐奈") != std::string::npos || name.find("小猫") != std::string::npos))
+        incoming /= 2;
+
+    const auto roundsForAttack = [&](int rawAttack) {
+        const int dealt = std::max(0, rawAttack * attackMultiplier - monster.GetDEF());
+        return dealt > 0 ? (monster.GetHP() + dealt - 1) / dealt : -1;
+    };
+    const int currentRounds = roundsForAttack(player.atk);
+    MonsterCombatHint hint;
+    if (currentRounds > 0 && incoming >= 0)
+        hint.hpLoss = (currentRounds > 1) ? (currentRounds - 1) * incoming : 0;
+
+    // 找到使击杀回合数减少一回合的最小“额外攻击力”。
+    if (currentRounds > 1) {
+        for (int delta = 1; delta <= 100000; ++delta) {
+            if (roundsForAttack(player.atk + delta) > 0 &&
+                roundsForAttack(player.atk + delta) < currentRounds) {
+                hint.attackDelta = delta;
+                break;
+            }
+        }
+    } else if (currentRounds < 0) {
+        for (int delta = 1; delta <= 100000; ++delta) {
+            if (roundsForAttack(player.atk + delta) > 0) {
+                hint.attackDelta = delta;
+                break;
+            }
+        }
+    }
+    return hint;
+}
+
+void drawMonsterCombatHint(QPainter& painter, const QRect& rect, const Player& player,
+                           const Monster& monster)
+{
+    const MonsterCombatHint hint = monsterCombatHint(player, monster);
+    const QRect panel = rect.adjusted(1, 34, -1, -1);
+    painter.fillRect(panel, QColor(0, 0, 0, 190));
+    QFont font;
+    font.setPixelSize(9);
+    font.setBold(true);
+    painter.setFont(font);
+    painter.setPen(hint.hpLoss >= 0 ? QColor("#ff9da9") : QColor("#ffce83"));
+    painter.drawText(panel.adjusted(1, 0, -1, -10), Qt::AlignCenter,
+                    hint.hpLoss >= 0 ? QString::fromUtf8("掉血 %1").arg(hint.hpLoss)
+                                     : QString::fromUtf8("无法破防"));
+    painter.setPen(QColor("#b9d6ff"));
+    const QString threshold = hint.attackDelta > 0
+        ? QString::fromUtf8("攻+%1减伤").arg(hint.attackDelta)
+        : QString::fromUtf8("已最低伤害");
+    painter.drawText(panel.adjusted(1, 10, -1, 0), Qt::AlignCenter, threshold);
+}
 }
 
 MapWidget::MapWidget(Game* game, QWidget* parent)
@@ -53,15 +172,15 @@ void MapWidget::generatePlaceholders()
     m_tilePix[Tile_Floor] = makePixmap(QColor(180, 170, 150), QColor(150, 140, 120), "");
     // 墙壁
     m_tilePix[Tile_Wall] = makePixmap(QColor(55, 55, 60), QColor(40, 40, 45), "");
-    // 暗墙（无眼镜时和墙一样）
-    m_tilePix[Tile_DarkWall] = makePixmap(QColor(55, 55, 60), QColor(40, 40, 45), "");
+    // 暗墙始终比普通墙略浅，便于识别但不会误认为地板。
+    m_tilePix[Tile_DarkWall] = makePixmap(QColor(82, 84, 92), QColor(60, 62, 70), "");
     // 暗墙（有眼镜时变浅）
     m_darkWallRevealed = makePixmap(QColor(100, 95, 85), QColor(75, 70, 60), "暗", QColor(180, 180, 160), 10);
     // 上楼
-    m_tilePix[Tile_StairsUp] = makePixmap(QColor(180, 160, 50), QColor(140, 120, 30),
-        QString::fromUtf8("↑"), Qt::black, 20);
+    m_tilePix[Tile_StairsUp] = makePixmap(QColor(72, 58, 12), QColor(210, 175, 40),
+        QString::fromUtf8("↑"), Qt::white, 20);
     // 下楼
-    m_tilePix[Tile_StairsDown] = makePixmap(QColor(160, 100, 180), QColor(120, 70, 140),
+    m_tilePix[Tile_StairsDown] = makePixmap(QColor(52, 28, 85), QColor(150, 90, 220),
         QString::fromUtf8("↓"), Qt::white, 20);
     // 道具
     m_tilePix[Tile_Item] = makePixmap(QColor(60, 170, 60), QColor(40, 130, 40),
@@ -140,9 +259,44 @@ void MapWidget::loadTileImage(int tileType, const QString& path)
 {
     QPixmap px(path);
     if (!px.isNull()) {
+        if (tileType == Tile_StairsUp || tileType == Tile_StairsDown) {
+            QImage image = px.toImage().convertToFormat(QImage::Format_ARGB32);
+            for (int y = 0; y < image.height(); ++y) {
+                for (int x = 0; x < image.width(); ++x) {
+                    const QColor color = QColor::fromRgba(image.pixel(x, y));
+                    image.setPixelColor(x, y, QColor(color.red() * 0.52,
+                                                     color.green() * 0.52,
+                                                     color.blue() * 0.52,
+                                                     color.alpha()));
+                }
+            }
+            // 楼梯素材本身带透明边缘，铺一层深色舞台底板并加高对比边框，
+            // 避免在深色地图背景中与普通地板混淆。
+            QImage plate(image.size(), QImage::Format_ARGB32_Premultiplied);
+            const bool up = tileType == Tile_StairsUp;
+            plate.fill(up ? QColor(48, 38, 8) : QColor(31, 19, 48));
+            QPainter platePainter(&plate);
+            platePainter.drawImage(0, 0, image);
+            platePainter.setPen(QPen(up ? QColor(220, 185, 58) : QColor(165, 105, 225), 2));
+            platePainter.drawRect(1, 1, plate.width() - 3, plate.height() - 3);
+            platePainter.end();
+            px = QPixmap::fromImage(plate);
+        } else if (tileType == Tile_DarkWall) {
+            QImage image = px.toImage().convertToFormat(QImage::Format_ARGB32);
+            for (int y = 0; y < image.height(); ++y) {
+                for (int x = 0; x < image.width(); ++x) {
+                    const QColor color = QColor::fromRgba(image.pixel(x, y));
+                    const QColor lighter = color.lighter(145);
+                    image.setPixelColor(x, y, QColor(lighter.red(), lighter.green(),
+                                                     lighter.blue(), color.alpha()));
+                }
+            }
+            px = QPixmap::fromImage(image);
+        }
         // Pixel-art assets must remain crisp; nearest-neighbor scaling also avoids
         // filtering work on every custom tile during startup.
-        m_tilePix[tileType] = px.scaled(TILE_SIZE, TILE_SIZE, Qt::IgnoreAspectRatio, Qt::FastTransformation);
+        m_tilePix[tileType] = px.scaled(kTileRenderSize, kTileRenderSize,
+                                        Qt::IgnoreAspectRatio, Qt::FastTransformation);
         m_hasTileImage.insert(tileType);
     }
 }
@@ -170,18 +324,22 @@ void MapWidget::loadPlayerSpriteSheet(const QString& path)
     const QPixmap sheet(path);
     if (sheet.isNull())
         return;
-    const bool eightByEight = sheet.width() >= TILE_SIZE * 8 &&
-                              sheet.height() >= TILE_SIZE * 8;
-    const int columns = eightByEight ? 8 : 4;
-    const int rows = eightByEight ? 8 : 4;
+
+    // 新素材是 8×8（64 帧），旧素材仍按 4×4 读取，保持向后兼容。
+    const bool isEightByEight = sheet.width() >= TILE_SIZE * 8 &&
+                                sheet.height() >= TILE_SIZE * 8;
+    const int columns = isEightByEight ? 8 : 4;
+    const int rows = isEightByEight ? 8 : 4;
     if (sheet.width() < TILE_SIZE * columns || sheet.height() < TILE_SIZE * rows)
         return;
+
     for (auto& frame : m_playerFrames)
         frame = QPixmap();
     for (int row = 0; row < rows; ++row) {
         for (int col = 0; col < columns; ++col) {
-            m_playerFrames[row * columns + col] = sheet.copy(col * TILE_SIZE, row * TILE_SIZE,
-                                                               TILE_SIZE, TILE_SIZE);
+            const int index = row * columns + col;
+            m_playerFrames[static_cast<size_t>(index)] =
+                sheet.copy(col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
         }
     }
     m_playerSheetColumns = columns;
@@ -190,12 +348,56 @@ void MapWidget::loadPlayerSpriteSheet(const QString& path)
     update();
 }
 
+void MapWidget::loadPlayerOutfitSpriteSheet(const QString& outfitId, const QString& path)
+{
+    const std::string id = outfitId.toStdString();
+    if (id.empty() || path.isEmpty())
+        return;
+    m_playerOutfitPaths[id] = path;
+    if (m_activePlayerOutfit.empty())
+        setPlayerOutfit(outfitId);
+}
+
+bool MapWidget::setPlayerOutfit(const QString& outfitId)
+{
+    const auto it = m_playerOutfitPaths.find(outfitId.toStdString());
+    if (it == m_playerOutfitPaths.end())
+        return false;
+    loadPlayerSpriteSheet(it->second);
+    if (!m_hasPlayerSheet)
+        return false;
+    m_activePlayerOutfit = it->first;
+    return true;
+}
+
+QString MapWidget::playerOutfit() const
+{
+    return QString::fromStdString(m_activePlayerOutfit);
+}
+
 void MapWidget::setPlayerDirection(int dx, int dy)
 {
     if (dx < 0) m_playerDirectionRow = 1;
     else if (dx > 0) m_playerDirectionRow = 2;
     else if (dy < 0) m_playerDirectionRow = 3;
     else if (dy > 0) m_playerDirectionRow = 0;
+}
+
+void MapWidget::playPlayerPath(const std::vector<std::pair<int, int>>& path)
+{
+    m_scriptedPlayerPath.clear();
+    m_scriptedPlayerPathIndex = 0;
+    if (!m_game || path.size() <= 1 || !m_movementAnimationEnabled) {
+        snapPlayerToGame();
+        return;
+    }
+
+    m_scriptedPlayerPath = path;
+    m_scriptedPlayerPathIndex = 1;
+    m_motionInitialized = true;
+    m_playerMotion.snapTo(path.front().first, path.front().second);
+    m_playerFrame = 1;
+    update();
 }
 
 void MapWidget::mousePressEvent(QMouseEvent* event)
@@ -221,6 +423,7 @@ void MapWidget::mousePressEvent(QMouseEvent* event)
 void MapWidget::syncPlayerMotionTarget()
 {
     if (!m_game) return;
+    if (!m_scriptedPlayerPath.empty()) return;
     const int tileX = m_game->player().x;
     const int tileY = m_game->player().y;
     if (!m_motionInitialized) {
@@ -244,8 +447,11 @@ void MapWidget::syncPlayerMotionTarget()
 
 void MapWidget::snapPlayerToGame()
 {
+    m_scriptedPlayerPath.clear();
+    m_scriptedPlayerPathIndex = 0;
     m_motionInitialized = false;
     m_monsterMotions.clear();
+    m_monsterMotionIndex = 0;
     m_monsterMotionActive = false;
     syncPlayerMotionTarget();
     update();
@@ -254,6 +460,31 @@ void MapWidget::snapPlayerToGame()
 void MapWidget::advancePlayerMotion()
 {
     const qint64 elapsedMs = std::clamp<qint64>(m_motionClock.restart(), 1, 50);
+    if (!m_scriptedPlayerPath.empty()) {
+        if (!m_playerMotion.isMoving() && m_scriptedPlayerPathIndex < m_scriptedPlayerPath.size()) {
+            const auto [fromX, fromY] = m_scriptedPlayerPath[m_scriptedPlayerPathIndex - 1];
+            const auto [toX, toY] = m_scriptedPlayerPath[m_scriptedPlayerPathIndex];
+            setPlayerDirection(toX - fromX, toY - fromY);
+            m_playerMotion.beginGridStep(fromX, fromY, toX, toY, kPlayerWalkSpeed);
+            ++m_scriptedPlayerPathIndex;
+        }
+        if (m_playerMotion.isMoving()) {
+            m_playerMotion.advance(static_cast<float>(elapsedMs));
+            m_playerFrame = m_playerMotion.walkingFrame(m_playerSheetColumns == 8 ? 8 : 4);
+            if (!m_playerMotion.isMoving() &&
+                m_scriptedPlayerPathIndex >= m_scriptedPlayerPath.size()) {
+                const auto [lastX, lastY] = m_scriptedPlayerPath.back();
+                m_lastPlayerTileX = lastX;
+                m_lastPlayerTileY = lastY;
+                m_scriptedPlayerPath.clear();
+                m_scriptedPlayerPathIndex = 0;
+                m_playerFrame = 1;
+                emit playerMotionFinished();
+            }
+            update();
+        }
+        return;
+    }
     syncPlayerMotionTarget();
     advanceMonsterMotion();
     if (!m_motionInitialized) return;
@@ -265,6 +496,9 @@ void MapWidget::advancePlayerMotion()
         if (finished) {
             m_playerFrame = 1;
             emit playerMotionFinished();
+            // playerMotionFinished 的同步槽会提交下一格逻辑位置；同一帧
+            // 立即重同步，避免等待下一次16ms定时器才开始下一段插值。
+            syncPlayerMotionTarget();
         }
         update();
     }
@@ -273,6 +507,7 @@ void MapWidget::advancePlayerMotion()
 void MapWidget::playMonsterMovement(const std::vector<Game::MonsterMovementAnimation>& movements)
 {
     m_monsterMotions.clear();
+    m_monsterMotionIndex = 0;
     for (const auto& movement : movements) {
         m_monsterMotions.push_back({
             movement.monster.GetName(),
@@ -292,8 +527,15 @@ void MapWidget::advanceMonsterMotion()
 {
     if (!m_monsterMotionActive) return;
     if (m_monsterMotionClock.elapsed() >= 320) {
-        m_monsterMotions.clear();
-        m_monsterMotionActive = false;
+        ++m_monsterMotionIndex;
+        if (m_monsterMotionIndex >= m_monsterMotions.size()) {
+            m_monsterMotions.clear();
+            m_monsterMotionIndex = 0;
+            m_monsterMotionActive = false;
+            emit monsterMotionFinished();
+        } else {
+            m_monsterMotionClock.restart();
+        }
     }
     update();
 }
@@ -318,7 +560,7 @@ void MapWidget::loadDarkWallRevealedImage(const QString& path)
 {
     QPixmap px(path);
     if (!px.isNull())
-        m_darkWallRevealed = px.scaled(TILE_SIZE, TILE_SIZE, Qt::IgnoreAspectRatio,
+        m_darkWallRevealed = px.scaled(kTileRenderSize, kTileRenderSize, Qt::IgnoreAspectRatio,
                                        Qt::FastTransformation);
 }
 
@@ -698,15 +940,15 @@ static bool hasCustomShape(const std::string& name)
            name == "铁剑" || name == "银剑" || name == "骑士剑" || name == "圣剑" || name == "神圣剑" ||
            name == "铁盾" || name == "银盾" || name == "骑士盾" || name == "圣盾" || name == "神圣盾" ||
            name == "圣水" || name == "镐" || name == "炸弹" || name == "地震卷轴" ||
-           name == "十字架" || name == "屠龙匕" || name == "冰冻魔法" || name == "飞行魔杖" ||
-           name == "对称飞行器" || name == "记事本" ||
+           name == "十字架" || name == "屠龙匕" || name == "冰冻魔法" || name == "冰冻徽章" || name == "飞行魔杖" ||
+           name == "对称飞行器" || name == "记事本" || name == "怪物手册" || name == "高松灯的单词本" ||
            name == "MyGO应援红章" || name == "Mujica应援蓝章" ||
            name == "爱音拨片" || name == "立希鼓棒" || name == "乐奈猫爪" || name == "灯的麦克风" || name == "睦的贝斯" ||
            name == "素世谱架" || name == "海铃节拍器" || name == "初华舞台耳返" || name == "祥子黑色乐谱" || name == "Mujica终幕面具" ||
            name == "立希水壶" || name == "灯的热牛奶" || name == "爱音能量饮" || name == "红色Live票" || name == "蓝色Live票" || name == "黄色Live票" ||
-           name == "爱音自拍眼镜" || name == "睦的镐子" || name == "Mujica烟雾弹" || name == "Mujica舞台震响卷" || name == "MyGO和解徽章" ||
-           name == "祥子指挥棒" || name == "海铃冷静指令" || name == "爱音手机" || name == "楼层传送器" || name == "Mujica镜面舞台票" || name == "灯的歌词本" ||
-           name == "后台万能通行证" || name == "舞台升降卡" || name == "撤场通行卡" || name == "乐队护盾贴" || name == "立希企鹅挂件" ||
+           name == "爱音自拍眼镜" || name == "睦的镐子" || name == "Mujica烟雾弹" || name == "Mujica舞台震响卷" || name == "MyGO和解徽章" || name == "MyGO团结徽章" ||
+           name == "祥子指挥棒" || name == "海铃冷静指令" || name == "冰冻徽章" || name == "爱音手机" || name == "楼层传送器" || name == "Mujica镜面舞台票" || name == "灯的歌词本" || name == "怪物手册" || name == "高松灯的单词本" ||
+            name == "后台万能通行证" || name == "大黄门钥匙" || name == "舞台升降卡" || name == "撤场通行卡" || name == "乐队护盾贴" || name == "立希企鹅挂件" ||
            name == "乐奈抹茶芭菲" || name == "乐奈幸运硬币" ||
            name == "匿名眼镜" ||
            name == "破墙锤" ||
@@ -735,7 +977,7 @@ static void itemAppearance(const std::string& name, int value, QColor& fill, QCo
         qname == QString::fromUtf8("Yellow Key") || qname == QString::fromUtf8("黄钥匙") || qname == QString::fromUtf8("黄色Live票"))
         { fill = QColor(225, 185, 40); border = QColor(155, 110, 20);
           label = QString::fromUtf8("黄钥"); textColor = QColor(70, 35, 0); return; }
-    if (qname == QString::fromUtf8("万能钥匙") || qname == QString::fromUtf8("后台万能通行证"))
+    if (qname == QString::fromUtf8("万能钥匙") || qname == QString::fromUtf8("后台万能通行证") || qname == QString::fromUtf8("大黄门钥匙"))
         { fill = QColor(130, 60, 200); border = QColor(90, 30, 160);
           label = QString::fromUtf8("万能钥"); textColor = QColor(255, 220, 100); return; }
 
@@ -788,11 +1030,11 @@ static void itemAppearance(const std::string& name, int value, QColor& fill, QCo
         qname == QString::fromUtf8("地震卷轴"))
         { fill = QColor(140, 100, 70); border = QColor(100, 70, 40);
           label = qname; textColor = Qt::white; return; }
-    if (qname == QString::fromUtf8("MyGO和解徽章") || qname == QString::fromUtf8("祥子指挥棒") ||
+    if (qname == QString::fromUtf8("MyGO和解徽章") || qname == QString::fromUtf8("MyGO团结徽章") || qname == QString::fromUtf8("祥子指挥棒") ||
         qname == QString::fromUtf8("海铃冷静指令") || qname == QString::fromUtf8("爱音手机") || qname == QString::fromUtf8("楼层传送器") ||
-        qname == QString::fromUtf8("Mujica镜面舞台票") || qname == QString::fromUtf8("灯的歌词本") ||
+        qname == QString::fromUtf8("Mujica镜面舞台票") || qname == QString::fromUtf8("灯的歌词本") || qname == QString::fromUtf8("怪物手册") || qname == QString::fromUtf8("高松灯的单词本") ||
         qname == QString::fromUtf8("十字架") || qname == QString::fromUtf8("屠龙匕") ||
-        qname == QString::fromUtf8("冰冻魔法") || qname == QString::fromUtf8("飞行魔杖") ||
+        qname == QString::fromUtf8("冰冻魔法") || qname == QString::fromUtf8("冰冻徽章") || qname == QString::fromUtf8("飞行魔杖") ||
         qname == QString::fromUtf8("对称飞行器") || qname == QString::fromUtf8("记事本"))
         { fill = QColor(150, 90, 190); border = QColor(100, 50, 140);
           label = qname; textColor = Qt::white; return; }
@@ -893,50 +1135,32 @@ void MapWidget::paintEvent(QPaintEvent*)
         for (int x = 0; x < w; ++x) {
             int t = m_game->map()[y * w + x];
             QRect r(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+            const QRect tileRect = tileRenderRect(x, y);
+
+            // 素材多为带透明边缘的舞台贴图；先铺连续底色，避免格子间透出背景。
+            if (t != Tile_Empty)
+                painter.fillRect(r, tileSeamColor(t));
 
             // 所有可行走对象先使用素材地板打底，透明角色和道具不再漏出背景图。
             if (t != Tile_Wall && t != Tile_DarkWall && t != Tile_Lava &&
                 t != Tile_StarRiver && t != Tile_Empty) {
                 auto floor = m_tilePix.find(Tile_Floor);
-                if (floor != m_tilePix.end()) painter.drawPixmap(r, floor->second);
+                if (floor != m_tilePix.end()) painter.drawPixmap(tileRect, floor->second);
             }
 
             QPixmap* pix = nullptr;
             std::string monsterName;
+            bool actorSprite = false;
 
             // -- 怪物 --
             if (t == Tile_Monster) {
-                Monster* m = m_game->monsterAt(x, y);
-                if (m) {
-                    monsterName = m->GetName();
-                    bool animatedTarget = false;
-                    if (m_monsterMotionActive) {
-                        for (const auto& motion : m_monsterMotions) {
-                            if (qRound(motion.to.x()) == x && qRound(motion.to.y()) == y) {
-                                animatedTarget = true;
-                                break;
-                            }
-                        }
-                    }
-                    if (!animatedTarget) {
-                        auto it = m_monsterPix.find(monsterName);
-                        if (it != m_monsterPix.end()) {
-                            pix = &it->second;
-                        }
-                    }
-                }
-                if (!pix) pix = &m_defaultMonsterPix;
-                if (m_monsterMotionActive && pix == &m_defaultMonsterPix) {
-                    for (const auto& motion : m_monsterMotions)
-                        if (qRound(motion.to.x()) == x && qRound(motion.to.y()) == y) {
-                            pix = nullptr;
-                            break;
-                        }
-                }
+                // 怪物统一延后到玩家之后绘制，保证完全不透明并位于最上层。
+                continue;
             }
 
             // NPC 图块按角色名称选择素材；普通 NPC 仍回退到 Tile_NPC 默认图。
             if (t == Tile_NPC) {
+                actorSprite = true;
                 if (NPC* npc = m_game->npcAt(x, y)) {
                     auto npcImage = m_npcPix.find(npc->GetName());
                     if (npcImage != m_npcPix.end())
@@ -969,23 +1193,9 @@ void MapWidget::paintEvent(QPaintEvent*)
 
             // 绘制底图
             if (pix && !pix->isNull())
-                painter.drawPixmap(r, *pix);
+                painter.drawPixmap(actorSprite ? r : tileRect, *pix);
 
             // 门、楼梯、商店等均由素材本身表达，不再叠加代码绘制的标签底条。
-        }
-    }
-
-    // 十层包围事件：逻辑坐标已切换到目标格，画面用插值把怪物从第三/第四排
-    // 移动到侧翼，避免出现瞬移。目标格的静态怪物在上方循环中暂时隐藏。
-    if (m_monsterMotionActive) {
-        const qreal progress = std::clamp<qreal>(m_monsterMotionClock.elapsed() / 320.0, 0.0, 1.0);
-        const qreal eased = progress * progress * (3.0 - 2.0 * progress);
-        for (const auto& motion : m_monsterMotions) {
-            const qreal x = motion.from.x() + (motion.to.x() - motion.from.x()) * eased;
-            const qreal y = motion.from.y() + (motion.to.y() - motion.from.y()) * eased;
-            auto it = m_monsterPix.find(motion.name);
-            const QPixmap* pix = it != m_monsterPix.end() ? &it->second : &m_defaultMonsterPix;
-            painter.drawPixmap(QPointF(x * TILE_SIZE, y * TILE_SIZE), *pix);
         }
     }
 
@@ -996,14 +1206,53 @@ void MapWidget::paintEvent(QPaintEvent*)
 
     int playerFrameIndex = 0;
     if (m_playerSheetColumns == 8 && m_playerSheetRows == 8) {
+        // 8×8 行走图：每个方向占两行，静止/预备行 + 行走动作行。
         const int actionRow = m_playerDirectionRow * 2 + (m_playerMotion.isMoving() ? 1 : 0);
         playerFrameIndex = actionRow * 8 + std::clamp(m_playerFrame, 0, 7);
     } else {
         playerFrameIndex = m_playerDirectionRow * 4 + std::clamp(m_playerFrame, 0, 3);
     }
-    if (m_hasPlayerSheet && !m_playerFrames[static_cast<size_t>(playerFrameIndex)].isNull()) {
+    if (m_hasPlayerSheet && playerFrameIndex >= 0 &&
+        playerFrameIndex < static_cast<int>(m_playerFrames.size()) &&
+        !m_playerFrames[static_cast<size_t>(playerFrameIndex)].isNull()) {
         painter.drawPixmap(pr, m_playerFrames[static_cast<size_t>(playerFrameIndex)]);
     } else if (!m_playerPix.isNull()) {
         painter.drawPixmap(pr, m_playerPix);
     }
+
+    // 静态怪物、战斗提示和移动怪物全部位于玩家之上，且不施加透明度。
+    painter.save();
+    painter.setOpacity(1.0);
+    for (int y = 0; y < h; ++y) {
+        for (int x = 0; x < w; ++x) {
+            if (m_game->map()[y * w + x] != Tile_Monster) continue;
+            if (m_game->floor32MonstersHidden()) continue;
+            if (m_monsterMotionActive && m_monsterMotionIndex < m_monsterMotions.size()) {
+                const auto& motion = m_monsterMotions[m_monsterMotionIndex];
+                if (qRound(motion.to.x()) == x && qRound(motion.to.y()) == y)
+                    continue;
+            }
+            const Monster* monster = m_game->monsterAt(x, y);
+            const QPixmap* pix = &m_defaultMonsterPix;
+            if (monster) {
+                const auto it = m_monsterPix.find(monster->GetName());
+                if (it != m_monsterPix.end()) pix = &it->second;
+            }
+            const QRect rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+            painter.drawPixmap(rect, *pix);
+            if (monster)
+                drawMonsterCombatHint(painter, rect, m_game->player(), *monster);
+        }
+    }
+    if (m_monsterMotionActive && m_monsterMotionIndex < m_monsterMotions.size()) {
+        const qreal progress = std::clamp<qreal>(m_monsterMotionClock.elapsed() / 320.0, 0.0, 1.0);
+        const qreal eased = progress * progress * (3.0 - 2.0 * progress);
+        const auto& motion = m_monsterMotions[m_monsterMotionIndex];
+        const qreal x = motion.from.x() + (motion.to.x() - motion.from.x()) * eased;
+        const qreal y = motion.from.y() + (motion.to.y() - motion.from.y()) * eased;
+        const auto it = m_monsterPix.find(motion.name);
+        const QPixmap* pix = it != m_monsterPix.end() ? &it->second : &m_defaultMonsterPix;
+        painter.drawPixmap(QPointF(x * TILE_SIZE, y * TILE_SIZE), *pix);
+    }
+    painter.restore();
 }

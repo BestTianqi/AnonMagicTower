@@ -18,6 +18,8 @@
 #include <QScrollArea>
 #include <QApplication>
 #include <QHash>
+#include <QImage>
+#include <QColor>
 #include <algorithm>
 
 // ==================== MapEditWidget ====================
@@ -25,9 +27,32 @@
 static QPixmap editorAsset(const QString& path)
 {
     static QHash<QString, QPixmap> cache;
-    if (!cache.contains(path))
-        cache.insert(path, QPixmap(path).scaled(60, 60, Qt::IgnoreAspectRatio,
-                                                 Qt::FastTransformation));
+    if (!cache.contains(path)) {
+        QPixmap source(path);
+        if (path.contains("/stairs_")) {
+            QImage image = source.toImage().convertToFormat(QImage::Format_ARGB32);
+            for (int y = 0; y < image.height(); ++y) {
+                for (int x = 0; x < image.width(); ++x) {
+                    const QColor color = QColor::fromRgba(image.pixel(x, y));
+                    image.setPixelColor(x, y, QColor(color.red() * 0.52,
+                                                     color.green() * 0.52,
+                                                     color.blue() * 0.52,
+                                                     color.alpha()));
+                }
+            }
+            QImage plate(image.size(), QImage::Format_ARGB32_Premultiplied);
+            const bool up = path.contains("stairs_up");
+            plate.fill(up ? QColor(48, 38, 8) : QColor(31, 19, 48));
+            QPainter platePainter(&plate);
+            platePainter.drawImage(0, 0, image);
+            platePainter.setPen(QPen(up ? QColor(220, 185, 58) : QColor(165, 105, 225), 2));
+            platePainter.drawRect(1, 1, plate.width() - 3, plate.height() - 3);
+            platePainter.end();
+            source = QPixmap::fromImage(plate);
+        }
+        cache.insert(path, source.scaled(60, 60, Qt::IgnoreAspectRatio,
+                                         Qt::FastTransformation));
+    }
     return cache.value(path);
 }
 
@@ -59,7 +84,7 @@ static QString editorItemAsset(const std::string& name)
     if (item == QString::fromUtf8("红色Live票")) return ":/images/runtime/items/mygo/live_ticket_red.png";
     if (item == QString::fromUtf8("蓝色Live票")) return ":/images/runtime/items/mygo/live_ticket_blue.png";
     if (item == QString::fromUtf8("黄色Live票")) return ":/images/runtime/items/mygo/live_ticket_yellow.png";
-    if (item == QString::fromUtf8("后台万能通行证")) return ":/images/runtime/items/mygo/backstage_pass.png";
+    if (item == QString::fromUtf8("后台万能通行证") || item == QString::fromUtf8("大黄门钥匙")) return ":/images/runtime/items/mygo/backstage_pass.png";
     if (item == QString::fromUtf8("现场补给")) return ":/images/runtime/items/mygo/mygo_support_badge_red.png";
     if (item == QString::fromUtf8("灯的热牛奶")) return ":/images/runtime/items/mygo/tomori_warm_milk.png";
     if (item == QString::fromUtf8("爱音能量饮")) return ":/images/runtime/items/mygo/anon_energy_drink.png";
@@ -78,13 +103,14 @@ static QString editorItemAsset(const std::string& name)
     if (item == QString::fromUtf8("爱音手机")) return ":/images/runtime/items/mygo/anon_smartphone.png";
     if (item == QString::fromUtf8("楼层传送器")) return ":/images/runtime/items/mygo/anon_smartphone.png";
     if (item == QString::fromUtf8("Mujica镜面舞台票")) return ":/images/runtime/items/mygo/mujica_mirror_ticket.png";
-    if (item == QString::fromUtf8("灯的歌词本")) return ":/images/runtime/items/mygo/tomori_lyric_notebook.png";
+    if (item == QString::fromUtf8("高松灯的单词本")) return ":/images/runtime/items/mygo/tomori_lyric_notebook.png";
+    if (item == QString::fromUtf8("怪物手册")) return ":/images/runtime/items/glasses.png";
     if (item == QString::fromUtf8("立希水壶")) return ":/images/runtime/items/mygo/rikki_water_kettle.png";
     if (item == QString::fromUtf8("爱音自拍眼镜")) return ":/images/runtime/items/mygo/anon_selfie_glasses.png";
     if (item == QString::fromUtf8("睦的镐子")) return ":/images/runtime/items/mygo/mutsumi_pickaxe_toolbox.png";
     if (item == QString::fromUtf8("Mujica烟雾弹")) return ":/images/runtime/items/mygo/mujica_smoke_bomb.png";
     if (item == QString::fromUtf8("Mujica舞台震响卷")) return ":/images/runtime/items/mygo/mujica_stage_quake_scroll.png";
-    if (item == QString::fromUtf8("MyGO和解徽章")) return ":/images/runtime/items/mygo/mygo_reconciliation_badge.png";
+    if (item == QString::fromUtf8("MyGO和解徽章") || item == QString::fromUtf8("MyGO团结徽章")) return ":/images/runtime/items/mygo/mygo_reconciliation_badge.png";
     if (item == QString::fromUtf8("祥子指挥棒")) return ":/images/runtime/items/mygo/sakiko_conductor_baton.png";
     if (item == QString::fromUtf8("海铃冷静指令")) return ":/images/runtime/items/mygo/umiri_calm_command.png";
     if (item == QString::fromUtf8("乐队护盾贴")) return ":/images/runtime/items/mygo/band_shield_sticker.png";
@@ -96,7 +122,7 @@ static QString editorItemAsset(const std::string& name)
     if (item == "Red Key" || item == QString::fromUtf8("红钥匙") || item == QString::fromUtf8("红色Live票")) return ":/images/runtime/items/key_red.png";
     if (item == "Blue Key" || item == QString::fromUtf8("蓝钥匙") || item == QString::fromUtf8("蓝色Live票")) return ":/images/runtime/items/key_blue.png";
     if (item == "Green Key" || item == "Yellow Key" || item == QString::fromUtf8("绿钥匙") || item == QString::fromUtf8("黄钥匙") || item == QString::fromUtf8("黄色Live票")) return ":/images/runtime/items/key_yellow.png";
-    if (item == QString::fromUtf8("万能钥匙") || item == QString::fromUtf8("后台万能通行证")) return ":/images/runtime/items/key_magic.png";
+    if (item == QString::fromUtf8("万能钥匙") || item == QString::fromUtf8("后台万能通行证") || item == QString::fromUtf8("大黄门钥匙")) return ":/images/runtime/items/key_magic.png";
     if (item == "Potion" || item == QString::fromUtf8("生命药") || item == QString::fromUtf8("药水") || item == QString::fromUtf8("现场补给")) return ":/images/runtime/items/potion.png";
     if (item == QString::fromUtf8("小血瓶") || item == QString::fromUtf8("灯的热牛奶")) return ":/images/runtime/items/potion_small.png";
     if (item == QString::fromUtf8("大血瓶") || item == QString::fromUtf8("爱音能量饮")) return ":/images/runtime/items/potion_large.png";
@@ -134,9 +160,11 @@ static QString editorItemAsset(const std::string& name)
     if (item == QString::fromUtf8("十字架") || item == QString::fromUtf8("屠龙匕") ||
         item == QString::fromUtf8("冰冻魔法") || item == QString::fromUtf8("飞行魔杖") ||
         item == QString::fromUtf8("对称飞行器") || item == QString::fromUtf8("记事本") ||
-        item == QString::fromUtf8("MyGO和解徽章") || item == QString::fromUtf8("祥子指挥棒") ||
+        item == QString::fromUtf8("怪物手册") || item == QString::fromUtf8("高松灯的单词本") ||
+        item == QString::fromUtf8("MyGO和解徽章") || item == QString::fromUtf8("MyGO团结徽章") || item == QString::fromUtf8("祥子指挥棒") ||
         item == QString::fromUtf8("海铃冷静指令") || item == QString::fromUtf8("爱音手机") ||
-        item == QString::fromUtf8("Mujica镜面舞台票") || item == QString::fromUtf8("灯的歌词本"))
+        item == QString::fromUtf8("Mujica镜面舞台票") || item == QString::fromUtf8("高松灯的单词本") ||
+        item == QString::fromUtf8("怪物手册"))
         return ":/images/runtime/items/artifact.png";
     return ":/images/runtime/items/artifact.png";
 }
@@ -317,6 +345,8 @@ void MapEditWidget::paintEvent(QPaintEvent*)
                     t.type != Tile_StarRiver && t.type != Tile_Floor)
                     painter.drawPixmap(r, editorAsset(":/images/runtime/tiles/floor.png"));
                 painter.drawPixmap(r, editorAsset(asset));
+                if (t.type == Tile_DarkWall)
+                    painter.fillRect(r, QColor(255, 255, 255, 42));
                 continue;
             }
 
@@ -326,10 +356,10 @@ void MapEditWidget::paintEvent(QPaintEvent*)
 
             switch (t.type) {
             case Tile_Wall:       fill = QColor(55, 55, 60);   break;
-            case Tile_DarkWall:   fill = QColor(30, 30, 35);   label = QString::fromUtf8("暗墙"); break;
+            case Tile_DarkWall:   fill = QColor(82, 84, 92);   label = QString::fromUtf8("暗墙"); break;
             case Tile_Floor:      fill = QColor(180, 170, 150); break;
-            case Tile_StairsUp:   fill = QColor(180, 160, 50);  label = QString::fromUtf8("↑上"); break;
-            case Tile_StairsDown: fill = QColor(160, 100, 180); label = QString::fromUtf8("↓下"); break;
+            case Tile_StairsUp:   fill = QColor(72, 58, 12);  label = QString::fromUtf8("↑上"); break;
+            case Tile_StairsDown: fill = QColor(52, 28, 85); label = QString::fromUtf8("↓下"); break;
             case Tile_DoorRed:    fill = QColor(180, 60, 50);   label = QString::fromUtf8("红门"); break;
             case Tile_DoorBlue:   fill = QColor(50, 70, 180);   label = QString::fromUtf8("蓝门"); break;
             case Tile_DoorGreen:  fill = QColor(50, 160, 70);   label = QString::fromUtf8("绿门"); break;
@@ -346,7 +376,7 @@ void MapEditWidget::paintEvent(QPaintEvent*)
                         { fill = QColor(45, 60, 200); label = QString::fromUtf8("蓝钥"); }
                     else if (iname == QString::fromUtf8("Green Key") || iname == QString::fromUtf8("绿钥匙"))
                         { fill = QColor(45, 180, 60); label = QString::fromUtf8("绿钥"); }
-                    else if (iname == QString::fromUtf8("万能钥匙"))
+                    else if (iname == QString::fromUtf8("万能钥匙") || iname == QString::fromUtf8("大黄门钥匙"))
                         { fill = QColor(130, 60, 200); label = QString::fromUtf8("万能钥"); }
                     // 属性
                     else if (iname == QString::fromUtf8("Potion") || iname == QString::fromUtf8("生命药") || iname == QString::fromUtf8("药水"))
@@ -389,9 +419,9 @@ void MapEditWidget::paintEvent(QPaintEvent*)
                              iname == QString::fromUtf8("初华舞台耳返") || iname == QString::fromUtf8("祥子黑色乐谱") ||
                              iname == QString::fromUtf8("Mujica终幕面具"))
                         { fill = QColor(60, 120, 200); label = iname.left(4); }
-                    else if (iname == QString::fromUtf8("MyGO和解徽章") || iname == QString::fromUtf8("祥子指挥棒") ||
+                    else if (iname == QString::fromUtf8("MyGO和解徽章") || iname == QString::fromUtf8("MyGO团结徽章") || iname == QString::fromUtf8("祥子指挥棒") ||
                              iname == QString::fromUtf8("海铃冷静指令") || iname == QString::fromUtf8("爱音手机") ||
-                             iname == QString::fromUtf8("Mujica镜面舞台票") || iname == QString::fromUtf8("灯的歌词本"))
+                             iname == QString::fromUtf8("Mujica镜面舞台票") || iname == QString::fromUtf8("高松灯的单词本") || iname == QString::fromUtf8("怪物手册"))
                         { fill = QColor(150, 90, 190); label = iname.left(4); }
                     else
                         { label = iname.left(4); }
@@ -560,20 +590,23 @@ static const ItemDef g_itemDefs[] = {
     {QString::fromUtf8("Mujica舞台震响卷"), 0, "摧毁本层墙壁"},
     {QString::fromUtf8("MyGO和解徽章"), 0, "对吸血鬼和兽人攻击翻倍"},
     {QString::fromUtf8("祥子指挥棒"), 0, "对魔龙攻击翻倍"},
-    {QString::fromUtf8("海铃冷静指令"), 0, "冻结岩浆"},
+    {QString::fromUtf8("海铃冷静指令"), 0, "冻结本层全部岩浆（可重复使用）"},
     {QString::fromUtf8("爱音手机"), 0, "传送到指定楼层"},
     {QString::fromUtf8("Mujica镜面舞台票"), 3, "可使用3次"},
-    {QString::fromUtf8("灯的歌词本"), 0, "记录魔塔提示"},
+    {QString::fromUtf8("怪物手册"), 0, "查看怪物属性"},
+    {QString::fromUtf8("高松灯的单词本"), 0, "记录魔塔提示"},
     {QString::fromUtf8("红色Live票"), 1, "红色Live票"},
     {QString::fromUtf8("蓝色Live票"), 2, "蓝色Live票"},
     {QString::fromUtf8("黄色Live票"), 3, "黄色Live票"},
     {QString(), 0, nullptr}  // sentinel = 特殊物品分界线
 };
 static const char* g_specialItems[] = {
-    "后台万能通行证", "爱音自拍眼镜", "破墙锤", "舞台升降卡", "撤场通行卡",
+    // 仅列出经典地图实际使用的本地化名称；旧名称仍由 Game 的兼容解析保留，
+    // 但不再在编辑器奖励/交易下拉框中重复展示。
+    "大黄门钥匙", "爱音自拍眼镜", "舞台升降卡", "撤场通行卡",
     "乐队护盾贴", "立希企鹅挂件", "乐奈抹茶芭菲", "乐奈幸运硬币", "立希水壶",
     "睦的镐子", "Mujica烟雾弹", "Mujica舞台震响卷", "MyGO和解徽章", "祥子指挥棒", "海铃冷静指令",
-    "爱音手机", "楼层传送器", "Mujica镜面舞台票", "灯的歌词本", nullptr
+    "爱音手机", "Mujica镜面舞台票", "怪物手册", "高松灯的单词本", nullptr
 };
 
 MapEditor::MapEditor(QWidget* parent)
@@ -639,8 +672,8 @@ MapEditor::MapEditor(QWidget* parent)
     TileBtn btns[] = {
         { Tile_Wall,       QString::fromUtf8(" 墙 "),      "#666" },
         { Tile_Floor,      QString::fromUtf8(" 地板 "),    "#4a4" },
-        { Tile_StairsUp,   QString::fromUtf8(" 上楼梯 "),  "#bb0" },
-        { Tile_StairsDown, QString::fromUtf8(" 下楼梯 "),  "#b6b" },
+        { Tile_StairsUp,   QString::fromUtf8(" 上楼梯 "),  "#665500" },
+        { Tile_StairsDown, QString::fromUtf8(" 下楼梯 "),  "#5b2c66" },
         { Tile_Monster,    QString::fromUtf8(" 怪物 "),    "#d44" },
         { Tile_Item,       QString::fromUtf8(" 道具 "),    "#4c4" },
         { Tile_DoorRed,    QString::fromUtf8(" 红门 "),    "#d33" },
@@ -648,7 +681,7 @@ MapEditor::MapEditor(QWidget* parent)
         { Tile_DoorGreen,  QString::fromUtf8(" 绿门 "),    "#3b3" },
         { Tile_NPC,        QString::fromUtf8(" NPC "),     "#db3" },
         { Tile_Shop,       QString::fromUtf8(" 商店 "),    "#da0" },
-        { Tile_DarkWall,   QString::fromUtf8(" 暗墙 "),    "#333" },
+        { Tile_DarkWall,   QString::fromUtf8(" 暗墙 "),    "#575b66" },
     };
     const int btnCount = sizeof(btns) / sizeof(btns[0]);
 
@@ -754,9 +787,8 @@ MapEditor::MapEditor(QWidget* parent)
         { QString::fromUtf8("红色Live票"), 0,  "#d33", false, QString::fromUtf8("红色Live票 x1") },
         { QString::fromUtf8("蓝色Live票"), 0,  "#33d", false, QString::fromUtf8("蓝色Live票 x1") },
         { QString::fromUtf8("黄色Live票"), 0,  "#3a3", false, QString::fromUtf8("黄色Live票 x1") },
-        { QString::fromUtf8("后台万能通行证"), 0, "#84d", false, QString::fromUtf8("任意门3次") },
+        { QString::fromUtf8("大黄门钥匙"), 0, "#84d", false, QString::fromUtf8("开启本层全部黄门") },
         { QString::fromUtf8("爱音自拍眼镜"), 0, "#4aa", false, QString::fromUtf8("可查看怪物属性") },
-        { QString::fromUtf8("破墙锤"),   0, "#864", false, QString::fromUtf8("摧毁墙壁") },
         { QString::fromUtf8("舞台升降卡"), 0, "#aa0", false, QString::fromUtf8("从当前位置上楼") },
         { QString::fromUtf8("撤场通行卡"), 0, "#a6a", false, QString::fromUtf8("从当前位置下楼") },
         { QString::fromUtf8("乐队护盾贴"), 0, "#68d", false, QString::fromUtf8("防御力+10") },
@@ -781,9 +813,9 @@ MapEditor::MapEditor(QWidget* parent)
         { QString::fromUtf8("祥子指挥棒"), 0, "#f88", false, QString::fromUtf8("对魔龙攻击翻倍") },
         { QString::fromUtf8("海铃冷静指令"), 0, "#8df", false, QString::fromUtf8("冻结岩浆") },
         { QString::fromUtf8("爱音手机"), 0, "#c8f", false, QString::fromUtf8("传送到指定楼层") },
-        { QString::fromUtf8("楼层传送器"), 0, "#b8f", false, QString::fromUtf8("传送到指定楼层") },
         { QString::fromUtf8("Mujica镜面舞台票"), 3, "#f8c", false, QString::fromUtf8("可使用3次") },
-        { QString::fromUtf8("灯的歌词本"), 0, "#dda", false, QString::fromUtf8("记录魔塔提示") },
+        { QString::fromUtf8("怪物手册"), 0, "#b8c8ff", false, QString::fromUtf8("查看怪物属性") },
+        { QString::fromUtf8("高松灯的单词本"), 0, "#dda", false, QString::fromUtf8("记录魔塔提示") },
     };
     const int itemBtnCount = sizeof(itemBtns) / sizeof(itemBtns[0]);
 
@@ -849,11 +881,14 @@ MapEditor::MapEditor(QWidget* parent)
     m_npcRewardCombo = new QComboBox(m_npcPanel);
     m_npcRewardCombo->setStyleSheet("QComboBox { background: #222; border: 1px solid #555; padding: 4px; }");
     m_npcRewardCombo->addItem(QString::fromUtf8("(无奖励)"));
+    const auto addUniqueItem = [](QComboBox* combo, const QString& name) {
+        if (combo->findText(name) < 0) combo->addItem(name);
+    };
     for (int i = 0; !g_itemDefs[i].name.isNull(); ++i)
-        m_npcRewardCombo->addItem(g_itemDefs[i].name);
+        addUniqueItem(m_npcRewardCombo, g_itemDefs[i].name);
     m_npcRewardCombo->insertSeparator(m_npcRewardCombo->count());
     for (int i = 0; g_specialItems[i]; ++i)
-        m_npcRewardCombo->addItem(QString::fromUtf8(g_specialItems[i]));
+        addUniqueItem(m_npcRewardCombo, QString::fromUtf8(g_specialItems[i]));
     nlay->addWidget(m_npcRewardCombo);
 
     // 奖励数值
@@ -893,10 +928,10 @@ MapEditor::MapEditor(QWidget* parent)
     m_npcTradeRewardCombo->setStyleSheet("QComboBox { background: #222; border: 1px solid #555; padding: 2px; }");
     m_npcTradeRewardCombo->addItem(QString::fromUtf8("(无)"));
     for (int i = 0; !g_itemDefs[i].name.isNull(); ++i)
-        m_npcTradeRewardCombo->addItem(g_itemDefs[i].name);
+        addUniqueItem(m_npcTradeRewardCombo, g_itemDefs[i].name);
     m_npcTradeRewardCombo->insertSeparator(m_npcTradeRewardCombo->count());
     for (int i = 0; g_specialItems[i]; ++i)
-        m_npcTradeRewardCombo->addItem(QString::fromUtf8(g_specialItems[i]));
+        addUniqueItem(m_npcTradeRewardCombo, QString::fromUtf8(g_specialItems[i]));
     tradeRewardRow->addWidget(m_npcTradeRewardCombo);
     m_npcTradeRewardValueSpin = new QSpinBox(m_npcTradePanel);
     m_npcTradeRewardValueSpin->setRange(0, 9999);

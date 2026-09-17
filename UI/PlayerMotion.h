@@ -48,10 +48,9 @@ public:
     bool advance(float elapsedMs) {
         if (!isMoving()) return false;
         m_elapsedMs = std::min(m_durationMs, m_elapsedMs + std::max(0.0f, elapsedMs));
-        const float linearT = progress();
-        // Smoothstep gives the walk a gentle acceleration and deceleration
-        // while keeping the authoritative destination unchanged.
-        const float t = linearT * linearT * (3.0f - 2.0f * linearT);
+        // 跨格使用恒速插值。每格边界会立即衔接下一格，避免 smoothstep
+        // 在终点减速到零后造成明显停顿；逻辑坐标仍由 Game 独立维护。
+        const float t = progress();
         m_x = m_startX + (m_targetX - m_startX) * t;
         m_y = m_startY + (m_targetY - m_startY) * t;
         if (m_elapsedMs >= m_durationMs) {

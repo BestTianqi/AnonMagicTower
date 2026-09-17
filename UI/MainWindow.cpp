@@ -7,7 +7,6 @@
 #include <QKeyEvent>
 #include <QMessageBox>
 #include <QString>
-#include <QFileDialog>
 #include <QDir>
 #include <QDialog>
 #include <QVBoxLayout>
@@ -30,7 +29,10 @@
 #include <QMap>
 #include <QSettings>
 #include <QStandardPaths>
+#include <QFileInfo>
 #include <QTemporaryFile>
+#include <QGraphicsOpacityEffect>
+#include <QPropertyAnimation>
 #include <QApplication>
 #include <algorithm>
 #include <iterator>
@@ -40,11 +42,17 @@ static QString formatNumber(int value)
     return QLocale(QLocale::Chinese, QLocale::China).toString(value);
 }
 
-static QString dialoguePortraitPath(const QString& path)
+static QString dialoguePortraitPath(QString path)
 {
-    // 地图继续使用原有 60×60 头像；Galgame 使用同样人物的去背景副本。
+    // Galgame 对话统一使用高分辨率立绘；保留显式指定的剧情专属表情。
     if (path.endsWith(QStringLiteral("/anon.png")))
-        return QStringLiteral(":/images/characters/portraits/anon_dialogue.png");
+        return QStringLiteral(":/images/characters/portraits/variants/anon_calm.png");
+    if (path.endsWith(QStringLiteral("/soyo.png")))
+        return QStringLiteral(":/images/characters/portraits/variants/soyo_school_calm.png");
+    if (path.endsWith(QStringLiteral("/yukina.png")))
+        return QStringLiteral(":/images/characters/portraits/variants/yukina_new_school_calm.png");
+    if (path.endsWith(QStringLiteral("/kasumi.png")))
+        return QStringLiteral(":/images/characters/portraits/variants/kasumi_new_school_joy.png");
     return path;
 }
 
@@ -52,6 +60,13 @@ static QString monsterPortraitPath(const std::string& name)
 {
     // 与 MapWidget::loadAssets 中的原版怪物 ID 映射保持一致。
     // 怪物名称包含“原版形态”后缀，不能只靠角色名 contains 判断。
+    const int generatedIndex = MonsterDB::indexOf(name);
+    if (generatedIndex >= 0) {
+        const QString generated = QString(":/images/characters/portraits/monster_variants/monster_%1.png")
+                                      .arg(generatedIndex + 1, 2, 10, QChar('0'));
+        if (!QPixmap(generated).isNull())
+            return generated;
+    }
     static const char* themedPortraits[] = {
         ":/images/characters/portraits/rana.png",
         ":/images/characters/portraits/mutsumi.png",
@@ -132,12 +147,58 @@ static void applyRuntimeArtSkin(QWidget& widget)
         button->setStyleSheet(buttonArt);
 }
 
+static QString itemIconPath(const std::string& rawName)
+{
+    const QString name = QString::fromStdString(Game::canonicalItemName(rawName));
+    if (name == QString::fromUtf8("红色Live票")) return QStringLiteral(":/images/runtime/items/mygo/live_ticket_red.png");
+    if (name == QString::fromUtf8("蓝色Live票")) return QStringLiteral(":/images/runtime/items/mygo/live_ticket_blue.png");
+    if (name == QString::fromUtf8("黄色Live票")) return QStringLiteral(":/images/runtime/items/mygo/live_ticket_yellow.png");
+    if (name == QString::fromUtf8("大黄门钥匙")) return QStringLiteral(":/images/runtime/items/key_magic.png");
+    if (name == QStringLiteral("Weapon")) return QStringLiteral(":/images/runtime/items/weapon.png");
+    if (name == QStringLiteral("Armor")) return QStringLiteral(":/images/runtime/items/armor.png");
+    if (name == QStringLiteral("Treasure")) return QStringLiteral(":/images/runtime/items/treasure.png");
+    if (name == QString::fromUtf8("现场补给")) return QStringLiteral(":/images/runtime/items/mygo/mygo_support_badge_red.png");
+    if (name == QString::fromUtf8("灯的热牛奶")) return QStringLiteral(":/images/runtime/items/mygo/tomori_warm_milk.png");
+    if (name == QString::fromUtf8("爱音能量饮")) return QStringLiteral(":/images/runtime/items/mygo/anon_energy_drink.png");
+    if (name == QString::fromUtf8("MyGO应援红章")) return QStringLiteral(":/images/runtime/items/mygo/mygo_support_badge_red.png");
+    if (name == QString::fromUtf8("Mujica应援蓝章")) return QStringLiteral(":/images/runtime/items/mygo/mujica_support_badge_blue.png");
+    if (name == QString::fromUtf8("爱音拨片")) return QStringLiteral(":/images/runtime/items/mygo/anon_guitar_pick.png");
+    if (name == QString::fromUtf8("立希鼓棒")) return QStringLiteral(":/images/runtime/items/mygo/taki_drumsticks.png");
+    if (name == QString::fromUtf8("乐奈猫爪")) return QStringLiteral(":/images/runtime/items/mygo/rana_cat_claw.png");
+    if (name == QString::fromUtf8("灯的麦克风")) return QStringLiteral(":/images/runtime/items/mygo/tomori_microphone.png");
+    if (name == QString::fromUtf8("睦的贝斯")) return QStringLiteral(":/images/runtime/items/mygo/mutsumi_bass.png");
+    if (name == QString::fromUtf8("素世谱架")) return QStringLiteral(":/images/runtime/items/mygo/soyo_music_stand.png");
+    if (name == QString::fromUtf8("海铃节拍器")) return QStringLiteral(":/images/runtime/items/mygo/umiri_metronome.png");
+    if (name == QString::fromUtf8("初华舞台耳返")) return QStringLiteral(":/images/runtime/items/mygo/uika_in_ear.png");
+    if (name == QString::fromUtf8("祥子黑色乐谱")) return QStringLiteral(":/images/runtime/items/mygo/sakiko_sheet_music.png");
+    if (name == QString::fromUtf8("Mujica终幕面具")) return QStringLiteral(":/images/runtime/items/mygo/mujica_finale_mask.png");
+    if (name == QString::fromUtf8("爱音手机") || name == QString::fromUtf8("楼层传送器")) return QStringLiteral(":/images/runtime/items/mygo/anon_smartphone.png");
+    if (name == QString::fromUtf8("Mujica镜面舞台票")) return QStringLiteral(":/images/runtime/items/mygo/mujica_mirror_ticket.png");
+    if (name == QString::fromUtf8("高松灯的单词本")) return QStringLiteral(":/images/runtime/items/mygo/tomori_lyric_notebook.png");
+    if (name == QString::fromUtf8("怪物手册")) return QStringLiteral(":/images/runtime/items/glasses.png");
+    if (name == QString::fromUtf8("立希水壶")) return QStringLiteral(":/images/runtime/items/mygo/rikki_water_kettle.png");
+    if (name == QString::fromUtf8("爱音自拍眼镜")) return QStringLiteral(":/images/runtime/items/mygo/anon_selfie_glasses.png");
+    if (name == QString::fromUtf8("睦的镐子")) return QStringLiteral(":/images/runtime/items/mygo/mutsumi_pickaxe_toolbox.png");
+    if (name == QString::fromUtf8("破墙锤")) return QStringLiteral(":/images/runtime/items/wall_breaker.png");
+    if (name == QString::fromUtf8("Mujica烟雾弹")) return QStringLiteral(":/images/runtime/items/mygo/mujica_smoke_bomb.png");
+    if (name == QString::fromUtf8("Mujica舞台震响卷")) return QStringLiteral(":/images/runtime/items/mygo/mujica_stage_quake_scroll.png");
+    if (name == QString::fromUtf8("MyGO和解徽章") || name == QString::fromUtf8("MyGO团结徽章")) return QStringLiteral(":/images/runtime/items/mygo/mygo_reconciliation_badge.png");
+    if (name == QString::fromUtf8("祥子指挥棒")) return QStringLiteral(":/images/runtime/items/mygo/sakiko_conductor_baton.png");
+    if (name == QString::fromUtf8("海铃冷静指令")) return QStringLiteral(":/images/runtime/items/mygo/umiri_calm_command.png");
+    if (name == QString::fromUtf8("乐队护盾贴")) return QStringLiteral(":/images/runtime/items/mygo/band_shield_sticker.png");
+    if (name == QString::fromUtf8("立希企鹅挂件")) return QStringLiteral(":/images/runtime/items/mygo/rikki_penguin_keychain.png");
+    if (name == QString::fromUtf8("乐奈抹茶芭菲")) return QStringLiteral(":/images/runtime/items/mygo/rana_matcha_parfait.png");
+    if (name == QString::fromUtf8("乐奈幸运硬币")) return QStringLiteral(":/images/runtime/items/mygo/rana_lucky_coin.png");
+    if (name == QString::fromUtf8("舞台升降卡")) return QStringLiteral(":/images/runtime/items/mygo/stage_lift_card.png");
+    if (name == QString::fromUtf8("撤场通行卡")) return QStringLiteral(":/images/runtime/items/mygo/exit_pass.png");
+    if (name == QString::fromUtf8("灯的热牛奶")) return QStringLiteral(":/images/runtime/items/potion_small.png");
+    if (name == QString::fromUtf8("爱音能量饮")) return QStringLiteral(":/images/runtime/items/potion_large.png");
+    return QStringLiteral(":/images/runtime/items/artifact.png");
+}
+
 MainWindow::MainWindow(Game* game, QWidget* parent)
     : QWidget(parent), m_game(game)
 {
-    m_undoFile.setAutoRemove(true);
-    m_undoFile.open();
-    m_undoFile.close();
     setFocusPolicy(Qt::StrongFocus);
     ui.setupUi(this);
     setWindowTitle(QString::fromUtf8("MYGO!!!!! × Ave Mujica：梦限大魔塔"));
@@ -157,33 +218,25 @@ MainWindow::MainWindow(Game* game, QWidget* parent)
         "QPushButton:hover { color: white; }"
     );
     const QString buttonArt =
-        "QPushButton { color: #fff7d0; border-image: url(:/images/runtime/ui/button_texture.png) 18 24 18 24 stretch stretch; padding: 8px 14px; font-size: 14px; font-weight: 700; }"
+        "QPushButton { color: #fff7d0; border-image: url(:/images/runtime/ui/button_texture.png) 18 24 18 24 stretch stretch; padding: 2px 4px; font-size: 11px; font-weight: 700; }"
         "QPushButton:hover { color: white; }";
-    for (QPushButton* button : {ui.invButton, ui.saveButton, ui.quickSaveButton,
+    for (QPushButton* button : {ui.saveButton, ui.quickSaveButton,
                                 ui.undoButton, ui.loadButton, ui.settingsButton,
-                                ui.editorButton, ui.modButton})
+                                ui.modButton})
         button->setStyleSheet(buttonArt);
-    ui.invButton->setIcon(QIcon(":/images/runtime/items/artifact.png"));
-    ui.saveButton->setIcon(QIcon(":/images/runtime/items/treasure.png"));
-    ui.quickSaveButton->setIcon(QIcon(":/images/runtime/items/treasure.png"));
-    ui.undoButton->setIcon(QIcon(":/images/runtime/items/key_magic.png"));
-    ui.loadButton->setIcon(QIcon(":/images/runtime/items/stairs_down.png"));
-    ui.settingsButton->setIcon(QIcon(":/images/runtime/items/glasses.png"));
-    ui.editorButton->setIcon(QIcon(":/images/runtime/items/glasses.png"));
-    ui.modButton->setIcon(QIcon(":/images/runtime/items/key_magic.png"));
-    for (QPushButton* button : {ui.invButton, ui.saveButton, ui.quickSaveButton,
-                                ui.undoButton, ui.loadButton, ui.settingsButton,
-                                ui.editorButton, ui.modButton})
-        button->setIconSize(QSize(30, 30));
     ui.undoButton->setEnabled(false);
-    ui.invButton->setText(QString::fromUtf8("背包"));
     ui.saveButton->setText(QString::fromUtf8("保存"));
     ui.quickSaveButton->setText(QString::fromUtf8("即时存档"));
     ui.undoButton->setText(QString::fromUtf8("撤销"));
     ui.loadButton->setText(QString::fromUtf8("读取"));
     ui.settingsButton->setText(QString::fromUtf8("设置"));
-    ui.editorButton->setText(QString::fromUtf8("地图编辑器"));
     ui.modButton->setText(QString::fromUtf8("修改器"));
+    ui.saveButton->setToolTip(QString::fromUtf8("保存游戏"));
+    ui.quickSaveButton->setToolTip(QString::fromUtf8("即时存档 (F5)"));
+    ui.undoButton->setToolTip(QString::fromUtf8("撤销 (Ctrl+Z)"));
+    ui.loadButton->setToolTip(QString::fromUtf8("读取存档"));
+    ui.settingsButton->setToolTip(QString::fromUtf8("设置"));
+    ui.modButton->setToolTip(QString::fromUtf8("修改器"));
     ui.monsterScroll->setStyleSheet(
         "QScrollArea { background-color: rgba(17,19,34,220); background-image: url(:/images/runtime/ui/panel_texture.png); border: 2px solid #777080; }"
         "QScrollBar:vertical { background: #171824; width: 9px; }"
@@ -199,24 +252,99 @@ MainWindow::MainWindow(Game* game, QWidget* parent)
     ui.mapWidget->setMovementAnimationEnabled(
         settings.value(QStringLiteral("movementAnimation"), true).toBool());
     connect(ui.mapWidget, &MapWidget::tileClicked, this, [this](int x, int y) {
-        if (m_game->player().hp <= 0 || ui.mapWidget->isSceneAnimating()) return;
+        if (m_game->player().hp <= 0 || ui.mapWidget->isSceneAnimating() ||
+            m_pendingTeleport.active) return;
         if (m_game->floor3PrisonStoryPending()) {
             showFloor3PrisonVisualNovel();
             ui.mapWidget->update();
             updateHUD();
             return;
         }
-        captureUndoSnapshot();
         const int floorBefore = m_game->currentFloor();
-        const auto result = m_game->teleportPlayerTo(x, y);
+        const Item* clickedItem = m_game->itemAt(x, y);
+        const QString pickedName = clickedItem
+            ? QString::fromStdString(Game::canonicalItemName(clickedItem->GetName()))
+            : QString();
+        const QString pickedDescription = clickedItem ? getItemDescription(clickedItem) : QString();
+        if (!m_game->beginTeleportPlayerTo(x, y)) {
+            ui.mapWidget->snapPlayerToGame();
+            return;
+        }
+        // 只有路径规划成功才记录撤销点；点击墙体或不可达位置不应制造“假操作”。
+        captureUndoSnapshot();
+        const bool animateTeleport = m_game->lastTeleportNeedsAnimation();
+        const auto teleportPath = m_game->takeLastTeleportPath();
+        if (animateTeleport && teleportPath.size() > 1 &&
+            ui.mapWidget->movementAnimationEnabled()) {
+            m_pendingTeleport.active = true;
+            m_pendingTeleport.x = x;
+            m_pendingTeleport.y = y;
+            m_pendingTeleport.floorBefore = floorBefore;
+            m_pendingTeleport.pickedName = pickedName;
+            m_pendingTeleport.pickedDescription = pickedDescription;
+            ui.mapWidget->playPlayerPath(teleportPath);
+            return;
+        }
+
+        const auto result = m_game->completeTeleportPlayerTo();
+        ui.mapWidget->snapPlayerToGame();
         startMonsterMovementAnimation();
-        switch (result) {
+        handleTeleportResult(x, y, floorBefore, pickedName, pickedDescription, result);
+    });
+    updateHUD();
+    m_movementQueueTimer.setInterval(16);
+    connect(&m_movementQueueTimer, &QTimer::timeout, this, &MainWindow::flushPendingMove);
+    // 动画结束的同一帧先提交鼠标瞬移的目标交互，再衔接键盘移动队列。
+    connect(ui.mapWidget, &MapWidget::playerMotionFinished, this, [this]() {
+        if (m_pendingTeleport.active) {
+            completePendingTeleport();
+            return;
+        }
+        flushPendingMove();
+    });
+    connect(ui.mapWidget, &MapWidget::monsterMotionFinished, this, [this]() {
+        if (m_floor32KnightStoryFloor < 0)
+            return;
+        const int floorBefore = m_floor32KnightStoryFloor;
+        m_floor32KnightStoryFloor = -1;
+        showFloor32KnightStoryIfNeeded(floorBefore);
+        ui.mapWidget->update();
+        updateHUD();
+    });
+    m_movementQueueTimer.start();
+    connect(&m_battleFeedbackTimer, &QTimer::timeout, this, [this]() {
+        if (ui.battleLabel) ui.battleLabel->setVisible(false);
+    });
+
+    connect(ui.saveButton, &QPushButton::clicked, this, [this]() {
+        showSaveLoadDialog(true);
+    });
+
+    connect(ui.loadButton, &QPushButton::clicked, this, [this]() {
+        showSaveLoadDialog(false);
+    });
+
+    connect(ui.modButton, &QPushButton::clicked, this, &MainWindow::showModifier);
+}
+
+void MainWindow::handleTeleportResult(int x, int y, int floorBefore,
+                                      const QString& pickedName,
+                                      const QString& pickedDescription,
+                                      Game::MoveResult result)
+{
+    switch (result) {
         case Game::Move_Pickup:
         case Game::Move_Ok:
+            if (result == Game::Move_Pickup && !pickedName.isEmpty())
+                showBattleFeedback(QString::fromUtf8("获得 %1：%2").arg(pickedName).arg(
+                    QString(pickedDescription).replace(QString::fromUtf8("（未生效）"), QString::fromUtf8("（已生效）"))));
             if (m_game->floor3PrisonStoryPending())
                 showPrisonTrapPrompt();
             else if (floorBefore == 3 && m_game->currentFloor() == 2)
                 showOpeningPrisonStory();
+            showFloor20VampireStoryIfNeeded(floorBefore);
+            showFloor33TrapStoryIfNeeded(floorBefore);
+            showFloor32KnightStoryAfterMovement(floorBefore);
             ui.mapWidget->update();
             updateHUD();
             break;
@@ -233,9 +361,20 @@ MainWindow::MainWindow(Game* game, QWidget* parent)
         case Game::Move_Encounter: {
             // 点击怪物格也走统一战斗入口；瞬移后玩家坐标已在目标格，
             // 因而战斗结束后可以继续从该格移动或拾取战利品。
+            const bool knightFight = floorBefore == 32 && m_game->monsterAt(x, y) &&
+                m_game->monsterAt(x, y)->GetName() == "幼年长崎素世·骑士队长";
             std::vector<std::string> log;
             const auto fightResult = m_game->fightAt(x, y, log);
             showBattleFeedback(QString::fromStdString(summarizeBattleLog(log)));
+            if (knightFight && fightResult == Game::Fight_PlayerWin)
+                showVisualNovelDialogue({
+                    {QString::fromUtf8("骑士队长"), QString::fromUtf8("哼！这次算你赢了，我先逃回右上角的后台入口！"),
+                     QStringLiteral(":/images/characters/portraits/variants/soyo_child_sad.png"), QStringLiteral("#b58cff")},
+                    {QString::fromUtf8("千早爱音"), QString::fromUtf8("别想逃走……他已经逃回 (12,2) 的后台入口了。"),
+                     QStringLiteral(":/images/characters/portraits/variants/anon_confident.png"), QStringLiteral("#ff8fc7")}
+                });
+            // 战败对白结束后才开始撤退动画；普通战斗仍立即播放其他脚本移动。
+            startMonsterMovementAnimation();
             ui.mapWidget->update();
             updateHUD();
             if (fightResult == Game::Fight_GameWin) {
@@ -259,61 +398,24 @@ MainWindow::MainWindow(Game* game, QWidget* parent)
             break;
         default:
             break;
-        }
-    });
-    updateHUD();
-    m_movementQueueTimer.setInterval(16);
-    connect(&m_movementQueueTimer, &QTimer::timeout, this, &MainWindow::flushPendingMove);
-    // 动画结束的同一帧立即衔接下一格，定时器仅作为事件循环繁忙时的兜底。
-    connect(ui.mapWidget, &MapWidget::playerMotionFinished,
-            this, &MainWindow::flushPendingMove);
-    m_movementQueueTimer.start();
-    connect(&m_battleFeedbackTimer, &QTimer::timeout, this, [this]() {
-        if (ui.battleLabel) ui.battleLabel->setVisible(false);
-    });
+    }
+}
 
-    connect(ui.saveButton, &QPushButton::clicked, this, [this]() {
-        QString file = QFileDialog::getSaveFileName(this, QString::fromUtf8("保存存档"),
-            QDir::currentPath(), QString::fromUtf8("保存文件 (*.txt)"));
-        if (!file.isEmpty()) {
-            bool ok = m_game->saveToFile(file.toStdString());
-            QMessageBox::information(this, QString::fromUtf8("保存"), ok ? QString::fromUtf8("保存成功") : QString::fromUtf8("保存失败"));
-        }
-    });
-
-    connect(ui.loadButton, &QPushButton::clicked, this, [this]() {
-        QString file = QFileDialog::getOpenFileName(this, QString::fromUtf8("读取存档"),
-            QDir::currentPath(), QString::fromUtf8("保存文件 (*.txt)"));
-        if (!file.isEmpty()) {
-            bool ok = m_game->loadFromFile(file.toStdString());
-            if (ok) {
-                m_hasUndoSnapshot = false;
-                ui.undoButton->setEnabled(false);
-                m_hasPendingMove = false;
-                ui.mapWidget->snapPlayerToGame();
-                ui.mapWidget->update();
-                updateHUD();
-                QMessageBox::information(this, QString::fromUtf8("读取"), QString::fromUtf8("读取成功"));
-            } else {
-                QMessageBox::warning(this, QString::fromUtf8("读取"), QString::fromUtf8("读取失败"));
-            }
-        }
-    });
-
-    connect(ui.editorButton, &QPushButton::clicked, this, [this]() {
-        auto* editor = new MapEditor();
-        editor->setAttribute(Qt::WA_DeleteOnClose);
-        editor->show();
-    });
-
-    connect(ui.invButton, &QPushButton::clicked, this, &MainWindow::showInventory);
-
-    connect(ui.modButton, &QPushButton::clicked, this, &MainWindow::showModifier);
+void MainWindow::completePendingTeleport()
+{
+    if (!m_pendingTeleport.active) return;
+    const PendingTeleport pending = m_pendingTeleport;
+    m_pendingTeleport = {};
+    const auto result = m_game->completeTeleportPlayerTo();
+    startMonsterMovementAnimation();
+    handleTeleportResult(pending.x, pending.y, pending.floorBefore,
+                         pending.pickedName, pending.pickedDescription, result);
+    ui.mapWidget->update();
 }
 
 void MainWindow::flushPendingMove()
 {
-    if (!m_hasPendingMove || ui.mapWidget->isSceneAnimating()) return;
+    if (!m_hasPendingMove || m_pendingTeleport.active || ui.mapWidget->isSceneAnimating()) return;
     const int dx = m_pendingMoveDx;
     const int dy = m_pendingMoveDy;
     m_hasPendingMove = false;
@@ -325,7 +427,11 @@ void MainWindow::flushPendingMove()
 
 void MainWindow::startMonsterMovementAnimation()
 {
-    const auto movements = m_game->takeFloor10AmbushMovementAnimations();
+    auto movements = m_game->takeFloor10AmbushMovementAnimations();
+    const auto scripted = m_game->takeScriptedMonsterMovementAnimations();
+    movements.insert(movements.end(), scripted.begin(), scripted.end());
+    const auto knight = m_game->takeFloor32KnightMovementAnimations();
+    movements.insert(movements.end(), knight.begin(), knight.end());
     if (!movements.empty())
         ui.mapWidget->playMonsterMovement(movements);
 }
@@ -343,32 +449,141 @@ void MainWindow::showBattleFeedback(const QString& message)
 void MainWindow::captureUndoSnapshot()
 {
     if (!m_game) return;
-    if (m_undoFile.fileName().isEmpty()) {
-        if (!m_undoFile.open()) return;
-        m_undoFile.close();
-    }
-    m_hasUndoSnapshot = m_game->saveToFile(m_undoFile.fileName().toStdString());
-    ui.undoButton->setEnabled(m_hasUndoSnapshot);
+    auto snapshot = std::make_unique<QTemporaryFile>();
+    snapshot->setAutoRemove(true);
+    if (!snapshot->open()) return;
+    const QString path = snapshot->fileName();
+    snapshot->close();
+    if (!m_game->saveToFile(path.toStdString())) return;
+    m_undoHistory.emplace_back(std::move(snapshot));
+    // 保留足够长的操作历史，支持连续撤销；最旧快照超出上限后自动淘汰。
+    constexpr size_t kMaxUndoSteps = 128;
+    if (m_undoHistory.size() > kMaxUndoSteps)
+        m_undoHistory.erase(m_undoHistory.begin());
+    ui.undoButton->setEnabled(!m_undoHistory.empty());
+}
+
+void MainWindow::clearUndoHistory()
+{
+    m_undoHistory.clear();
+    ui.undoButton->setEnabled(false);
 }
 
 void MainWindow::undoLastAction()
 {
-    if (!m_hasUndoSnapshot) {
+    if (m_undoHistory.empty()) {
         QMessageBox::information(this, QString::fromUtf8("撤销"),
             QString::fromUtf8("当前没有可撤销的操作。"));
         return;
     }
-    if (!m_game->loadFromFile(m_undoFile.fileName().toStdString())) {
+    const QString path = m_undoHistory.back()->fileName();
+    if (!m_game->loadFromFile(path.toStdString())) {
         QMessageBox::warning(this, QString::fromUtf8("撤销"),
             QString::fromUtf8("撤销存档读取失败。"));
         return;
     }
-    m_hasUndoSnapshot = false;
-    ui.undoButton->setEnabled(false);
+    m_undoHistory.pop_back();
+    ui.undoButton->setEnabled(!m_undoHistory.empty());
     m_hasPendingMove = false;
+    m_pendingTeleport = {};
+    m_floor32KnightStoryFloor = -1;
     ui.mapWidget->snapPlayerToGame();
     ui.mapWidget->update();
     updateHUD();
+}
+
+void MainWindow::showSaveLoadDialog(bool initialSave)
+{
+    QDialog dlg(this);
+    dlg.setWindowTitle(QString::fromUtf8("魔塔存档"));
+    dlg.setFixedSize(520, 460);
+    applyRuntimeArtSkin(dlg);
+    auto* layout = new QVBoxLayout(&dlg);
+    layout->addWidget(new QLabel(QString::fromUtf8(
+        "选择一个存档槽位。普通存档最多 10 个槽位，保存不会离开当前游戏。"), &dlg));
+    auto* slotList = new QListWidget(&dlg);
+    layout->addWidget(slotList, 1);
+
+    QString dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    if (dir.isEmpty()) dir = QDir::currentPath();
+    const QString saveDir = QDir(dir).filePath(QStringLiteral("saves"));
+    QDir().mkpath(saveDir);
+
+    const auto slotPath = [&saveDir](int slot) {
+        return QDir(saveDir).filePath(QStringLiteral("slot_%1.sav").arg(slot));
+    };
+    const auto refreshSlots = [&]() {
+        slotList->clear();
+        for (int i = 1; i <= 10; ++i) {
+            const QString path = slotPath(i);
+            const QFileInfo info(path);
+            const QString state = info.exists()
+                ? QString::fromUtf8("已有存档（%1 KB）").arg(info.size() / 1024)
+                : QString::fromUtf8("空槽位");
+            auto* row = new QListWidgetItem(QString::fromUtf8("存档 %1    %2").arg(i).arg(state), slotList);
+            row->setData(Qt::UserRole, i);
+        }
+        int defaultRow = 0;
+        if (!initialSave) {
+            for (int i = 1; i <= 10; ++i) {
+                if (QFileInfo::exists(slotPath(i))) {
+                    defaultRow = i - 1;
+                    break;
+                }
+            }
+        }
+        slotList->setCurrentRow(defaultRow);
+    };
+    refreshSlots();
+
+    auto* status = new QLabel(&dlg);
+    status->setStyleSheet(QStringLiteral("color:#9fd8ff;"));
+    layout->addWidget(status);
+    auto* buttons = new QHBoxLayout();
+    auto* save = new QPushButton(QString::fromUtf8("保存到选中槽位"), &dlg);
+    auto* load = new QPushButton(QString::fromUtf8("读取选中槽位"), &dlg);
+    auto* close = new QPushButton(QString::fromUtf8("返回游戏"), &dlg);
+    buttons->addWidget(save);
+    buttons->addWidget(load);
+    buttons->addWidget(close);
+    layout->addLayout(buttons);
+
+    QObject::connect(save, &QPushButton::clicked, &dlg, [&]() {
+        auto* row = slotList->currentItem();
+        if (!row) return;
+        const int slot = row->data(Qt::UserRole).toInt();
+        if (m_game->saveToFile(slotPath(slot).toStdString())) {
+            status->setText(QString::fromUtf8("已保存到存档 %1").arg(slot));
+            refreshSlots();
+            slotList->setCurrentRow(slot - 1);
+        } else {
+            status->setText(QString::fromUtf8("保存失败，请重试。"));
+        }
+    });
+    QObject::connect(load, &QPushButton::clicked, &dlg, [&]() {
+        auto* row = slotList->currentItem();
+        if (!row) return;
+        const int slot = row->data(Qt::UserRole).toInt();
+        const QString path = slotPath(slot);
+        if (!QFileInfo::exists(path)) {
+            status->setText(QString::fromUtf8("存档 %1 为空。").arg(slot));
+            return;
+        }
+        if (!m_game->loadFromFile(path.toStdString())) {
+            status->setText(QString::fromUtf8("读取失败，请重试。"));
+            return;
+        }
+        clearUndoHistory();
+        m_hasPendingMove = false;
+        m_pendingTeleport = {};
+        m_floor32KnightStoryFloor = -1;
+        ui.mapWidget->snapPlayerToGame();
+        ui.mapWidget->update();
+        updateHUD();
+        dlg.accept();
+    });
+    QObject::connect(close, &QPushButton::clicked, &dlg, &QDialog::reject);
+    dlg.exec();
 }
 
 void MainWindow::quickSave()
@@ -378,9 +593,35 @@ void MainWindow::quickSave()
     QDir().mkpath(dir);
     const QString path = QDir(dir).filePath(QStringLiteral("quicksave.sav"));
     const bool ok = m_game->saveToFile(path.toStdString());
-    QMessageBox::information(this, QString::fromUtf8("即时存档"),
-        ok ? QString::fromUtf8("即时存档已保存。\n%1").arg(path)
-           : QString::fromUtf8("即时存档失败。"));
+    if (!ok)
+        QMessageBox::warning(this, QString::fromUtf8("即时存档"), QString::fromUtf8("即时存档失败。"));
+}
+
+void MainWindow::quickLoad()
+{
+    QString dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    if (dir.isEmpty()) dir = QDir::currentPath();
+    const QString path = QDir(dir).filePath(QStringLiteral("quicksave.sav"));
+    if (!QFileInfo::exists(path)) {
+        QMessageBox::information(this, QString::fromUtf8("即时读档"),
+            QString::fromUtf8("还没有即时存档。"));
+        return;
+    }
+    if (!m_game->loadFromFile(path.toStdString())) {
+        QMessageBox::warning(this, QString::fromUtf8("即时读档"),
+            QString::fromUtf8("即时存档读取失败。"));
+        return;
+    }
+    // 读档后丢弃当前撤销点和所有尚未完成的动画/剧情回调，避免旧状态回写新存档。
+    clearUndoHistory();
+    m_hasPendingMove = false;
+    m_pendingTeleport = {};
+    m_floor32KnightStoryFloor = -1;
+    ui.mapWidget->snapPlayerToGame();
+    ui.mapWidget->update();
+    updateHUD();
+    QMessageBox::information(this, QString::fromUtf8("即时读档"),
+        QString::fromUtf8("即时存档已读取。"));
 }
 
 void MainWindow::showSettings()
@@ -398,6 +639,7 @@ void MainWindow::showSettings()
     layout->addWidget(battle);
     layout->addWidget(new QLabel(QString::fromUtf8(
         "方向键：移动\n"
+        "F5 即时存档，F9 即时读档，Ctrl+Z 连续撤销。\n"
         "背包中的消耗品按原版规则使用；楼层传送器可重复使用。"), &dlg));
     auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg);
     buttons->button(QDialogButtonBox::Ok)->setText(QString::fromUtf8("应用"));
@@ -430,7 +672,7 @@ void MainWindow::showStoryMessage(const QString& message)
 {
     showVisualNovelDialogue({
         {QString::fromUtf8("旁白"), message,
-         QStringLiteral(":/images/characters/portraits/anon.png"), QStringLiteral("#ffd66b")}
+         QStringLiteral(":/images/characters/portraits/marina.png"), QStringLiteral("#ffd66b")}
     });
 
     connect(ui.quickSaveButton, &QPushButton::clicked, this, &MainWindow::quickSave);
@@ -442,9 +684,19 @@ void MainWindow::loadAssets()
 {
     auto* mw = ui.mapWidget;
 
-    // Galgame/头像继续使用原有透明小立绘；地图行走角色单独使用最新 8×8 素材。
+    // Galgame 使用高分辨率立绘，地图行走使用用户指定的最新 8×8 参考素材。
     mw->loadPlayerImage(":/images/characters/portraits/anon.png");
-    mw->loadPlayerSpriteSheet(":/images/characters/player_outfits/anon_reference_walk_8x8.png");
+    mw->loadPlayerOutfitSpriteSheet("reference_walk", ":/images/characters/player_outfits/anon_reference_walk_8x8.png");
+    // 爱音多套 8×8 精细行走图；其余套装可通过 setPlayerOutfit 切换。
+    mw->loadPlayerOutfitSpriteSheet("school", ":/images/characters/player_outfits/anon_school_8x8.png");
+    mw->loadPlayerOutfitSpriteSheet("casual", ":/images/characters/player_outfits/anon_casual_8x8.png");
+    mw->loadPlayerOutfitSpriteSheet("mygo_stage", ":/images/characters/player_outfits/anon_mygo_stage_8x8.png");
+    mw->loadPlayerOutfitSpriteSheet("mujica_stage", ":/images/characters/player_outfits/anon_mujica_stage_8x8.png");
+    mw->loadPlayerOutfitSpriteSheet("summer", ":/images/characters/player_outfits/anon_summer_8x8.png");
+    mw->loadPlayerOutfitSpriteSheet("school_actions", ":/images/characters/player_outfits/anon_school_actions_8x8.png");
+    mw->loadPlayerOutfitSpriteSheet("casual_actions", ":/images/characters/player_outfits/anon_casual_actions_8x8.png");
+    mw->loadPlayerOutfitSpriteSheet("mygo_stage_actions", ":/images/characters/player_outfits/anon_stage_actions_8x8.png");
+    mw->setPlayerOutfit("reference_walk");
     mw->loadBackgroundImage(":/images/backgrounds/bangdream_gbp_cover.jpg");
 
     // 运行时地图图块全部来自已生成图集的裁切素材。
@@ -462,9 +714,9 @@ void MainWindow::loadAssets()
     mw->loadTileImage(Tile_Lava,        ":/images/runtime/tiles/lava.png");
     mw->loadTileImage(Tile_StarRiver,   ":/images/runtime/tiles/star_river.png");
     // 普通 NPC 使用麻里奈，商店使用凛凛子（均为 60×60 RGBA 角色小人）。
-    mw->loadTileImage(Tile_Shop,        ":/images/characters/portraits/ririko.png");
-    mw->loadTileImage(Tile_NPC,         ":/images/characters/portraits/marina.png");
-    mw->loadNPCImage("小偷",             ":/images/characters/portraits/michelle.png");
+    mw->loadTileImage(Tile_Shop,        ":/images/characters/npcs/ririko_icon.png");
+    mw->loadTileImage(Tile_NPC,         ":/images/characters/npcs/marina_icon.png");
+    mw->loadNPCImage("小偷",             ":/images/characters/npcs/michelle_icon.png");
 
     const std::vector<std::pair<const char*, const char*>> itemImages = {
         {"Red Key",       ":/images/runtime/items/key_red.png"},
@@ -475,6 +727,7 @@ void MainWindow::loadAssets()
         {"Yellow Key",    ":/images/runtime/items/key_yellow.png"},
         {"黄钥匙",        ":/images/runtime/items/key_yellow.png"},
         {"万能钥匙",      ":/images/runtime/items/key_magic.png"},
+        {"大黄门钥匙",    ":/images/runtime/items/key_magic.png"},
         {"Potion",        ":/images/runtime/items/potion.png"},
         {"生命药",        ":/images/runtime/items/potion.png"},
         {"小血瓶",        ":/images/runtime/items/potion_small.png"},
@@ -522,13 +775,15 @@ void MainWindow::loadAssets()
         {"爱音手机",      ":/images/runtime/items/mygo/anon_smartphone.png"},
         {"楼层传送器",    ":/images/runtime/items/mygo/anon_smartphone.png"},
         {"Mujica镜面舞台票", ":/images/runtime/items/mygo/mujica_mirror_ticket.png"},
-        {"灯的歌词本",    ":/images/runtime/items/mygo/tomori_lyric_notebook.png"},
+        {"高松灯的单词本", ":/images/runtime/items/mygo/tomori_lyric_notebook.png"},
+        {"怪物手册",      ":/images/runtime/items/glasses.png"},
         {"立希水壶",      ":/images/runtime/items/mygo/rikki_water_kettle.png"},
         {"爱音自拍眼镜",  ":/images/runtime/items/mygo/anon_selfie_glasses.png"},
         {"睦的镐子",      ":/images/runtime/items/mygo/mutsumi_pickaxe_toolbox.png"},
         {"Mujica烟雾弹",  ":/images/runtime/items/mygo/mujica_smoke_bomb.png"},
         {"Mujica舞台震响卷", ":/images/runtime/items/mygo/mujica_stage_quake_scroll.png"},
         {"MyGO和解徽章",  ":/images/runtime/items/mygo/mygo_reconciliation_badge.png"},
+        {"MyGO团结徽章",  ":/images/runtime/items/mygo/mygo_reconciliation_badge.png"},
         {"祥子指挥棒",    ":/images/runtime/items/mygo/sakiko_conductor_baton.png"},
         {"海铃冷静指令",  ":/images/runtime/items/mygo/umiri_calm_command.png"},
         {"乐队护盾贴",    ":/images/runtime/items/mygo/band_shield_sticker.png"},
@@ -542,12 +797,16 @@ void MainWindow::loadAssets()
     for (const auto& [name, path] : itemImages)
         mw->loadItemImage(name, QString::fromUtf8(path));
 
-    // 加载怪物图片：使用与边栏相同的本体/舞台头像映射。
+    // 加载怪物图片：优先使用逐怪物 60x60 chibi 精灵，缺失时回退到立绘。
     auto monsters = MonsterDB::all();
     for (size_t i = 0; i < monsters.size(); ++i) {
-        QString path = monsterPortraitPath(monsters[i].GetName());
-        if (path.isEmpty())
-            path = QString(":/images/monster_%1.png").arg(i + 1, 2, 10, QChar('0'));
+        QString path = QString(":/images/characters/monsters/monster_%1.png")
+                           .arg(i + 1, 2, 10, QChar('0'));
+        if (QPixmap(path).isNull()) {
+            path = monsterPortraitPath(monsters[i].GetName());
+            if (path.isEmpty())
+                path = QString(":/images/monster_%1.png").arg(i + 1, 2, 10, QChar('0'));
+        }
         mw->loadMonsterImage(monsters[i].GetName(), path);
     }
 
@@ -604,8 +863,8 @@ QString MainWindow::getItemDescription(const Item* item) const
         return QString::fromUtf8("黄色Live票 ×1");
     if (name == QString::fromUtf8("立希水壶"))
         return QString::fromUtf8("生命值增加当前攻击力与防御力之和");
-    if (name == QString::fromUtf8("后台万能通行证"))
-        return QString::fromUtf8("可开任何门3次（优先使用普通钥匙）");
+    if (name == QString::fromUtf8("后台万能通行证") || name == QString::fromUtf8("大黄门钥匙"))
+        return QString::fromUtf8("使用后可打开当前楼层全部黄门");
     if (name == QString::fromUtf8("爱音自拍眼镜"))
         return QString::fromUtf8("可以查看怪物属性");
     if (name == QString::fromUtf8("破墙锤") || name == QString::fromUtf8("睦的镐子"))
@@ -626,25 +885,154 @@ QString MainWindow::getItemDescription(const Item* item) const
         return QString::fromUtf8("点击使用，下一次移动可摧毁墙壁");
     if (name == QString::fromUtf8("Mujica烟雾弹") || name == QString::fromUtf8("Mujica舞台震响卷"))
         return QString::fromUtf8("点击使用，摧毁墙壁");
-    if (name == QString::fromUtf8("MyGO和解徽章"))
-        return QString::fromUtf8("对吸血鬼和兽人攻击翻倍");
+    if (name == QString::fromUtf8("MyGO和解徽章") || name == QString::fromUtf8("MyGO团结徽章"))
+        return QString::fromUtf8("对吸血鬼和兽人攻击翻倍（%1）")
+            .arg(m_game->player().hasCross ? QString::fromUtf8("已生效") : QString::fromUtf8("未生效"));
     if (name == QString::fromUtf8("祥子指挥棒"))
-        return QString::fromUtf8("对魔龙攻击翻倍");
-    if (name == QString::fromUtf8("海铃冷静指令"))
-        return QString::fromUtf8("点击使用，冻结下一格岩浆");
+        return QString::fromUtf8("对魔龙攻击翻倍（%1）")
+            .arg(m_game->player().hasDragonSlayer ? QString::fromUtf8("已生效") : QString::fromUtf8("未生效"));
+    if (name == QString::fromUtf8("海铃冷静指令") || name == QString::fromUtf8("冰冻徽章"))
+        return QString::fromUtf8("点击使用，将当前楼层全部岩浆冻结为道路（可重复使用）");
     if (name == QString::fromUtf8("爱音手机"))
         return QString::fromUtf8("点击使用，传送到指定楼层");
     if (name == QString::fromUtf8("楼层传送器"))
         return QString::fromUtf8("点击使用，传送到指定楼层");
     if (name == QString::fromUtf8("Mujica镜面舞台票"))
         return QString::fromUtf8("点击使用，剩余 %1 次").arg(item->GetValue());
-    if (name == QString::fromUtf8("灯的歌词本"))
-        return QString::fromUtf8("记录魔塔提示");
+    if (name == QString::fromUtf8("高松灯的单词本"))
+        return QString::fromUtf8("高松灯整理的单词与线索");
+    if (name == QString::fromUtf8("怪物手册"))
+        return QString::fromUtf8("查看地图上怪物的生命、攻击、防御与预计掉血");
 
     return name;
 }
 
-void MainWindow::showInventory()
+void MainWindow::activateItem(int index)
+{
+    if (index < 0 || index >= m_game->player().InventoryCount()) return;
+    const Item* item = m_game->player().GetItem(index);
+    if (!item) return;
+
+    const QString itemName = QString::fromStdString(Game::canonicalItemName(item->GetName()));
+    const QString itemDescription = getItemDescription(item);
+    if (item->IsPassiveEffect()) {
+        showBattleFeedback(itemName + QStringLiteral("\n") + itemDescription);
+        return;
+    }
+
+    const bool isFlyingWand = dynamic_cast<const FlyingWand*>(item) != nullptr;
+    const bool isFloorTeleporter = dynamic_cast<const FloorTeleporter*>(item) != nullptr;
+    const bool isStairUpper = dynamic_cast<const StairUpper*>(item) != nullptr;
+    const bool isStairLower = dynamic_cast<const StairLower*>(item) != nullptr;
+    const bool isSymmetryFlyer = dynamic_cast<const SymmetryFlyer*>(item) != nullptr;
+    const bool isBomb = dynamic_cast<const Bomb*>(item) != nullptr;
+    const bool isEarthquake = dynamic_cast<const EarthquakeScroll*>(item) != nullptr;
+    const bool isFreezeMagic = dynamic_cast<const FreezeMagic*>(item) != nullptr;
+    const bool isMagicKey = dynamic_cast<const MagicKey*>(item) != nullptr;
+
+    QString msg = QString::fromUtf8("使用了 %1").arg(itemName);
+    if (isStairUpper) {
+        if (!m_game->canTeleportByStairItem(true, m_game->player().x, m_game->player().y)) {
+            showBattleFeedback(QString::fromUtf8("上楼器失败：目标楼层对应位置不是地板。"));
+            return;
+        }
+        const int floorBefore = m_game->currentFloor();
+        captureUndoSnapshot();
+        m_game->player().UseItem(index);
+        m_game->goUpFloor(m_game->player().x, m_game->player().y, false);
+        m_game->player().stairUpUsed = false;
+        showOpeningFloorStory(floorBefore, m_game->currentFloor());
+    } else if (isStairLower) {
+        if (m_game->currentFloor() <= 0) {
+            showBattleFeedback(QString::fromUtf8("当前已经在最底层，无法继续下楼。"));
+            return;
+        }
+        if (!m_game->canTeleportByStairItem(false, m_game->player().x, m_game->player().y)) {
+            showBattleFeedback(QString::fromUtf8("下楼器失败：目标楼层对应位置不是地板。"));
+            return;
+        }
+        const int floorBefore = m_game->currentFloor();
+        captureUndoSnapshot();
+        m_game->player().UseItem(index);
+        m_game->goDownFloor(m_game->player().x, m_game->player().y, false);
+        m_game->player().stairDownUsed = false;
+        showOpeningFloorStory(floorBefore, m_game->currentFloor());
+    } else if (isFlyingWand) {
+        if (!m_game->canUsePhone()) {
+            showBattleFeedback(QString::fromUtf8("爱音手机只能在与紫色或黄色楼梯连通的楼层使用。"));
+            return;
+        }
+        bool ok = false;
+        const int target = QInputDialog::getInt(this, QString::fromUtf8("爱音手机"),
+            QString::fromUtf8("选择已到达的目标楼层（不可前往0、44、50层）："),
+            m_game->currentFloor(), 1, 49, 1, &ok);
+        if (!ok) return;
+        if (target == 44 || target == 50 || !m_game->hasVisitedFloor(target)) {
+            showBattleFeedback(QString::fromUtf8("手机只能传送到已经到过的楼层，且不能前往0、44、50层。"));
+            return;
+        }
+        captureUndoSnapshot();
+        if (!m_game->phoneTeleportToFloor(target)) {
+            if (!m_undoHistory.empty()) m_undoHistory.pop_back();
+            ui.undoButton->setEnabled(!m_undoHistory.empty());
+            showBattleFeedback(QString::fromUtf8("当前楼梯未连通，或目标楼层没有可用楼梯。"));
+            return;
+        }
+        m_game->player().UseItem(index);
+    } else if (isFloorTeleporter) {
+        bool ok = false;
+        const int target = QInputDialog::getInt(this, QString::fromUtf8("楼层传送器"),
+            QString::fromUtf8("选择目标楼层（0-50）："), m_game->currentFloor(), 0, 50, 1, &ok);
+        if (!ok) return;
+        captureUndoSnapshot();
+        m_game->player().UseItem(index);
+        while (m_game->currentFloor() < target) {
+            const int floorBefore = m_game->currentFloor();
+            m_game->goUpFloor(m_game->player().x, m_game->player().y, false);
+            if (m_game->currentFloor() == 42 && m_game->floor42KnightStoryPending())
+                showOpeningFloorStory(floorBefore, m_game->currentFloor());
+        }
+        while (m_game->currentFloor() > target)
+            m_game->goDownFloor(m_game->player().x, m_game->player().y, false);
+    } else if (isSymmetryFlyer) {
+        const int mirroredX = m_game->width() - 1 - m_game->player().x;
+        const int mirroredY = m_game->height() - 1 - m_game->player().y;
+        const int targetTile = m_game->tileAt(mirroredX, mirroredY);
+        if (targetTile == Tile_Floor) {
+            captureUndoSnapshot();
+            m_game->player().x = mirroredX;
+            m_game->player().y = mirroredY;
+            m_game->player().UseItem(index);
+        } else {
+            showBattleFeedback(QString::fromUtf8("对称位置不可到达。"));
+            return;
+        }
+    } else if (isFreezeMagic) {
+        captureUndoSnapshot();
+        m_game->player().UseItem(index);
+        msg += QString::fromUtf8("（冻结 %1 格岩浆）").arg(m_game->useFreezeMagic());
+    } else if (isBomb || isEarthquake) {
+        captureUndoSnapshot();
+        const int affected = isBomb ? m_game->useBomb() : m_game->useEarthquakeScroll();
+        m_game->player().UseItem(index);
+        msg += QString::fromUtf8("（影响 %1 个图块/敌人）").arg(affected);
+    } else if (isMagicKey) {
+        captureUndoSnapshot();
+        const int opened = m_game->useMagicKey();
+        m_game->player().UseItem(index);
+        msg += QString::fromUtf8("（开启 %1 扇黄门）").arg(opened);
+    } else {
+        captureUndoSnapshot();
+        const QString description = itemDescription;
+        m_game->player().UseItem(index);
+        msg += QStringLiteral(": ") + description;
+    }
+    showBattleFeedback(msg);
+    ui.mapWidget->update();
+    updateHUD();
+}
+
+void MainWindow::showInventory(int focusIndex)
 {
     auto& inv = m_game->player().Inventory();
     int count = m_game->player().InventoryCount();
@@ -690,6 +1078,8 @@ void MainWindow::showInventory()
             }
         }
     }
+    if (focusIndex >= 0 && focusIndex < count)
+        list->setCurrentRow(focusIndex);
     layout->addWidget(list);
 
     auto* btnBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg);
@@ -715,46 +1105,108 @@ void MainWindow::showInventory()
                             QString::fromStdString(item->GetName()),
                             getItemDescription(item)));
                 } else {
-                    captureUndoSnapshot();
                     const bool isFlyingWand = dynamic_cast<const FlyingWand*>(item) != nullptr;
                     const bool isFloorTeleporter = dynamic_cast<const FloorTeleporter*>(item) != nullptr;
+                    const bool isStairUpper = dynamic_cast<const StairUpper*>(item) != nullptr;
+                    const bool isStairLower = dynamic_cast<const StairLower*>(item) != nullptr;
                     const bool isSymmetryFlyer = dynamic_cast<const SymmetryFlyer*>(item) != nullptr;
                     const bool isBomb = dynamic_cast<const Bomb*>(item) != nullptr;
                     const bool isEarthquake = dynamic_cast<const EarthquakeScroll*>(item) != nullptr;
                     const bool isFreezeMagic = dynamic_cast<const FreezeMagic*>(item) != nullptr;
+                    const bool isMagicKey = dynamic_cast<const MagicKey*>(item) != nullptr;
                     QString msg = QString::fromUtf8("使用了 %1: %2")
                         .arg(QString::fromStdString(item->GetName()))
                         .arg(getItemDescription(item));
-                    if (isFlyingWand || isFloorTeleporter) {
+                    if (isStairUpper) {
+                        // 上楼器点击后立即执行传送，不留到下一次移动。
+                        const int floorBefore = m_game->currentFloor();
+                        captureUndoSnapshot();
+                        m_game->player().UseItem(idx);
+                        m_game->goUpFloor(m_game->player().x, m_game->player().y, false);
+                        m_game->player().stairUpUsed = false;
+                        showOpeningFloorStory(floorBefore, m_game->currentFloor());
+                    } else if (isStairLower) {
+                        if (m_game->currentFloor() <= 0) {
+                            QMessageBox::information(&dlg, QString::fromUtf8("无法使用"),
+                                QString::fromUtf8("当前已经在最底层，无法继续下楼。"));
+                            return;
+                        }
+                        const int floorBefore = m_game->currentFloor();
+                        captureUndoSnapshot();
+                        m_game->player().UseItem(idx);
+                        m_game->goDownFloor(m_game->player().x, m_game->player().y, false);
+                        // 下楼器在使用界面中立即执行传送，不把一次性状态留给下一次按键。
+                        m_game->player().stairDownUsed = false;
+                        showOpeningFloorStory(floorBefore, m_game->currentFloor());
+                    } else if (isFlyingWand) {
+                        if (!m_game->canUsePhone()) {
+                            QMessageBox::information(&dlg, QString::fromUtf8("手机无法使用"),
+                                QString::fromUtf8("爱音手机只能在与紫色或黄色楼梯连通的楼层使用。"));
+                            return;
+                        }
+                        bool ok = false;
+                        const int target = QInputDialog::getInt(&dlg, QString::fromUtf8("爱音手机"),
+                            QString::fromUtf8("选择已到达的目标楼层（不可前往0、44、50层）:"),
+                            m_game->currentFloor(), 1, 49, 1, &ok);
+                        if (!ok) return;
+                        if (target == 44 || target == 50 || !m_game->hasVisitedFloor(target)) {
+                            QMessageBox::information(&dlg, QString::fromUtf8("无法传送"),
+                                QString::fromUtf8("手机只能传送到已经到过的楼层，且不能前往0、44、50层。"));
+                            return;
+                        }
+                        captureUndoSnapshot();
+                        if (!m_game->phoneTeleportToFloor(target)) {
+                            if (!m_undoHistory.empty()) m_undoHistory.pop_back();
+                            ui.undoButton->setEnabled(!m_undoHistory.empty());
+                            QMessageBox::information(&dlg, QString::fromUtf8("无法传送"),
+                                QString::fromUtf8("当前楼梯未连通，或目标楼层没有可用楼梯。"));
+                            return;
+                        }
+                        m_game->player().UseItem(idx);
+                    } else if (isFloorTeleporter) {
                         bool ok = false;
                         const int target = QInputDialog::getInt(&dlg,
-                            item->GetName() == "楼层传送器" ? QString::fromUtf8("楼层传送器") : QString::fromUtf8("飞行魔杖"),
-                            QString::fromUtf8("选择目标楼层（1-50）:"), m_game->currentFloor(), 1, 50, 1, &ok);
+                            QString::fromUtf8("楼层传送器"),
+                            QString::fromUtf8("选择目标楼层（0-50）:"), m_game->currentFloor(), 0, 50, 1, &ok);
                         if (!ok) return;
+                        captureUndoSnapshot();
                         m_game->player().UseItem(idx);
-                        while (m_game->currentFloor() < target)
+                        while (m_game->currentFloor() < target) {
+                            const int floorBefore = m_game->currentFloor();
                             m_game->goUpFloor(m_game->player().x, m_game->player().y, false);
+                            if (m_game->currentFloor() == 42 && m_game->floor42KnightStoryPending())
+                                showOpeningFloorStory(floorBefore, m_game->currentFloor());
+                        }
                         while (m_game->currentFloor() > target)
                             m_game->goDownFloor(m_game->player().x, m_game->player().y, false);
                     } else if (isSymmetryFlyer) {
                         const int mirroredX = m_game->width() - 1 - m_game->player().x;
-                        const int mirroredY = m_game->player().y;
+                        const int mirroredY = m_game->height() - 1 - m_game->player().y;
                         const int targetTile = m_game->tileAt(mirroredX, mirroredY);
                         if (targetTile == Tile_Floor || targetTile == Tile_Item ||
                             targetTile == Tile_StairsUp || targetTile == Tile_StairsDown) {
+                            captureUndoSnapshot();
                             m_game->player().x = mirroredX;
                             m_game->player().y = mirroredY;
                             m_game->player().UseItem(idx);
                         }
                     } else if (isFreezeMagic) {
+                        captureUndoSnapshot();
                         m_game->player().UseItem(idx);
                         const int affected = m_game->useFreezeMagic();
                         msg += QString::fromUtf8("（冻结 %1 格岩浆）").arg(affected);
                     } else if (isBomb || isEarthquake) {
+                        captureUndoSnapshot();
                         const int affected = isBomb ? m_game->useBomb() : m_game->useEarthquakeScroll();
                         m_game->player().UseItem(idx);
                         msg += QString::fromUtf8("（影响 %1 个图块/敌人）").arg(affected);
+                    } else if (isMagicKey) {
+                        captureUndoSnapshot();
+                        const int opened = m_game->useMagicKey();
+                        m_game->player().UseItem(idx);
+                        msg += QString::fromUtf8("（开启 %1 扇黄门）").arg(opened);
                     } else {
+                        captureUndoSnapshot();
                         m_game->player().UseItem(idx);
                     }
                     updateHUD();
@@ -773,6 +1225,8 @@ void MainWindow::showInventory()
 
 void MainWindow::showPrisonTrapPrompt()
 {
+    if (m_game->storyShown("floor3_prison_prompt")) return;
+    m_game->markStoryShown("floor3_prison_prompt");
     showStoryMessage(QString::fromUtf8(
         "五个身影已经显现：长崎素世与四名魔法警卫将你围住！\n"
         "点击地图画面继续，查看事件对话。"));
@@ -780,25 +1234,27 @@ void MainWindow::showPrisonTrapPrompt()
 
 void MainWindow::showFloor3PrisonVisualNovel()
 {
+    if (m_game->storyShown("floor3_prison_dialogue")) return;
     const std::vector<VisualNovelPage> pages = {
         {QString::fromUtf8("千早爱音"),
          QString::fromUtf8("咦……这面墙后面，刚才明明什么都没有……"),
-         QStringLiteral(":/images/characters/portraits/anon.png"), QStringLiteral("#ff8fc7")},
+         QStringLiteral(":/images/characters/portraits/variants/anon_surprised.png"), QStringLiteral("#ff8fc7")},
         {QString::fromUtf8("长崎素世"),
          QString::fromUtf8("终于追上你了，爱音。你以为自己能平安通过这里吗？"),
-         QStringLiteral(":/images/characters/portraits/soyo.png"), QStringLiteral("#d9b6ff")},
+         QStringLiteral(":/images/characters/portraits/variants/soyo_witch_angry.png"), QStringLiteral("#d9b6ff")},
         {QString::fromUtf8("千早爱音"),
          QString::fromUtf8("素世？！你为什么会在这里？我们不是约好要一起离开的吗？"),
-         QStringLiteral(":/images/characters/portraits/anon.png"), QStringLiteral("#ff8fc7")},
+         QStringLiteral(":/images/characters/portraits/variants/anon_more_shocked.png"), QStringLiteral("#ff8fc7")},
         {QString::fromUtf8("长崎素世"),
          QString::fromUtf8("别再往前了。把她围起来——这一次，我不会再让你逃走。"),
-         QStringLiteral(":/images/characters/portraits/soyo.png"), QStringLiteral("#d9b6ff")},
+         QStringLiteral(":/images/characters/portraits/variants/soyo_witch_more_battle.png"), QStringLiteral("#d9b6ff")},
         {QString::fromUtf8("系统"),
          QString::fromUtf8("四名魔法警卫显现！夹击陷阱启动。\n点击“继续”承受冲击并返回二层。"),
-         QStringLiteral(":/images/characters/portraits/soyo.png"), QStringLiteral("#ffd66b")}
+         QStringLiteral(":/images/characters/portraits/marina.png"), QStringLiteral("#ffd66b")}
     };
 
     showVisualNovelDialogue(pages);
+    m_game->markStoryShown("floor3_prison_dialogue");
 
     // 对话全部播放完后才结算伤害并传送回二层，保留原版剧情节奏。
     if (m_game->floor3PrisonStoryPending()) {
@@ -869,6 +1325,9 @@ void MainWindow::showVisualNovelDialogue(const std::vector<VisualNovelPage>& pag
     next->setDefault(true);
     next->setFixedWidth(140);
     auto* buttonRow = new QHBoxLayout();
+    auto* pageCounter = new QLabel(&dlg);
+    pageCounter->setStyleSheet(QStringLiteral("color: #cdb4e8; font-size: 14px; font-weight: 700;"));
+    buttonRow->addWidget(pageCounter);
     buttonRow->addStretch();
     buttonRow->addWidget(next);
     boxLayout->addLayout(buttonRow);
@@ -879,20 +1338,32 @@ void MainWindow::showVisualNovelDialogue(const std::vector<VisualNovelPage>& pag
         name->setText(page.speaker);
         name->setStyleSheet(QStringLiteral("color: %1;").arg(page.accent));
         text->setText(page.text);
+        pageCounter->setText(QStringLiteral("%1 / %2").arg(pageIndex + 1).arg(pages.size()));
         const bool playerSpeaking = page.speaker.contains(QString::fromUtf8("爱音"));
         const QString leftPath = dialoguePortraitPath(playerSpeaking ? page.portrait
                                                 : QStringLiteral(":/images/characters/portraits/anon.png"));
         const QString rightPath = dialoguePortraitPath(playerSpeaking
             ? QStringLiteral(":/images/characters/portraits/soyo.png") : page.portrait);
-        const auto setPortrait = [](QLabel* target, const QString& path) {
+        const auto setPortrait = [&dlg](QLabel* target, const QString& path, bool active) {
             const QPixmap image(path);
-            if (!image.isNull())
+            if (!image.isNull()) {
                 target->setPixmap(image.scaled(target->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
-            else
+                // 当前说话者突出显示，另一侧降低亮度；每页切换时淡入，避免立绘突变。
+                auto* effect = new QGraphicsOpacityEffect(target);
+                target->setGraphicsEffect(effect);
+                effect->setOpacity(0.0);
+                auto* fade = new QPropertyAnimation(effect, "opacity", effect);
+                fade->setDuration(180);
+                fade->setStartValue(0.0);
+                fade->setEndValue(active ? 1.0 : 0.42);
+                fade->start(QAbstractAnimation::DeleteWhenStopped);
+            } else {
                 target->clear();
+                target->setGraphicsEffect(nullptr);
+            }
         };
-        setPortrait(leftPortrait, leftPath);
-        setPortrait(rightPortrait, rightPath);
+        setPortrait(leftPortrait, leftPath, playerSpeaking);
+        setPortrait(rightPortrait, rightPath, !playerSpeaking);
         next->setText(pageIndex + 1 == static_cast<int>(pages.size())
                           ? QString::fromUtf8("继续 ▶") : QString::fromUtf8("继续 ▶"));
     };
@@ -950,13 +1421,20 @@ bool MainWindow::showVisualNovelChoice(const QString& speaker, const QString& me
                                             : QStringLiteral(":/images/characters/portraits/anon.png"));
     const QString rightPath = dialoguePortraitPath(playerSpeaking
         ? QStringLiteral(":/images/characters/portraits/soyo.png") : portraitPath);
-    const auto setPortrait = [](QLabel* target, const QString& path) {
+    const auto setPortrait = [&dlg](QLabel* target, const QString& path, bool active) {
         const QPixmap image(path);
-        if (!image.isNull())
+        if (!image.isNull()) {
             target->setPixmap(image.scaled(target->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+            auto* effect = new QGraphicsOpacityEffect(target);
+            target->setGraphicsEffect(effect);
+            effect->setOpacity(active ? 1.0 : 0.42);
+        } else {
+            target->clear();
+            target->setGraphicsEffect(nullptr);
+        }
     };
-    setPortrait(leftPortrait, leftPath);
-    setPortrait(rightPortrait, rightPath);
+    setPortrait(leftPortrait, leftPath, playerSpeaking);
+    setPortrait(rightPortrait, rightPath, !playerSpeaking);
     stage->addWidget(leftPortrait, 0, Qt::AlignLeft | Qt::AlignBottom);
     stage->addStretch(1);
     stage->addWidget(rightPortrait, 0, Qt::AlignRight | Qt::AlignBottom);
@@ -996,43 +1474,218 @@ bool MainWindow::showVisualNovelChoice(const QString& speaker, const QString& me
 
 void MainWindow::showOpeningPrisonStory()
 {
+    if (m_prisonReturnStoryShown || m_game->storyShown("floor3_prison_return")) return;
+    m_prisonReturnStoryShown = true;
+    m_game->markStoryShown("floor3_prison_return");
     showVisualNovelDialogue({
         {QString::fromUtf8("旁白"),
          QString::fromUtf8("夹击发生了！你受到600点伤害，攻击和防御被压到10。"),
          QStringLiteral(":/images/characters/portraits/anon.png"), QStringLiteral("#ffd66b")},
         {QString::fromUtf8("千早爱音"),
          QString::fromUtf8("呜……这里是二层牢房？三层的怪物也都不见了……"),
-         QStringLiteral(":/images/characters/portraits/anon.png"), QStringLiteral("#ff8fc7")},
+         QStringLiteral(":/images/characters/portraits/variants/anon_sad.png"), QStringLiteral("#ff8fc7")},
         {QString::fromUtf8("米歇尔"),
          QString::fromUtf8("想恢复状态，就来和我对话两次。铁剑在5层，铁盾在9层。"),
-         QStringLiteral(":/images/characters/portraits/michelle.png"), QStringLiteral("#ff9fbc")}
+         QStringLiteral(":/images/characters/portraits/variants/michelle_caring.png"), QStringLiteral("#ff9fbc")}
     });
+}
+
+void MainWindow::showFloor20VampireStoryIfNeeded(int floorBefore)
+{
+    if (floorBefore != 20 || m_game->currentFloor() != 20 ||
+        m_game->tileAt(7, 10) != Tile_DoorMagic ||
+        m_game->floor20VampireStoryShown())
+        return;
+    const Monster* vampire = m_game->monsterAt(7, 7);
+    if (!vampire || vampire->GetName() != "凑友希那·吸血鬼") return;
+    m_game->markFloor20VampireStoryShown();
+    showVisualNovelDialogue({
+        {QString::fromUtf8("旁白"),
+         QString::fromUtf8("红门刚刚闭合，九只大蝙蝠在舞台中央聚成一个身影。"),
+         QStringLiteral(":/images/characters/portraits/marina.png"), QStringLiteral("#ffd66b")},
+        {QString::fromUtf8("千早爱音"),
+         QString::fromUtf8("这不是普通的蝙蝠……是凑友希那的吸血鬼形态！"),
+         QStringLiteral(":/images/characters/portraits/variants/anon_surprised.png"), QStringLiteral("#ff8fc7")},
+        {QString::fromUtf8("旁白"),
+         QString::fromUtf8("击败吸血鬼后，花门才会解除封锁。十字架可以让对吸血鬼的攻击翻倍。"),
+         QStringLiteral(":/images/characters/portraits/variants/yukina_new_stage_surprised.png"), QStringLiteral("#b5c8ff")}
+    });
+}
+
+void MainWindow::showFloor33TrapStoryIfNeeded(int floorBefore)
+{
+    if (floorBefore != 33 || m_game->currentFloor() != 33 ||
+        !m_game->floor33TrapTriggered() ||
+        m_game->player().x != 11 || m_game->player().y != 7 ||
+        m_floor33TrapStoryShown || m_game->storyShown("floor33_trap_dialogue"))
+        return;
+    m_floor33TrapStoryShown = true;
+    m_game->markStoryShown("floor33_trap_dialogue");
+    showVisualNovelDialogue({
+        {QString::fromUtf8("旁白"),
+         QString::fromUtf8("你踏入了舞台中央，左右两侧的花门同时降下。"),
+         QStringLiteral(":/images/characters/portraits/marina.png"), QStringLiteral("#ffd66b")},
+        {QString::fromUtf8("千早爱音"),
+         QString::fromUtf8("四个角落的怪物……必须全部击败，花门才会打开！"),
+         QStringLiteral(":/images/characters/portraits/variants/anon_extra_worried.png"), QStringLiteral("#ff8fc7")}
+    });
+}
+
+void MainWindow::showFloor32KnightStoryIfNeeded(int floorBefore)
+{
+    if (floorBefore != 32 || m_game->currentFloor() != 32 ||
+        !m_game->floor32KnightStoryPending())
+        return;
+    if (!m_game->storyShown("floor32_knight_dialogue")) {
+        m_game->markStoryShown("floor32_knight_dialogue");
+        showVisualNovelDialogue({
+            {QString::fromUtf8("旁白"),
+             QString::fromUtf8("小长崎素世从右上角 (12,2) 的黄色楼梯出现，沿地板一步步走来，直接撞向爱音。"),
+             QStringLiteral(":/images/characters/portraits/marina.png"), QStringLiteral("#ffd66b")},
+            {QString::fromUtf8("骑士队长"),
+             QString::fromUtf8("米歇尔已经被抓回二楼了！你别想再追上她！"),
+             QStringLiteral(":/images/characters/portraits/variants/soyo_child_angry.png"), QStringLiteral("#b58cff")},
+            {QString::fromUtf8("千早爱音"),
+             QString::fromUtf8("来吧！就算你先攻，我也不会让开！"),
+             QStringLiteral(":/images/characters/portraits/variants/anon_extra_determined.png"), QStringLiteral("#ff8fc7")}
+        });
+    }
+    const int damage = m_game->resolveFloor32KnightStory();
+    if (damage > 0)
+        showBattleFeedback(QString::fromUtf8("骑士队长先攻，造成 %1 点伤害。").arg(damage));
+    if (m_game->player().hp <= 0) {
+        gameOver();
+        return;
+    }
+
+    std::vector<std::string> log;
+    const auto result = m_game->fightAt(7, 10, log);
+    showBattleFeedback(QString::fromStdString(summarizeBattleLog(log)));
+    if (result == Game::Fight_PlayerWin) {
+        showVisualNovelDialogue({
+            {QString::fromUtf8("骑士队长"),
+             QString::fromUtf8("哼！这次算你赢了！"),
+             QStringLiteral(":/images/characters/portraits/variants/soyo_child_sad.png"), QStringLiteral("#b58cff")},
+            {QString::fromUtf8("旁白"),
+             QString::fromUtf8("小素世转身沿来时的地板通道逃回右上黄色楼梯，楼梯始终没有消失。"),
+             QStringLiteral(":/images/characters/portraits/marina.png"), QStringLiteral("#ffd66b")}
+        });
+        startMonsterMovementAnimation();
+    } else if (result == Game::Fight_PlayerDead) {
+        gameOver();
+    }
+    ui.mapWidget->update();
+    updateHUD();
+}
+
+void MainWindow::showFloor32KnightStoryAfterMovement(int floorBefore)
+{
+    if (floorBefore != 32 || m_game->currentFloor() != 32 ||
+        !m_game->floor32KnightStoryPending())
+        return;
+    if (ui.mapWidget->isMonsterMoving()) {
+        m_floor32KnightStoryFloor = floorBefore;
+        return;
+    }
+    showFloor32KnightStoryIfNeeded(floorBefore);
 }
 
 void MainWindow::showOpeningFloorStory(int fromFloor, int toFloor)
 {
     (void)fromFloor;
+    if (toFloor < 2 || toFloor > 50)
+        return;
+
+    // 42层首次抵达时，骑士队长逃跑后被魔王抓住，四名魔法警卫完成夹击；
+    // 魔王离开后玩家仍留在42层。该剧情由 Game 状态保证只触发一次。
+    if (toFloor == 42 && m_game->floor42KnightStoryPending() &&
+        !m_game->storyShown("floor42_knight_capture")) {
+        m_game->markStoryShown("floor42_knight_capture");
+        m_game->markStoryShown("floor_opening_42");
+        m_floorStoriesShown.insert(toFloor);
+        showVisualNovelDialogue({
+            {QString::fromUtf8("旁白"),
+             QString::fromUtf8("骑士队长转身逃回黄色楼梯，王座后的阴影却突然压了下来。"),
+             QStringLiteral(":/images/characters/portraits/marina.png"), QStringLiteral("#ffd66b")},
+            {QString::fromUtf8("魔王"),
+             QString::fromUtf8("抓住她。四名魔法警卫，从左右两侧夹击！"),
+             QStringLiteral(":/images/characters/portraits/variants/soyo_witch_extra_commanding.png"), QStringLiteral("#b58cff")},
+            {QString::fromUtf8("千早爱音"),
+             QString::fromUtf8("骑士队长被抓住了……魔法警卫已经把我围住！"),
+             QStringLiteral(":/images/characters/portraits/variants/anon_worried.png"), QStringLiteral("#ff8fc7")},
+            {QString::fromUtf8("旁白"),
+             QString::fromUtf8("魔王转身离开王座，夹击暂时解除。你仍站在第四十二层，前方的道路重新显现。"),
+             QStringLiteral(":/images/characters/portraits/marina.png"), QStringLiteral("#ffd66b")}
+        });
+        m_game->resolveFloor42KnightStory();
+        ui.mapWidget->update();
+        updateHUD();
+        return;
+    }
+
+    const std::string openingStoryKey = "floor_opening_" + std::to_string(toFloor);
+    if (m_floorStoriesShown.count(toFloor) != 0 || m_game->storyShown(openingStoryKey))
+        return;
+
+    std::vector<VisualNovelPage> pages;
     if (toFloor == 2 && !m_floor2OpeningShown) {
         m_floor2OpeningShown = true;
-        showVisualNovelDialogue({
+        pages = {
             {QString::fromUtf8("千早爱音"),
              QString::fromUtf8("这里就是魔塔二层……听说被夺走的铁剑和铁盾分别藏在更高的楼层。"),
-             QStringLiteral(":/images/characters/portraits/anon.png"), QStringLiteral("#ff8fc7")},
-            {QString::fromUtf8("旁白"),
-             QString::fromUtf8("先去找牢房里的米歇尔，她知道通往暗道的方法。"),
-             QStringLiteral(":/images/characters/portraits/michelle.png"), QStringLiteral("#ffd66b")}
-        });
-    } else if (fromFloor == 2 && toFloor == 3 && !m_floor3OpeningShown) {
+             QStringLiteral(":/images/characters/portraits/variants/anon_calm.png"), QStringLiteral("#ff8fc7")},
+        {QString::fromUtf8("旁白"),
+         QString::fromUtf8("先去找牢房里的米歇尔，她知道通往暗道的方法。"),
+             QStringLiteral(":/images/characters/portraits/variants/michelle_wave.png"), QStringLiteral("#ffd66b")}
+        };
+    } else if (toFloor == 3 && !m_floor3OpeningShown) {
         m_floor3OpeningShown = true;
-        showVisualNovelDialogue({
+        pages = {
             {QString::fromUtf8("千早爱音"),
              QString::fromUtf8("三层的空气好沉重……前方似乎有守卫巡逻。"),
-             QStringLiteral(":/images/characters/portraits/anon.png"), QStringLiteral("#ff8fc7")},
+             QStringLiteral(":/images/characters/portraits/variants/anon_worried.png"), QStringLiteral("#ff8fc7")},
             {QString::fromUtf8("旁白"),
              QString::fromUtf8("小心前进，别被他们发现。"),
-             QStringLiteral(":/images/characters/portraits/soyo.png"), QStringLiteral("#ffd66b")}
-        });
+             QStringLiteral(":/images/characters/portraits/variants/soyo_school_serious.png"), QStringLiteral("#ffd66b")}
+        };
+    } else {
+        QString location;
+        QString warning;
+        QString portrait = QStringLiteral(":/images/characters/portraits/marina.png");
+        QString playerPortrait = QStringLiteral(":/images/characters/portraits/variants/anon_calm.png");
+        switch (toFloor) {
+        case 4: location = QStringLiteral("商店层的灯牌在黑暗里亮起。凛凛子似乎正在准备新的交易。"); warning = QStringLiteral("先确认钥匙和金币，再决定要不要购买强化。"); portrait = QStringLiteral(":/images/characters/portraits/ririko.png"); break;
+        case 5: location = QStringLiteral("第五层传来熟悉的金属声——铁剑就在这附近。"); warning = QStringLiteral("拿回装备，才能继续追上素世的脚步。"); playerPortrait = QStringLiteral(":/images/characters/portraits/variants/anon_confident.png"); break;
+        case 9: location = QStringLiteral("第九层的冷风穿过长廊，铁盾的气息就在前方。"); warning = QStringLiteral("机关门不会白白打开，留意周围的守卫。"); playerPortrait = QStringLiteral(":/images/characters/portraits/variants/anon_worried.png"); break;
+        case 10: location = QStringLiteral("第十层的花门紧闭，舞台中央传来椎名立希的脚步声。"); warning = QStringLiteral("击败侧翼怪物，才能解开上下花门。"); portrait = QStringLiteral(":/images/characters/portraits/taki_stage.png"); break;
+        case 20: location = QStringLiteral("第二十层的石壁刻着古老的乐谱，魔法守卫在暗处等待。"); warning = QStringLiteral("不要忽视每一扇机关门，它们都对应着守卫。"); playerPortrait = QStringLiteral(":/images/characters/portraits/variants/anon_worried.png"); break;
+        case 24:
+            location = QStringLiteral("第二十四层的红门像一道被封存的舞台幕墙，门后没有普通楼梯。");
+            warning = m_game->princessDollPassageUnlocked()
+                ? QStringLiteral("隐藏楼梯已经显现，穿过红门后登上正中的楼梯即可直达终幕。")
+                : QStringLiteral("先去二十六层面对公主娃娃，回来后红门上方才会显现通往终幕的道路。");
+            playerPortrait = QStringLiteral(":/images/characters/portraits/variants/anon_surprised.png");
+            break;
+        case 25: location = QStringLiteral("第二十五层的大厅回荡着大法师的低语。"); warning = QStringLiteral("这里开始，敌人的防御会明显提升。"); portrait = QStringLiteral(":/images/characters/portraits/sakiko_stage.png"); break;
+        case 30: location = QStringLiteral("第三十层的牢门后传来求救声，像是有人被困在舞台后台。"); warning = QStringLiteral("找到开门的钥匙，再决定是否深入。"); playerPortrait = QStringLiteral(":/images/characters/portraits/variants/anon_worried.png"); break;
+        case 40: location = QStringLiteral("第四十层通往异界的入口终于显现，星河在墙后缓慢流动。"); warning = QStringLiteral("秘宝是开启后续道路的关键。"); playerPortrait = QStringLiteral(":/images/characters/portraits/variants/anon_confident.png"); break;
+        case 44: location = QStringLiteral("异界深处的第四十四层没有熟悉的方向感，只有不断变化的舞台。"); warning = QStringLiteral("这里不与普通楼梯相连，只能使用上楼器或下楼器进入和离开。"); playerPortrait = QStringLiteral(":/images/characters/portraits/variants/anon_surprised.png"); break;
+        case 49: location = QStringLiteral("第四十九层的王座前，魔龙守卫挡住了最后的道路。"); warning = QStringLiteral("神圣剑、神圣盾或屠龙匕首，至少准备一样。"); playerPortrait = QStringLiteral(":/images/characters/portraits/variants/anon_extra_determined.png"); portrait = QStringLiteral(":/images/characters/portraits/soyo_stage.png"); break;
+        case 50: location = QStringLiteral("第五十层的顶灯全部亮起，长崎素世正在王座尽头等你。"); warning = QStringLiteral("走完最后一段路，完成这场属于 MyGO!!!!! 与 Ave Mujica 的演出。"); portrait = QStringLiteral(":/images/characters/portraits/variants/soyo_witch_calm.png"); break;
+        default:
+            // 未配置专属剧情的楼层保持原版静默，不显示通用旁白。
+            return;
+        }
+        pages = {
+            {QString::fromUtf8("千早爱音"), location,
+             playerPortrait, QStringLiteral("#ff8fc7")},
+            {QString::fromUtf8("旁白"), warning, portrait, QStringLiteral("#ffd66b")}
+        };
     }
+
+    m_game->markStoryShown(openingStoryKey);
+    m_floorStoriesShown.insert(toFloor);
+    if (!pages.empty()) showVisualNovelDialogue(pages);
 }
 
 void MainWindow::showNPCDialog(int x, int y)
@@ -1043,11 +1696,20 @@ void MainWindow::showNPCDialog(int x, int y)
     Player& p = m_game->player();
 
     // NPC 对话使用与地图图块相同的角色头像，保持角色身份连续。
-    const QString npcPortrait = npc->IsTrader()
-        ? QStringLiteral(":/images/characters/portraits/ririko.png")
-        : (npc->GetName() == "小偷"
-            ? QStringLiteral(":/images/characters/portraits/michelle.png")
-            : QStringLiteral(":/images/characters/portraits/marina.png"));
+    QString npcPortrait;
+    if (npc->IsTrader()) {
+        npcPortrait = QStringLiteral(":/images/characters/portraits/ririko.png");
+    } else if (npc->GetName() == "小偷" || npc->GetName() == "米歇尔") {
+        // 米歇尔在牢笼、离场和终幕分别使用不同动作，保持剧情状态连续。
+        if (m_game->currentFloor() == 2 && x == 12 && y == 12)
+            npcPortrait = QStringLiteral(":/images/characters/portraits/variants/michelle_caring.png");
+        else if (!npc->HasGivenReward())
+            npcPortrait = QStringLiteral(":/images/characters/portraits/variants/michelle_wave.png");
+        else
+            npcPortrait = QStringLiteral(":/images/characters/portraits/variants/michelle_confident.png");
+    } else {
+        npcPortrait = QStringLiteral(":/images/characters/portraits/marina.png");
+    }
     auto showNpcInfo = [&](const QString& title, const QString& text) {
         showVisualNovelDialogue({
             {title, text, npcPortrait, QStringLiteral("#ffb5d7")}
@@ -1057,7 +1719,7 @@ void MainWindow::showNPCDialog(int x, int y)
     // 原版关键 NPC 事件（保留一次性状态）。
     const int classicId = npc->ClassicId();
     if (!npc->HasGivenReward() && classicId == 3) {
-        npc->Interact(p); // 领取怪物手册（主题名称：灯的歌词本）
+        npc->Interact(p); // 领取三层专属道具“怪物手册”
         showNpcInfo(QString::fromUtf8("怪物手册"),
             QString::fromUtf8("这本怪物手册交给你。\n它能查看本层怪物的能力。"));
         updateHUD();
@@ -1071,14 +1733,22 @@ void MainWindow::showNPCDialog(int x, int y)
         updateHUD();
         return;
     }
-    if (!npc->HasGivenReward() && classicId == 22) {
-        if (showVisualNovelChoice(QString::fromUtf8("公主"),
-                                  QString::fromUtf8("谢谢你救了我！现在前往魔塔顶层吗？"),
-                                  npcPortrait, QString::fromUtf8("前往顶层"))) {
-            npc->SetGiven(true);
-            while (m_game->currentFloor() < 50) m_game->goUpFloor(p.x, p.y, false);
-            showNpcInfo(QString::fromUtf8("公主"), QString::fromUtf8("我会在魔王身边等你。"));
-        }
+    if (!npc->HasGivenReward() && classicId == 22 && m_game->currentFloor() == 26) {
+        // 原版26层并不存在真正的公主：这里是洋娃娃。完成对话后，
+        // 24层红门上方显现直通50层的隐藏楼梯，而不是直接传送。
+        npc->SetGiven(true);
+        m_game->unlockPrincessDollPassage();
+        showVisualNovelDialogue({
+            {QString::fromUtf8("公主娃娃"),
+             QString::fromUtf8("谢谢你打开牢门……我终于自由了。"),
+             npcPortrait, QStringLiteral("#ffb5d7")},
+            {QString::fromUtf8("千早爱音"),
+             QString::fromUtf8("咦？等等……这只是一个洋娃娃！"),
+             QStringLiteral(":/images/characters/portraits/variants/anon_surprised.png"), QStringLiteral("#ff8fc7")},
+            {QString::fromUtf8("旁白"),
+             QString::fromUtf8("24层的墙体发生变化，红门后的隐藏通道已经开启。"),
+             QStringLiteral(":/images/characters/portraits/marina.png"), QStringLiteral("#ffd66b")}
+        });
         updateHUD();
         return;
     }
@@ -1109,13 +1779,83 @@ void MainWindow::showNPCDialog(int x, int y)
         updateHUD();
         return;
     }
+    if (!npc->HasGivenReward() && classicId == 26 && m_game->currentFloor() == 35) {
+        // 35层米歇尔剧情：对话完成后她离开魔龙层，前往50层终幕，
+        // 同时打开魔龙房间暗道。所有文字统一使用 Galgame 对话界面。
+        npc->SetGiven(true);
+        showVisualNovelDialogue({
+            {QString::fromUtf8("米歇尔"),
+             QString::fromUtf8("我来帮你打开魔龙房间的暗道。等我离开后，去50层终幕找我。"),
+             npcPortrait, QStringLiteral("#ffb5d7")},
+            {QString::fromUtf8("千早爱音"),
+             QString::fromUtf8("米歇尔，你要先去50层吗？终幕见！"),
+             QStringLiteral(":/images/characters/portraits/variants/anon_confident.png"), QStringLiteral("#ff8fc7")}
+        });
+        m_game->completeFloor35MichelleStory();
+        ui.mapWidget->update();
+        updateHUD();
+        return;
+    }
+    if (!npc->HasGivenReward() && classicId == 47 && m_game->currentFloor() == 50) {
+        // 终幕揭开伪装：50层的米歇尔其实是长崎素世。
+        npc->SetGiven(true);
+        showVisualNovelDialogue({
+            {QString::fromUtf8("米歇尔"),
+             QString::fromUtf8("一路辛苦了，爱音。米歇尔只是我戴上的伪装。"),
+             npcPortrait, QStringLiteral("#ffb5d7")},
+            {QString::fromUtf8("长崎素世"),
+             QString::fromUtf8("现在，欢迎来到真正的终幕——我是长崎素世。"),
+             QStringLiteral(":/images/characters/portraits/variants/soyo_witch_calm.png"), QStringLiteral("#b58cff")},
+            {QString::fromUtf8("千早爱音"),
+             QString::fromUtf8("素世……原来你一直就在我身边！"),
+             QStringLiteral(":/images/characters/portraits/variants/anon_more_shocked.png"), QStringLiteral("#ff8fc7")}
+        });
+        m_game->revealFloor50MichelleIdentity();
+        ui.mapWidget->update();
+        updateHUD();
+        return;
+    }
     if (classicId == 13) {
+        if (npc->GetName() == "米歇尔" && !m_game->canReleaseMichelleFromCage()) {
+            showVisualNovelDialogue({
+                {QString::fromUtf8("米歇尔"),
+                 QString::fromUtf8("牢门外还有中级守卫……先击败守卫，再来救我出去。"),
+                 npcPortrait, QStringLiteral("#ffb5d7")},
+                {QString::fromUtf8("千早爱音"),
+                 QString::fromUtf8("我明白了。等我清理完守卫就回来。"),
+                 QStringLiteral(":/images/characters/portraits/variants/anon_worried.png"), QStringLiteral("#ff8fc7")}
+            });
+            updateHUD();
+            return;
+        }
+        // 29层剧情后米歇尔会在二层右下角 (12,12) 返场；这段对话只负责
+        // 提示队伍前往35层开启暗道，不应复用开局(4,8)小偷的两次对话流程。
+        if (npc->GetName() == "米歇尔" && m_game->currentFloor() == 2 &&
+            (x == 12 && y == 12)) {
+            npc->SetGiven(true);
+            m_game->activateFloor35Michelle();
+            showVisualNovelDialogue({
+                {QString::fromUtf8("米歇尔"),
+                 QString::fromUtf8("大家到35层集合吧，我会在那里打开魔龙房间的暗道。"),
+                 npcPortrait, QStringLiteral("#ffb5d7")},
+                {QString::fromUtf8("千早爱音"),
+                 QString::fromUtf8("收到！我们现在就去35层，打开通往更深处的道路。"),
+                 QStringLiteral(":/images/characters/portraits/variants/anon_confident.png"), QStringLiteral("#ff8fc7")}
+            });
+            ui.mapWidget->update();
+            updateHUD();
+            return;
+        }
         // 原版2层小偷必须对话两次：第一次给出铁剑/铁盾楼层，
         // 第二次才解除三层陷阱造成的虚弱状态。
         if (!npc->HasGivenReward()) {
             // 对话完成后只打开小偷左侧的原版暗墙。
             m_game->setTile(3, 8, Tile_Floor);
             npc->SetGiven(true);
+            // 只有15层剧情后回来的“米歇尔”才会在此处被救出并前往35层；
+            // 开局二层的普通小偷对话不会提前触发魔龙剧情。
+            if (npc->GetName() == "米歇尔")
+                m_game->activateFloor35Michelle();
             showStoryMessage(QString::fromUtf8("铁剑在5层，铁盾在9层。先去把它们找回来。"));
 
             // 米歇尔完成第一次情报对话后走到二层下楼梯处，短暂停留后离场。
@@ -1166,6 +1906,63 @@ void MainWindow::showNPCDialog(int x, int y)
                 if (std::abs(dx) + std::abs(dy) == 1 && m_game->tileAt(x + dx, y + dy) == Tile_DarkWall)
                     m_game->setTile(x + dx, y + dy, Tile_Floor);
         npc->SetGiven(true);
+
+        // 大章鱼所在的15层：米歇尔完成剧情后打开左侧暗墙并前往29层。
+        if (classicId == 14 && m_game->currentFloor() == 15) {
+            showVisualNovelDialogue({
+                {QString::fromUtf8("米歇尔"),
+                 QString::fromUtf8("大章鱼已经被击败了。我先去29层等你，之后再一起前往35层吧。"),
+                 npcPortrait, QStringLiteral("#ffb5d7")},
+                {QString::fromUtf8("千早爱音"),
+                 QString::fromUtf8("一路小心，等我在35层和你会合！"),
+                 QStringLiteral(":/images/characters/portraits/variants/anon_confident.png"), QStringLiteral("#ff8fc7")}
+            });
+            m_game->sendMichelleToFloor29();
+            FloorData& floor = m_game->currentFloorData();
+            const int npcKey = m_game->posKey(x, y);
+            floor.npcs.erase(npcKey);
+            floor.map[npcKey] = floor.items.count(npcKey) ? Tile_Item : Tile_Floor;
+            ui.mapWidget->update();
+            updateHUD();
+            return;
+        }
+
+        // 29层的米歇尔是一次性剧情 NPC：完成对话后离场，并移除她正下方
+        // 的墙（原版暗道入口）。该事件必须在对话窗口关闭后才清除 NPC，
+        // 避免立绘在剧情尚未结束时突然消失。
+        if (classicId == 25 && m_game->currentFloor() == 29) {
+            if (m_game->tileAt(x, y + 1) == Tile_Wall ||
+                m_game->tileAt(x, y + 1) == Tile_DarkWall) {
+                m_game->setTile(x, y + 1, Tile_Floor);
+            }
+
+            std::vector<VisualNovelPage> pages;
+            for (const auto& line : npc->Dialog()) {
+                pages.push_back({QString::fromStdString(npc->GetName()),
+                                 QString::fromStdString(line), npcPortrait,
+                                 QStringLiteral("#ffb5d7")});
+            }
+            if (pages.empty()) {
+                pages.push_back({QString::fromStdString(npc->GetName()),
+                                 QString::fromUtf8("暗道已经打开了。"), npcPortrait,
+                                 QStringLiteral("#ffb5d7")});
+            }
+            showVisualNovelDialogue(pages);
+
+            // 29层剧情结束后，米歇尔回到二层右下角 (12,12)，等待玩家再次救出。
+            m_game->returnMichelleToFloor2Cage();
+
+            FloorData& floor = m_game->currentFloorData();
+            const int npcKey = m_game->posKey(x, y);
+            auto it = floor.npcs.find(npcKey);
+            if (it != floor.npcs.end() && it->second.ClassicId() == classicId) {
+                floor.npcs.erase(it);
+                floor.map[npcKey] = floor.items.count(npcKey) ? Tile_Item : Tile_Floor;
+            }
+            ui.mapWidget->update();
+            updateHUD();
+            return;
+        }
     }
 
     // 交易 NPC：每个 NPC 只允许完成一次交易，状态随存档保存。
@@ -1218,11 +2015,15 @@ void MainWindow::showNPCDialog(int x, int y)
     }
 
     // 普通NPC（非交易或交易已完成）
+    const std::string npcStoryKey = "npc_dialogue_" + std::to_string(m_game->currentFloor())
+        + "_" + std::to_string(x) + "_" + std::to_string(y);
+    if (m_game->storyShown(npcStoryKey)) return;
     bool hadReward = !npc->HasGivenReward();
     std::string reply = npc->Interact(p);
 
     if (hadReward && npc->HasGivenReward()) {
         showNpcInfo(QString::fromStdString(npc->GetName()), QString::fromStdString(reply));
+        m_game->markStoryShown(npcStoryKey);
     } else {
         const auto& dialog = npc->Dialog();
         std::vector<VisualNovelPage> pages;
@@ -1236,6 +2037,7 @@ void MainWindow::showNPCDialog(int x, int y)
                              QString::fromStdString(reply), npcPortrait,
                              QStringLiteral("#ffb5d7")});
         showVisualNovelDialogue(pages);
+        m_game->markStoryShown(npcStoryKey);
     }
 }
 
@@ -1246,9 +2048,80 @@ void MainWindow::showShopDialog(int x, int y)
 
     Player& p = m_game->player();
 
+    // 4/12/32/46 层是可重复购买的原版属性商店，必须优先于一次性兑换商人判断。
+    if (shop->classicShopFloor > 0 && shop->classicShopFloor != 28) {
+        const ClassicShopOffer offer = classicShopOfferForFloor(shop->classicShopFloor, p.shopUseCount);
+        QDialog dlg(this);
+        dlg.setWindowTitle(QString::fromUtf8("属性商店"));
+        dlg.setFixedSize(460, 420);
+        auto* layout = new QVBoxLayout(&dlg);
+        layout->addWidget(new QLabel(QString::fromUtf8("原版商店：全局第 %1 次购买价格 %2 金币").arg(p.shopUseCount + 1).arg(offer.price), &dlg));
+        struct Offer { QString name; QString effect; std::function<void()> apply; };
+        const Offer offers[] = {
+            {QString::fromUtf8("生命值"), QString::fromUtf8("+%1").arg(offer.hp), [&]{ p.hp += offer.hp; }},
+            {QString::fromUtf8("攻击力"), QString::fromUtf8("+%1").arg(offer.atk), [&]{ p.atk += offer.atk; }},
+            {QString::fromUtf8("防御力"), QString::fromUtf8("+%1").arg(offer.def), [&]{ p.def += offer.def; }}
+        };
+        bool purchased = false;
+        for (const auto& item : offers) {
+            // 价格直接显示在每个购买按钮上，避免玩家还要回看顶部说明。
+            const QString buttonText = QString::fromUtf8("购买 %1（%2）\n当前价格：%3 金币")
+                .arg(item.name, item.effect).arg(offer.price);
+            auto* button = new QPushButton(buttonText, &dlg);
+            button->setMinimumHeight(52);
+            button->setEnabled(p.gold >= offer.price);
+            QObject::connect(button, &QPushButton::clicked, &dlg, [this, &dlg, &p, &purchased, offer, item] {
+                captureUndoSnapshot();
+                p.gold -= offer.price;
+                item.apply();
+                ++p.shopUseCount;
+                purchased = true;
+                dlg.accept();
+            });
+            layout->addWidget(button);
+        }
+        auto* leave = new QPushButton(QString::fromUtf8("离开"), &dlg);
+        QObject::connect(leave, &QPushButton::clicked, &dlg, &QDialog::reject);
+        layout->addWidget(leave);
+        applyRuntimeArtSkin(dlg);
+        dlg.exec();
+        // classicPurchaseCount 仅兼容旧存档，不参与属性商店是否可再次购买的判定。
+        (void)purchased;
+        updateHUD();
+        return;
+    }
+
     // 原版固定兑换商人：钥匙数量与价格保持 50 层魔塔配置。
     const int classicId = shop->classicNpcId;
     const QString shopPortrait = QStringLiteral(":/images/characters/portraits/ririko.png");
+    if (classicId == 24) {
+        // 28层商人是收购商：黄色钥匙可无限次出售，每把100金币。
+        const int yellowKeys = p.KeyCount(KeyType::Green);
+        if (yellowKeys <= 0) {
+            showVisualNovelDialogue({
+                {QString::fromUtf8("凛凛子"),
+                 QString::fromUtf8("带黄色Live票来，我会按每把100金币无限收购。"),
+                 shopPortrait, QStringLiteral("#ffb5d7")}
+            });
+            updateHUD();
+            return;
+        }
+        const bool accepted = showVisualNovelChoice(QString::fromUtf8("凛凛子"),
+            QString::fromUtf8("出售黄色Live票 ×1\n获得：100 金币\n当前黄色Live票：%1\n无上限")
+                .arg(yellowKeys), shopPortrait, QString::fromUtf8("出售"));
+        if (accepted) {
+            captureUndoSnapshot();
+            p.UseKey(KeyType::Green);
+            p.gold += 100;
+            showVisualNovelDialogue({
+                {QString::fromUtf8("凛凛子"),
+                 QString::fromUtf8("收购完成，获得100金币。下次还可以继续出售。"),
+                 shopPortrait, QStringLiteral("#ffb5d7")}
+            });
+        }
+        updateHUD();
+        return;
+    }
     if (shop->classicPurchaseCount > 0) {
         showVisualNovelDialogue({
             {QString::fromUtf8("凛凛子"),
@@ -1269,7 +2142,8 @@ void MainWindow::showShopDialog(int x, int y)
     switch (classicId) {
     case 7:  offer = {QString::fromUtf8("蓝色Live票 ×1"), 50, [&] { p.AddKey(KeyType::Blue); }}; break;
     case 8:  offer = {QString::fromUtf8("黄色Live票 ×5"), 50, [&] { p.AddKey(KeyType::Green, 5); }}; break;
-    case 9:  offer = {QString::fromUtf8("红色Live票 ×5"), 800, [&] { p.AddKey(KeyType::Red, 5); }}; break;
+    case 9:  offer = {QString::fromUtf8("红色Live票 ×1"), 800, [&] { p.AddKey(KeyType::Red); }}; break;
+    case 16: offer = {QString::fromUtf8("红色Live票 ×1"), 800, [&] { p.AddKey(KeyType::Red); }}; break;
     case 11: offer = {QString::fromUtf8("蓝色Live票 ×1"), 200, [&] { p.AddKey(KeyType::Blue); }}; break;
     case 27: offer = {QString::fromUtf8("黄色Live票 ×4、蓝色Live票 ×1"), 1000, [&] { p.AddKey(KeyType::Green, 4); p.AddKey(KeyType::Blue); }}; break;
     case 36: offer = {QString::fromUtf8("黄色Live票 ×3"), 200, [&] { p.AddKey(KeyType::Green, 3); }}; break;
@@ -1300,43 +2174,6 @@ void MainWindow::showShopDialog(int x, int y)
                  shopPortrait, QStringLiteral("#ffb5d7")}
             });
         }
-        updateHUD();
-        return;
-    }
-    if (shop->classicShopFloor > 0) {
-        const ClassicShopOffer offer = classicShopOfferForFloor(shop->classicShopFloor, p.shopUseCount);
-        QDialog dlg(this);
-        dlg.setWindowTitle(QString::fromUtf8("属性商店"));
-        dlg.setFixedSize(400, 300);
-        auto* layout = new QVBoxLayout(&dlg);
-        layout->addWidget(new QLabel(QString::fromUtf8("原版商店：全局第 %1 次购买价格 %2 金币").arg(p.shopUseCount + 1).arg(offer.price), &dlg));
-        struct Offer { QString name; QString effect; std::function<void()> apply; };
-        const Offer offers[] = {
-            {QString::fromUtf8("生命值"), QString::fromUtf8("+%1").arg(offer.hp), [&]{ p.hp += offer.hp; }},
-            {QString::fromUtf8("攻击力"), QString::fromUtf8("+%1").arg(offer.atk), [&]{ p.atk += offer.atk; }},
-            {QString::fromUtf8("防御力"), QString::fromUtf8("+%1").arg(offer.def), [&]{ p.def += offer.def; }}
-        };
-        bool purchased = false;
-        for (const auto& item : offers) {
-            auto* button = new QPushButton(QString::fromUtf8("购买 %1（%2）").arg(item.name, item.effect), &dlg);
-            button->setEnabled(p.gold >= offer.price);
-            QObject::connect(button, &QPushButton::clicked, &dlg, [this, &dlg, &p, &purchased, offer, item] {
-                captureUndoSnapshot();
-                p.gold -= offer.price;
-                item.apply();
-                ++p.shopUseCount;
-                purchased = true;
-                dlg.accept();
-            });
-            layout->addWidget(button);
-        }
-        auto* leave = new QPushButton(QString::fromUtf8("离开"), &dlg);
-        QObject::connect(leave, &QPushButton::clicked, &dlg, &QDialog::reject);
-        layout->addWidget(leave);
-        applyRuntimeArtSkin(dlg);
-        dlg.exec();
-        if (purchased)
-            shop->classicPurchaseCount = 1;
         updateHUD();
         return;
     }
@@ -1399,7 +2236,9 @@ void MainWindow::showShopDialog(int x, int y)
         label->setStyleSheet(item.basePrice > 0 ? "font-size: 13px;" : "color: #666; font-size: 13px;");
         row->addWidget(label, 1);
 
-        auto* btn = new QPushButton(QString::fromUtf8("购买"), &dlg);
+        auto* btn = new QPushButton(item.basePrice > 0
+            ? QString::fromUtf8("购买（%1 G）").arg(item.actualPrice)
+            : QString::fromUtf8("不可购买"), &dlg);
         btn->setFixedWidth(60);
         btn->setStyleSheet(
             "QPushButton { background: #3a5a3a; color: #d0d0d0; border: 1px solid #6a6; "
@@ -1565,10 +2404,10 @@ void MainWindow::showModifier()
         {QString::fromUtf8("红色Live票"), 1, "#d33"},
         {QString::fromUtf8("蓝色Live票"), 1, "#33d"},
         {QString::fromUtf8("黄色Live票"), 1, "#db3"},
-        {QString::fromUtf8("后台万能通行证"), 3, "#84d"},
+        {QString::fromUtf8("大黄门钥匙"), 0, "#84d"},
         {QString::fromUtf8("舞台升降卡"), 0, "#aa0"},
         {QString::fromUtf8("撤场通行卡"), 0, "#a6a"},
-        {QString::fromUtf8("破墙锤"), 0, "#864"},
+        {QString::fromUtf8("睦的镐子"), 0, "#864"},
         {QString::fromUtf8("乐队护盾贴"), 3, "#68d"},
         {QString::fromUtf8("爱音自拍眼镜"), 0, "#4aa"},
         {QString::fromUtf8("乐奈幸运硬币"), 0, "#da0"},
@@ -1647,14 +2486,14 @@ void MainWindow::showModifier()
 
     auto* debugHint = new QLabel(QString::fromUtf8(
         "开启后可绕过门、钥匙和剧情触发，直接传送到任意楼层坐标。\n"
-        "坐标范围：X/Y 0-14；楼层 1-50。"), debugTab);
+        "坐标范围：X/Y 0-14；楼层 0-50（含幸运金币层）。"), debugTab);
     debugHint->setWordWrap(true);
     debugHint->setStyleSheet("color: #aaa; font-size: 12px;");
     debugLayout->addWidget(debugHint);
 
     auto* debugForm = new QGridLayout();
     auto* floorSpin = new QSpinBox(debugTab);
-    floorSpin->setRange(1, 50);
+    floorSpin->setRange(0, 50);
     floorSpin->setValue(m_game->currentFloor());
     auto* xSpin = new QSpinBox(debugTab);
     xSpin->setRange(0, m_game->width() - 1);
@@ -1851,6 +2690,108 @@ void MainWindow::updateMonsterPanel()
     }
 }
 
+void MainWindow::updateItemPanel()
+{
+    if (!ui.itemLayout || !ui.itemPanel) return;
+    while (QLayoutItem* item = ui.itemLayout->takeAt(0)) {
+        if (QWidget* widget = item->widget()) delete widget;
+        delete item;
+    }
+
+    struct ItemSlot {
+        QString name;
+        int firstIndex = -1;
+        int count = 0;
+        bool equipment = false;
+    };
+    std::vector<ItemSlot> itemSlots;
+    const int count = m_game->player().InventoryCount();
+    const auto isTowerSpecial = [](const QString& name) {
+        static const char* const names[] = {
+            "爱音手机", "大黄门钥匙", "怪物手册", "高松灯的单词本", "爱音自拍眼镜", "睦的镐子",
+            "Mujica烟雾弹", "海铃冷静指令", "MyGO和解徽章", "祥子指挥棒",
+            "立希水壶", "乐奈幸运硬币", "舞台升降卡", "撤场通行卡",
+            "Mujica镜面舞台票"
+        };
+        for (const char* candidate : names)
+            if (name == QString::fromUtf8(candidate)) return true;
+        return false;
+    };
+    static const char* const visibleOrder[] = {
+        // 固定前两排：武器、防具
+        "爱音拨片", "立希鼓棒", "乐奈猫爪", "灯的麦克风", "睦的贝斯",
+        "素世谱架", "海铃节拍器", "初华舞台耳返", "祥子黑色乐谱", "Mujica终幕面具",
+        // 后续固定位置：塔内实际出现的特殊道具
+        "爱音手机", "大黄门钥匙", "怪物手册", "高松灯的单词本", "爱音自拍眼镜", "睦的镐子",
+        "Mujica烟雾弹", "海铃冷静指令", "MyGO和解徽章", "祥子指挥棒", "立希水壶",
+        "乐奈幸运硬币", "舞台升降卡", "撤场通行卡", "Mujica镜面舞台票"
+    };
+    constexpr int visibleCount = static_cast<int>(sizeof(visibleOrder) / sizeof(visibleOrder[0]));
+    for (int i = 0; i < count; ++i) {
+        const Item* item = m_game->player().GetItem(i);
+        if (!item) continue;
+        const QString name = QString::fromStdString(Game::canonicalItemName(item->GetName()));
+        const QString displayName = name.isEmpty() ? QString::fromUtf8("未知道具") : name;
+        const bool equipment = dynamic_cast<const Weapon*>(item) != nullptr ||
+                               dynamic_cast<const Armor*>(item) != nullptr;
+        if (!equipment && !isTowerSpecial(displayName)) continue;
+        int slotIndex = -1;
+        for (int j = 0; j < static_cast<int>(itemSlots.size()); ++j) {
+            if (itemSlots[j].name == displayName) {
+                slotIndex = j;
+                break;
+            }
+        }
+        if (slotIndex < 0) {
+            itemSlots.push_back({displayName, i, 1, equipment});
+        } else {
+            ++itemSlots[slotIndex].count;
+        }
+    }
+
+    if (itemSlots.empty()) {
+        auto* empty = new QLabel(QString::fromUtf8("暂无道具"), ui.itemPanel);
+        empty->setAlignment(Qt::AlignCenter);
+        empty->setStyleSheet(QStringLiteral("color:#747b9d; font-size:11px;"));
+        ui.itemLayout->addWidget(empty);
+        return;
+    }
+
+    constexpr int columns = 5;
+    for (int i = 0; i < visibleCount; ++i) {
+        const QString fixedName = QString::fromUtf8(visibleOrder[i]);
+        const auto slotIt = std::find_if(itemSlots.begin(), itemSlots.end(),
+            [&fixedName](const ItemSlot& slot) { return slot.name == fixedName; });
+        auto* emptySlot = new QWidget(ui.itemPanel);
+        emptySlot->setFixedSize(48, 48);
+        if (slotIt == itemSlots.end()) {
+            ui.itemLayout->addWidget(emptySlot, i / columns, i % columns, Qt::AlignCenter);
+            continue;
+        }
+        delete emptySlot;
+        const ItemSlot& slot = *slotIt;
+        const Item* item = m_game->player().GetItem(slot.firstIndex);
+        if (!item) continue;
+        auto* button = new QPushButton(ui.itemPanel);
+        button->setFixedSize(48, 48);
+        button->setIcon(QIcon(itemIconPath(item->GetName())));
+        button->setIconSize(QSize(34, 34));
+        button->setText(slot.count > 1 ? QString::fromUtf8("×%1").arg(slot.count) : QString());
+        button->setToolTip(slot.name + QStringLiteral("\n") + getItemDescription(item) +
+                           (slot.count > 1 ? QString::fromUtf8("\n持有 %1 件").arg(slot.count) : QString()) +
+                           QStringLiteral("\n点击直接查看或使用"));
+        button->setStyleSheet(
+            QStringLiteral("QPushButton { background: transparent; border: 1px solid transparent; border-image: none; "
+                           "border-radius: 4px; padding: 0; color: #ffd66b; font-size: 9px; font-weight: 700; }"
+                           "QPushButton:hover { background: rgba(90,70,120,90); border-color: #d7a9ff; }"));
+        ui.itemLayout->addWidget(button, i / columns, i % columns, Qt::AlignCenter);
+        const int itemIndex = slot.firstIndex;
+        connect(button, &QPushButton::clicked, this, [this, itemIndex]() {
+            activateItem(itemIndex);
+        });
+    }
+}
+
 void MainWindow::updateHUD()
 {
     int floor = m_game->currentFloor();
@@ -1867,28 +2808,9 @@ void MainWindow::updateHUD()
         keyText += QString::fromUtf8("   万能 ×%1").arg(formatNumber(m_game->player().magicKeyUses));
     ui.keysLabel->setText(keyText);
 
-    // 显示背包物品
-    int invCount = m_game->player().InventoryCount();
-    if (invCount > 0) {
-        QString items;
-        for (int i = 0; i < invCount; ++i) {
-            auto* item = m_game->player().GetItem(i);
-            if (item) {
-                const std::string canonical = Game::canonicalItemName(item->GetName());
-                const QString displayName = canonical.empty()
-                    ? QString::fromUtf8("未知道具")
-                    : QString::fromStdString(canonical);
-                if (!items.isEmpty()) items += QString::fromUtf8("、");
-                items += displayName;
-            }
-        }
-        ui.invItemsLabel->setText(QString::fromUtf8("物品\n%1").arg(items));
-        ui.invItemsLabel->setVisible(true);
-    } else {
-        ui.invItemsLabel->setVisible(false);
-    }
-
-    ui.invButton->setText(QString::fromUtf8("🎒 背包 (%1)").arg(invCount));
+    // 道具图标栏位于属性区域下方；旧文字栏位保留兼容但不再占用界面空间。
+    ui.invItemsLabel->setVisible(false);
+    updateItemPanel();
 
     updateMonsterPanel();
 }
@@ -1901,6 +2823,10 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
     }
     if (event->key() == Qt::Key_F5) {
         quickSave();
+        return;
+    }
+    if (event->key() == Qt::Key_F9) {
+        quickLoad();
         return;
     }
     // 玩家已死亡则不响应
@@ -1922,6 +2848,9 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
 
     // 游戏坐标已经按格更新；动画未结束前只缓存最后一次方向，动画结束后
     // 自动请求下一格，避免按住方向键时出现停顿或跨格插值。
+    if (m_pendingTeleport.active) {
+        return;
+    }
     if (ui.mapWidget->isMonsterMoving()) {
         return;
     }
@@ -1933,8 +2862,8 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
     }
 
     // 检查上楼器/下楼器（传送到当前坐标，不找楼梯）
-    captureUndoSnapshot();
     if (m_game->player().stairUpUsed) {
+        captureUndoSnapshot();
         m_game->player().stairUpUsed = false;
         m_game->goUpFloor(m_game->player().x, m_game->player().y, false);
         ui.mapWidget->update();
@@ -1942,6 +2871,7 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
         return;
     }
     if (m_game->player().stairDownUsed) {
+        captureUndoSnapshot();
         m_game->player().stairDownUsed = false;
         m_game->goDownFloor(m_game->player().x, m_game->player().y, false);
         ui.mapWidget->update();
@@ -1953,6 +2883,13 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
     int ny = m_game->player().y + dy;
     ui.mapWidget->setPlayerDirection(dx, dy);
     const int floorBefore = m_game->currentFloor();
+    const Item* steppedItem = m_game->itemAt(nx, ny);
+    const QString pickedName = steppedItem
+        ? QString::fromStdString(Game::canonicalItemName(steppedItem->GetName()))
+        : QString();
+    const QString pickedDescription = steppedItem ? getItemDescription(steppedItem) : QString();
+    // 在执行移动/战斗前保存一步撤销点，确保战斗、拾取和楼梯切换都能回退。
+    captureUndoSnapshot();
     auto result = m_game->tryMovePlayer(nx, ny);
     startMonsterMovementAnimation();
 
@@ -1960,6 +2897,12 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
     case Game::Move_Block:
         break;
     case Game::Move_DoorLocked: {
+        if (floorBefore == 24 && nx == 7 && ny == 9 &&
+            !m_game->princessDollPassageUnlocked()) {
+            QMessageBox::information(this, QString::fromUtf8("通道未开启"),
+                QString::fromUtf8("请先完成26层的公主娃娃剧情，24层隐藏通道才会出现。"));
+            break;
+        }
         int tile = m_game->tileAt(nx, ny);
         QString keyName;
         if (tile == Tile_DoorRed) keyName = QString::fromUtf8("红色Live票");
@@ -1974,16 +2917,24 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
             showPrisonTrapPrompt();
         else if (floorBefore == 3 && m_game->currentFloor() == 2)
             showOpeningPrisonStory();
+        showFloor20VampireStoryIfNeeded(floorBefore);
+        showFloor33TrapStoryIfNeeded(floorBefore);
+        showFloor32KnightStoryAfterMovement(floorBefore);
         ui.mapWidget->update();
         updateHUD();
         break;
     case Game::Move_Pickup:
+        if (!pickedName.isEmpty())
+            showBattleFeedback(QString::fromUtf8("获得 %1：%2").arg(pickedName).arg(
+                QString(pickedDescription).replace(QString::fromUtf8("（未生效）"), QString::fromUtf8("（已生效）"))));
         ui.mapWidget->update();
         updateHUD();
         break;
     case Game::Move_Encounter: {
         Monster* m = m_game->monsterAt(nx, ny);
         if (!m) break;
+        const bool knightFight = floorBefore == 32 &&
+            m->GetName() == "幼年长崎素世·骑士队长";
 
         // 预判战斗结果
         int attackPower = m_game->player().atk;
@@ -2038,6 +2989,8 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
         if (!battlePrefix.isEmpty()) dlg = battlePrefix + "\n" + dlg;
 
         if (fightRes == Game::Fight_GameWin) {
+            // 即使是最终战，也要先提交战斗产生的脚本移动队列。
+            startMonsterMovementAnimation();
             ui.mapWidget->update();
             updateHUD();
             showBattleFeedback(dlg);
@@ -2047,6 +3000,14 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
             ui.mapWidget->update();
             updateHUD();
             showBattleFeedback(dlg);
+            if (knightFight)
+                showVisualNovelDialogue({
+                     {QString::fromUtf8("骑士队长"), QString::fromUtf8("哼！这次算你赢了，我先逃回右上角的后台入口！"),
+                     QStringLiteral(":/images/characters/portraits/variants/soyo_child_sad.png"), QStringLiteral("#b58cff")},
+                    {QString::fromUtf8("千早爱音"), QString::fromUtf8("别想逃走……但楼梯已经打开了。"),
+                     QStringLiteral(":/images/characters/portraits/variants/anon_extra_determined.png"), QStringLiteral("#ff8fc7")}
+                });
+            startMonsterMovementAnimation();
         } else if (fightRes == Game::Fight_Stalemate) {
             ui.mapWidget->update();
             updateHUD();

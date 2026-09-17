@@ -41,6 +41,76 @@
         <file>images/monster_16.png</file>
         <file>images/monster_17.png</file>
         <file>images/monster_18.png</file>
+        <!-- 34种 Bang Dream 角色怪物 60x60 精灵 -->
+        <file>images/characters/monsters/monster_01.png</file>
+        <file>images/characters/monsters/monster_02.png</file>
+        <file>images/characters/monsters/monster_03.png</file>
+        <file>images/characters/monsters/monster_04.png</file>
+        <file>images/characters/monsters/monster_05.png</file>
+        <file>images/characters/monsters/monster_06.png</file>
+        <file>images/characters/monsters/monster_07.png</file>
+        <file>images/characters/monsters/monster_08.png</file>
+        <file>images/characters/monsters/monster_09.png</file>
+        <file>images/characters/monsters/monster_10.png</file>
+        <file>images/characters/monsters/monster_11.png</file>
+        <file>images/characters/monsters/monster_12.png</file>
+        <file>images/characters/monsters/monster_13.png</file>
+        <file>images/characters/monsters/monster_14.png</file>
+        <file>images/characters/monsters/monster_15.png</file>
+        <file>images/characters/monsters/monster_16.png</file>
+        <file>images/characters/monsters/monster_17.png</file>
+        <file>images/characters/monsters/monster_18.png</file>
+        <file>images/characters/monsters/monster_19.png</file>
+        <file>images/characters/monsters/monster_20.png</file>
+        <file>images/characters/monsters/monster_21.png</file>
+        <file>images/characters/monsters/monster_22.png</file>
+        <file>images/characters/monsters/monster_23.png</file>
+        <file>images/characters/monsters/monster_24.png</file>
+        <file>images/characters/monsters/monster_25.png</file>
+        <file>images/characters/monsters/monster_26.png</file>
+        <file>images/characters/monsters/monster_27.png</file>
+        <file>images/characters/monsters/monster_28.png</file>
+        <file>images/characters/monsters/monster_29.png</file>
+        <file>images/characters/monsters/monster_30.png</file>
+        <file>images/characters/monsters/monster_31.png</file>
+        <file>images/characters/monsters/monster_32.png</file>
+        <file>images/characters/monsters/monster_33.png</file>
+        <file>images/characters/monsters/monster_34.png</file>
+        <!-- 怪物专属Galgame立绘（每个角色一张动态表情基准） -->
+        <file>images/characters/portraits/monster_variants/monster_01.png</file>
+        <file>images/characters/portraits/monster_variants/monster_02.png</file>
+        <file>images/characters/portraits/monster_variants/monster_03.png</file>
+        <file>images/characters/portraits/monster_variants/monster_04.png</file>
+        <file>images/characters/portraits/monster_variants/monster_05.png</file>
+        <file>images/characters/portraits/monster_variants/monster_06.png</file>
+        <file>images/characters/portraits/monster_variants/monster_07.png</file>
+        <file>images/characters/portraits/monster_variants/monster_08.png</file>
+        <file>images/characters/portraits/monster_variants/monster_09.png</file>
+        <file>images/characters/portraits/monster_variants/monster_10.png</file>
+        <file>images/characters/portraits/monster_variants/monster_11.png</file>
+        <file>images/characters/portraits/monster_variants/monster_12.png</file>
+        <file>images/characters/portraits/monster_variants/monster_13.png</file>
+        <file>images/characters/portraits/monster_variants/monster_14.png</file>
+        <file>images/characters/portraits/monster_variants/monster_15.png</file>
+        <file>images/characters/portraits/monster_variants/monster_16.png</file>
+        <file>images/characters/portraits/monster_variants/monster_17.png</file>
+        <file>images/characters/portraits/monster_variants/monster_18.png</file>
+        <file>images/characters/portraits/monster_variants/monster_19.png</file>
+        <file>images/characters/portraits/monster_variants/monster_20.png</file>
+        <file>images/characters/portraits/monster_variants/monster_21.png</file>
+        <file>images/characters/portraits/monster_variants/monster_22.png</file>
+        <file>images/characters/portraits/monster_variants/monster_23.png</file>
+        <file>images/characters/portraits/monster_variants/monster_24.png</file>
+        <file>images/characters/portraits/monster_variants/monster_25.png</file>
+        <file>images/characters/portraits/monster_variants/monster_26.png</file>
+        <file>images/characters/portraits/monster_variants/monster_27.png</file>
+        <file>images/characters/portraits/monster_variants/monster_28.png</file>
+        <file>images/characters/portraits/monster_variants/monster_29.png</file>
+        <file>images/characters/portraits/monster_variants/monster_30.png</file>
+        <file>images/characters/portraits/monster_variants/monster_31.png</file>
+        <file>images/characters/portraits/monster_variants/monster_32.png</file>
+        <file>images/characters/portraits/monster_variants/monster_33.png</file>
+        <file>images/characters/portraits/monster_variants/monster_34.png</file>
         <!-- MyGO / Ave Mujica / 梦限大角色扩展立绘 -->
         <file>images/characters/extended/taki_casual.png</file>
         <file>images/characters/extended/taki_stage.png</file>
@@ -62,6 +132,37 @@
         <file>images/characters/extended/miyako_stage.png</file>
         <file>images/characters/extended/yuno_casual.png</file>
         <file>images/characters/extended/yuno_stage.png</file>
+        <file>images/characters/extended/yukina_casual.png</file>
+        <file>images/characters/extended/yukina_stage.png</file>
+        <file>images/characters/extended/kasumi_casual.png</file>
+        <file>images/characters/extended/kasumi_stage.png</file>
+        <file>images/characters/pilot/anon_casual.png</file>
+        <file>images/characters/pilot/anon_stage.png</file>
+        <!-- 爱音五套 8×8 精细行走图（每套 64 帧，480×480） -->
+        <file>images/characters/player_outfits/anon_school_8x8.png</file>
+        <file>images/characters/player_outfits/anon_casual_8x8.png</file>
+        <file>images/characters/player_outfits/anon_mygo_stage_8x8.png</file>
+        <file>images/characters/player_outfits/anon_mujica_stage_8x8.png</file>
+        <file>images/characters/player_outfits/anon_summer_8x8.png</file>
+        <file>images/characters/player_outfits/anon_school_actions_8x8.png</file>
+        <file>images/characters/player_outfits/anon_casual_actions_8x8.png</file>
+        <file>images/characters/player_outfits/anon_stage_actions_8x8.png</file>
+        <file>images/characters/mygo/soyo_casual.png</file>
+        <file>images/characters/mygo/soyo_stage.png</file>
+        <file>images/characters/mygo/tomori_casual.png</file>
+        <file>images/characters/mygo/tomori_stage.png</file>
+        <file>images/characters/ave_mujica/uika_casual.png</file>
+        <file>images/characters/ave_mujica/doloris_stage.png</file>
+        <file>images/characters/mugendai_mewtype/arale_casual.png</file>
+        <file>images/characters/mugendai_mewtype/arale_stage.png</file>
+        <file>images/characters/mugendai_mewtype/viola_normal.png</file>
+        <file>images/characters/mugendai_mewtype/viola_corrupted.png</file>
+        <file>images/characters/npcs/marina.png</file>
+        <file>images/characters/npcs/michelle.png</file>
+        <file>images/characters/npcs/ririko.png</file>
+        <file>images/characters/npcs/marina_icon.png</file>
+        <file>images/characters/npcs/michelle_icon.png</file>
+        <file>images/characters/npcs/ririko_icon.png</file>
         <!-- 主题背景与地图图块图集 -->
         <file>images/backgrounds/tower_hub.png</file>
         <file>images/backgrounds/bangdream_gbp_cover.jpg</file>
@@ -188,6 +289,70 @@
         <file>images/characters/portraits/uika_stage.png</file>
         <file>images/characters/portraits/yukina_stage.png</file>
         <file>images/characters/portraits/kasumi_stage.png</file>
+        <file>images/characters/portraits/variants/anon_calm.png</file>
+        <file>images/characters/portraits/variants/anon_angry.png</file>
+        <file>images/characters/portraits/variants/anon_surprised.png</file>
+        <file>images/characters/portraits/variants/anon_confident.png</file>
+        <file>images/characters/portraits/variants/soyo_school_calm.png</file>
+        <file>images/characters/portraits/variants/soyo_school_angry.png</file>
+        <file>images/characters/portraits/variants/soyo_school_surprised.png</file>
+        <file>images/characters/portraits/variants/soyo_school_confident.png</file>
+        <file>images/characters/portraits/variants/anon_shy.png</file>
+        <file>images/characters/portraits/variants/anon_sad.png</file>
+        <file>images/characters/portraits/variants/anon_laughing.png</file>
+        <file>images/characters/portraits/variants/anon_worried.png</file>
+        <file>images/characters/portraits/variants/soyo_school_shy.png</file>
+        <file>images/characters/portraits/variants/soyo_school_sad.png</file>
+        <file>images/characters/portraits/variants/soyo_school_laughing.png</file>
+        <file>images/characters/portraits/variants/soyo_school_worried.png</file>
+        <file>images/characters/portraits/variants/soyo_child_calm.png</file>
+        <file>images/characters/portraits/variants/soyo_child_happy.png</file>
+        <file>images/characters/portraits/variants/soyo_child_surprised.png</file>
+        <file>images/characters/portraits/variants/soyo_child_angry.png</file>
+        <file>images/characters/portraits/variants/soyo_child_sad.png</file>
+        <file>images/characters/portraits/variants/soyo_child_excited.png</file>
+        <file>images/characters/portraits/variants/soyo_child_reading.png</file>
+        <file>images/characters/portraits/variants/soyo_child_caring.png</file>
+        <file>images/characters/portraits/variants/michelle_wave.png</file>
+        <file>images/characters/portraits/variants/michelle_surprised.png</file>
+        <file>images/characters/portraits/variants/michelle_confident.png</file>
+        <file>images/characters/portraits/variants/michelle_caring.png</file>
+        <file>images/characters/portraits/variants/anon_official_outfits_sheet.png</file>
+        <file>images/characters/portraits/variants/soyo_witch_official_sheet.png</file>
+        <file>images/characters/portraits/variants/soyo_witch_calm.png</file>
+        <file>images/characters/portraits/variants/soyo_witch_confident.png</file>
+        <file>images/characters/portraits/variants/soyo_witch_angry.png</file>
+        <file>images/characters/portraits/variants/soyo_witch_surprised.png</file>
+        <file>images/characters/portraits/variants/anon_extra_official_sheet.png</file>
+        <file>images/characters/portraits/variants/anon_extra_joy.png</file>
+        <file>images/characters/portraits/variants/anon_extra_embarrassed.png</file>
+        <file>images/characters/portraits/variants/anon_extra_worried.png</file>
+        <file>images/characters/portraits/variants/anon_extra_determined.png</file>
+        <file>images/characters/portraits/variants/soyo_witch_extra_sheet.png</file>
+        <file>images/characters/portraits/variants/soyo_witch_extra_warm.png</file>
+        <file>images/characters/portraits/variants/soyo_witch_extra_thoughtful.png</file>
+        <file>images/characters/portraits/variants/soyo_witch_extra_startled.png</file>
+        <file>images/characters/portraits/variants/soyo_witch_extra_commanding.png</file>
+        <file>images/characters/portraits/variants/anon_more_sheet.png</file>
+        <file>images/characters/portraits/variants/anon_more_wink.png</file>
+        <file>images/characters/portraits/variants/anon_more_apologetic.png</file>
+        <file>images/characters/portraits/variants/anon_more_shocked.png</file>
+        <file>images/characters/portraits/variants/anon_more_victory.png</file>
+        <file>images/characters/portraits/variants/soyo_witch_more_sheet.png</file>
+        <file>images/characters/portraits/variants/soyo_witch_more_serene.png</file>
+        <file>images/characters/portraits/variants/soyo_witch_more_teasing.png</file>
+        <file>images/characters/portraits/variants/soyo_witch_more_frightened.png</file>
+        <file>images/characters/portraits/variants/soyo_witch_more_battle.png</file>
+        <file>images/characters/portraits/variants/yukina_new_sheet.png</file>
+        <file>images/characters/portraits/variants/yukina_new_school_calm.png</file>
+        <file>images/characters/portraits/variants/yukina_new_school_serious.png</file>
+        <file>images/characters/portraits/variants/yukina_new_stage_surprised.png</file>
+        <file>images/characters/portraits/variants/yukina_new_stage_singing.png</file>
+        <file>images/characters/portraits/variants/kasumi_new_sheet.png</file>
+        <file>images/characters/portraits/variants/kasumi_new_school_joy.png</file>
+        <file>images/characters/portraits/variants/kasumi_new_stage_wink.png</file>
+        <file>images/characters/portraits/variants/kasumi_new_school_surprised.png</file>
+        <file>images/characters/portraits/variants/kasumi_new_stage_guitar.png</file>
         <file>images/characters/pilot/anon_casual.png</file>
         <file>images/characters/pilot/anon_stage.png</file>
         <file>images/characters/player_outfits/anon_reference_walk_8x8.png</file>

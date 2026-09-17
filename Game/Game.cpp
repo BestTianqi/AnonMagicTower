@@ -5,6 +5,7 @@
 #include <QFile>
 #include <QDir>
 #include <QTextStream>
+#include <array>
 #include <algorithm>
 #include <fstream>
 #include <queue>
@@ -27,33 +28,87 @@ bool mechanismDoorReadyAt(int floorNumber, const FloorData& floor, int doorX, in
 {
     // 10 层花门由进入中央 Boss 区的剧情事件开启，而不是清怪开启。
     if (floorNumber == 10) return false;
-    // 原版 48 层圣剑房花门是损坏的机关，清怪后仍不会自动开启。
+    // 48层圣剑房花门由左上角藤都子SP的专属事件开启，
+    // 不参与通用机关门清怪判定。
     if (floorNumber == 48) return false;
-
-    // 优先按原版常见的“门周围八格”逐门判定：只要门周围存在怪物，
-    // 必须全部清除后这扇门才会打开。这样同一楼层的多扇门可以分别解锁。
-    bool hasAdjacentMonster = false;
-    for (int dy = -1; dy <= 1; ++dy) {
-        for (int dx = -1; dx <= 1; ++dx) {
-            if (dx == 0 && dy == 0) continue;
-            const int x = doorX + dx;
-            const int y = doorY + dy;
-            const int key = y * MAP_SIZE + x;
-            if (floor.monsters.find(key) != floor.monsters.end()) {
-                hasAdjacentMonster = true;
-                break;
-            }
-        }
-        if (hasAdjacentMonster) break;
+    if (floorNumber == 38 && doorX == 3 && doorY == 6) {
+        // 38层事件花门是剧情锁，不允许用钥匙、镐或普通清怪逻辑打开。
+        return false;
     }
-    if (hasAdjacentMonster) {
+    if (floorNumber == 20 && ((doorX == 7 && doorY == 10) || (doorX == 7 && doorY == 4))) {
+        // 20层剧情触发后，两扇花门都绑定中央吸血鬼。
+        return floor.monsters.find(7 * MAP_SIZE + 7) == floor.monsters.end();
+    }
+    if (floorNumber == 33 && doorX == 11 && (doorY == 5 || doorY == 9)) {
+        // 33层两扇花门共用四个斜角守卫；四只全部击败后同时开启。
+        static const int guards[] = {
+            6 * MAP_SIZE + 10, 6 * MAP_SIZE + 12,
+            8 * MAP_SIZE + 10, 8 * MAP_SIZE + 12
+        };
+        for (const int key : guards)
+            if (floor.monsters.find(key) != floor.monsters.end()) return false;
+        return true;
+    }
+
+    if (floorNumber == 15 && doorX == 7 && doorY == 4) {
+        // 15层中央花门绑定大章鱼（原版15号怪物）；
+        // 只有击败它后才允许打开，不能被其他清怪组提前解锁。
+        return !hasClassicMonsterId(floor, 15);
+    }
+
+    if (floorNumber == 30 && floor.map[doorY * MAP_SIZE + doorX] == Tile_DoorMagic) {
+        // 30层花门绑定整层怪物，不能按花门周围八格或旧编号组提前开启。
+        return floor.monsters.empty();
+    }
+
+    if (floor.map[doorY * MAP_SIZE + doorX] == Tile_DoorMagic) {
+        if (floorNumber == 49) {
+            // 49层上下两扇花门各自只绑定门正下方横向三格（左、中、右）。
+            // 两扇门互不共享守卫，其他位置的同类怪物不参与判定。
+            bool hasBelowGuard = false;
+            for (int dx = -1; dx <= 1; ++dx) {
+                const int key = (doorY + 1) * MAP_SIZE + (doorX + dx);
+                if (floor.monsters.find(key) != floor.monsters.end()) {
+                    hasBelowGuard = true;
+                    break;
+                }
+            }
+            if (!hasBelowGuard) return true;
+            for (int dx = -1; dx <= 1; ++dx) {
+                const int key = (doorY + 1) * MAP_SIZE + (doorX + dx);
+                if (floor.monsters.find(key) != floor.monsters.end()) return false;
+            }
+            return true;
+        }
+
+        // 花门只绑定自身周围八格的怪物：周围有一只或两只就只清理这一小组，
+        // 同编号但位于楼层其他区域的怪物不参与本门判定。
+        bool hasAdjacentMonster = false;
         for (int dy = -1; dy <= 1; ++dy) {
             for (int dx = -1; dx <= 1; ++dx) {
                 if (dx == 0 && dy == 0) continue;
-                const int key = (doorY + dy) * MAP_SIZE + (doorX + dx);
-                if (floor.monsters.find(key) != floor.monsters.end()) return false;
+                const int x = doorX + dx;
+                const int y = doorY + dy;
+                const int key = y * MAP_SIZE + x;
+                if (floor.monsters.find(key) != floor.monsters.end()) {
+                    hasAdjacentMonster = true;
+                    break;
+                }
             }
+            if (hasAdjacentMonster) break;
         }
+        if (hasAdjacentMonster) {
+            for (int dy = -1; dy <= 1; ++dy) {
+                for (int dx = -1; dx <= 1; ++dx) {
+                    if (dx == 0 && dy == 0) continue;
+                    const int key = (doorY + dy) * MAP_SIZE + (doorX + dx);
+                    if (floor.monsters.find(key) != floor.monsters.end()) return false;
+                }
+            }
+            return true;
+        }
+
+        // 花门没有邻近守卫时直接开放；全楼层指定怪物组只用于铁门等原版特殊门。
         return true;
     }
 
@@ -113,14 +168,52 @@ Game::Game()
 void Game::generateClassicTower()
 {
     m_floors.clear();
+    m_lastTeleportPath.clear();
+    m_pendingTeleportPath.clear();
+    m_pendingTeleportTargetX = -1;
+    m_pendingTeleportTargetY = -1;
+    m_visitedFloors.clear();
+    m_visitedFloors.insert(1);
     m_floor = 1;
     m_floor3PrisonTriggered = false;
     m_floor3PrisonStoryPending = false;
     m_floor3TrapActive = false;
+    m_princessDollRescued = false;
+    m_floor20VampireTriggered = false;
+    m_floor20VampireStoryShown = false;
+    m_floor14RedKeyRewardGranted = false;
+    m_floor32KnightTriggered = false;
+    m_floor32KnightStoryPending = false;
+    m_floor42KnightStoryTriggered = false;
+    m_floor42KnightStoryPending = false;
+    m_floor34RewardGranted = false;
+    m_floor35RewardsHidden = false;
+    m_floor40BossDefeated = false;
+    m_floor40RewardsGranted = false;
+    m_floor32KnightMovements.clear();
+    m_floor33TrapTriggered = false;
+    m_michelleRescued = false;
+    m_michelleGuardDefeated = false;
+    m_floor38FlowerTriggered = false;
+    m_floor43MiyakoRetreated = false;
+    m_storyOnceKeys.clear();
     m_floor10AmbushTriggered = false;
     m_floor10AmbushMonsterKeys.clear();
     m_floor10AmbushDoorKeys.clear();
     m_floor10AmbushMovements.clear();
+    // 原版 0 层不是普通塔层：使用 1 层取得的下楼器后抵达此处，
+    // 房间中央放置幸运金币。保留完整墙圈，便于正常移动和管理员调试。
+    FloorData luckyCoinFloor;
+    luckyCoinFloor.map.assign(m_width * m_height, Tile_Wall);
+    for (int y = 2; y <= 12; ++y)
+        for (int x = 2; x <= 12; ++x)
+            luckyCoinFloor.map[y * m_width + x] = Tile_Floor;
+    const int luckyCoinKey = 7 * m_width + 7;
+    luckyCoinFloor.map[2 * m_width + 7] = Tile_StairsUp;
+    luckyCoinFloor.items[luckyCoinKey] = std::make_unique<LuckyCoin>();
+    luckyCoinFloor.map[luckyCoinKey] = Tile_Item;
+    m_floors.emplace(0, std::move(luckyCoinFloor));
+
     for (int floor = 1; floor <= 50; ++floor) {
         FloorData fd;
         fd.map.assign(m_width * m_height, Tile_Wall);
@@ -130,9 +223,112 @@ void Game::generateClassicTower()
         m_floors.emplace(floor, std::move(fd));
     }
 
+    // 即使经典地图资源暂时不可用（例如无 Qt 资源的逻辑测试目标），
+    // 41层下楼器事件仍保持可验证的最小布局。
+    const auto ensureFloor41DownstairsLayout = [this]() {
+        FloorData& fd = m_floors[41];
+        // 原版41层的右上对称暗墙位于(11,3)，墙内藏着第二只高级巫师。
+        const int darkWallKey = posKey(11, 3);
+        const int wizardKey = posKey(3, 3);
+        // 无论静态资源原先是墙还是地板，都强制恢复右上暗墙；
+        // 左上(3,3)保留可见的首只高级巫师。
+        if (fd.monsters.find(darkWallKey) == fd.monsters.end())
+            fd.map[darkWallKey] = Tile_DarkWall;
+        if (fd.monsters.find(wizardKey) == fd.monsters.end()) {
+            fd.monsters.emplace(wizardKey, MonsterDB::getByIndex(26));
+            fd.map[wizardKey] = Tile_Monster;
+        }
+    };
+
+    // 逻辑测试和无 Qt 资源运行时仍需保留经典塔的关键事件布局。
+    // 正式资源加载完成后下面的完整脚本会再次校正这些格子。
+    const auto ensureClassicEventLayouts = [this]() {
+        auto& floor19 = m_floors[19];
+        const int crossKey = posKey(7, 4);
+        if (floor19.items.find(crossKey) == floor19.items.end()) {
+            floor19.items[crossKey] = std::make_unique<Cross>();
+            floor19.map[crossKey] = Tile_Item;
+        }
+        auto& floor20 = m_floors[20];
+        const int vampireKey = posKey(7, 7);
+        // 吸血鬼由(7,9)剧情点显现，初始地图不放置该Boss。
+        floor20.monsters.erase(vampireKey);
+        if (floor20.map[vampireKey] == Tile_Monster) floor20.map[vampireKey] = Tile_Floor;
+        floor20.map[posKey(7, 10)] = Tile_DoorRed;
+        // 20层顶部黄色上楼梯是击败吸血鬼后的奖励，底部紫色小楼梯始终保留。
+        floor20.map[posKey(7, 2)] = Tile_Floor;
+        floor20.map[posKey(7, 12)] = Tile_StairsDown;
+
+        auto& floor15 = m_floors[15];
+        floor15.map[posKey(9, 2)] = Tile_DarkWall;
+        floor15.map[posKey(7, 4)] = Tile_DoorMagic;
+        const int octopusKey = posKey(7, 6);
+        floor15.monsters[octopusKey] = MonsterDB::getByIndex(14);
+        floor15.map[octopusKey] = Tile_Monster;
+        m_floors[35].map[posKey(7, 4)] = Tile_DarkWall;
+        auto& floor35 = m_floors[35];
+        // 35层薇欧拉SP·魔龙固定站在(7,5)；清理旧版资源可能遗留的(7,7)事件格。
+        const int dragonKey = posKey(7, 5);
+        floor35.monsters.erase(posKey(7, 7));
+        floor35.monsters[dragonKey] = MonsterDB::get("薇欧拉SP·魔龙");
+        floor35.map[posKey(7, 7)] = floor35.items.count(posKey(7, 7)) ? Tile_Item : Tile_Floor;
+        floor35.map[dragonKey] = Tile_Monster;
+        auto& floor28 = m_floors[28];
+        const int merchantKey = posKey(9, 5);
+        floor28.map[merchantKey] = Tile_Shop;
+        floor28.shops[merchantKey] = ShopData{};
+        floor28.shops[merchantKey].classicNpcId = 24;
+        floor28.shops[merchantKey].classicShopFloor = 28;
+
+        // 29层米歇尔脚下的原版暗墙，完成对话后才会消失。
+        m_floors[29].map[posKey(7, 4)] = Tile_Wall;
+
+        // 无 Qt 地图资源的逻辑测试/后备地图也保留二层两名中级守卫，
+        // 以便牢笼救出前置条件与正式地图一致。
+        for (const auto& guard : std::array<std::pair<int, int>, 2>{{{7, 3}, {9, 3}}}) {
+            const int key = posKey(guard.first, guard.second);
+            m_floors[2].monsters[key] = MonsterDB::getByIndex(20);
+            m_floors[2].map[key] = Tile_Monster;
+        }
+
+        // 38层(3,7)为事件触发格；花门只有剧情创建后才出现。
+        m_floors[38].map[posKey(3, 7)] = Tile_Floor;
+        m_floors[38].map[posKey(3, 6)] = Tile_Floor;
+
+        // 43层藤都子SP的初始站位（资源缺失时也保持事件可测试）。
+        const int miyakoKey = posKey(10, 2);
+        m_floors[43].monsters[miyakoKey] = MonsterDB::get("藤都子SP·魔法警卫");
+        m_floors[43].map[miyakoKey] = Tile_Monster;
+
+        // 无资源测试与正式地图必须共享同一组关键地形校正。
+        const int floor14RewardKey = posKey(2, 4);
+        m_floors[14].items.erase(floor14RewardKey);
+        m_floors[14].map[floor14RewardKey] = Tile_Wall;
+        m_floors[32].map[posKey(6, 12)] = Tile_StairsDown;
+        m_floors[32].map[posKey(12, 2)] = Tile_StairsUp;
+        for (const auto& wall : std::array<std::pair<int, int>, 2>{{{10, 11}, {12, 11}}}) {
+            const int key = posKey(wall.first, wall.second);
+            m_floors[32].monsters.erase(key);
+            m_floors[32].items.erase(key);
+            m_floors[32].npcs.erase(key);
+            m_floors[32].shops.erase(key);
+            m_floors[32].map[key] = Tile_Wall;
+        }
+        for (const auto& wall : std::array<std::pair<int, int>, 12>{{
+                 {3, 6}, {4, 6}, {5, 6}, {9, 6}, {10, 6}, {11, 6},
+                 {3, 8}, {4, 8}, {5, 8}, {9, 8}, {10, 8}, {11, 8}}})
+            m_floors[36].map[posKey(wall.first, wall.second)] = Tile_DarkWall;
+    };
+
     QFile source(":/data/classic50_map.txt");
     if (!source.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        ensureClassicEventLayouts();
+        ensureFloor41DownstairsLayout();
         m_currentFloor = &m_floors[m_floor];
+        m_visitedFloors.insert(m_floor);
+        m_player = Player();
+        m_player.x = 7; m_player.y = 12;
+        m_player.hp = 1000; m_player.atk = 100; m_player.def = 100;
         return;
     }
 
@@ -175,7 +371,12 @@ void Game::generateClassicTower()
     QTextStream stream(&source);
     const QString header = stream.readLine().trimmed();
     if (header != "CLASSIC50_MAP_V1") {
+        ensureClassicEventLayouts();
+        ensureFloor41DownstairsLayout();
         m_currentFloor = &m_floors[m_floor];
+        m_player = Player();
+        m_player.x = 7; m_player.y = 12;
+        m_player.hp = 1000; m_player.atk = 100; m_player.def = 100;
         return;
     }
     while (!stream.atEnd()) {
@@ -207,6 +408,10 @@ void Game::generateClassicTower()
             else if (id == 4 || id == 5 || id == 18 || id == 20 ||
                      id == 22 || id == 26 || id == 34) tile = Tile_DoorMagic;
             else if (id == 9 || id == 11) tile = Tile_DoorIron;
+            // 40层 Boss 区入口原本标为花门，按当前流程改为红门，
+            // 由红钥匙开启，不再参与花门的清怪判定。
+            // 40层上方原先的第二扇红门已移除；id=3 的下方红门保留。
+            else if (id == 30 && level == 40) tile = Tile_Floor;
             fd.map[key] = tile;
         } else if (type == 1) {
             fd.items[key] = makeClassicItem(level, id);
@@ -220,13 +425,13 @@ void Game::generateClassicTower()
             }
             const bool merchant = id == 6 || id == 7 || id == 8 || id == 9 || id == 11 ||
                                   id == 15 || id == 16 || id == 27 || id == 28 || id == 36 ||
-                                  id == 38 || id == 41 || id == 43 || id == 44;
+                                  id == 38 || id == 41 || id == 43 || id == 44 || id == 24;
             if (merchant) {
                 fd.map[key] = Tile_Shop;
                 ShopData shop{20 + level * 10, 20 + level * 10, 20 + level * 10,
                               100 + level * 5, 2 + level / 10, 2 + level / 10};
                 shop.classicNpcId = id;
-                shop.classicShopFloor = id == 15 ? 4 : id == 16 ? 12 : id == 28 ? 32 : id == 43 ? 46 : 0;
+                shop.classicShopFloor = id == 15 ? 4 : id == 16 ? 12 : id == 24 ? 28 : id == 28 ? 32 : id == 43 ? 46 : 0;
                 if (shop.classicShopFloor > 0) {
                     const auto offer = classicShopOfferForFloor(shop.classicShopFloor, 0);
                     shop.potionPrice = shop.weaponPrice = shop.armorPrice = offer.price;
@@ -260,7 +465,11 @@ void Game::generateClassicTower()
                 case 30: dialog = {"救救我！这里的牢门似乎能被打开。"}; break;
                 case 34: dialog = {"前方的道路需要更高级的装备。"}; break;
                 case 35: dialog = {"秘宝被藏在更高的楼层。"}; break;
-                case 37: dialog = {"翡翠剑的房间需要用镐破墙进入。"}; break;
+                case 37:
+                    dialog = (level == 39)
+                        ? std::vector<std::string>{"打开左上房间12点和3点方向的两扇黄门，镜面舞台票就会出现。"}
+                        : std::vector<std::string>{"翡翠剑的房间需要用镐破墙进入。"};
+                    break;
                 case 39: dialog = {"通往异界的入口就在不远处。"}; break;
                 case 40: dialog = {"44层被藏在异界，只有通过秘宝才能到达。"}; break;
                 case 42: dialog = {"神圣盾能免疫魔法攻击，但它被藏在异界内。"}; break;
@@ -268,7 +477,7 @@ void Game::generateClassicTower()
                 default: break;
                 }
                 std::unique_ptr<Item> reward;
-                if (id == 3) reward = std::make_unique<NoteBook>();
+                if (id == 3) reward = std::make_unique<MonsterBook>();
                 else if (id == 18) reward = std::make_unique<HolyWater>();
                 else if (id == 32) reward = std::make_unique<Treasure>(1000);
                 NPC npc(name, dialog, std::move(reward), false, 0, nullptr, id);
@@ -280,6 +489,8 @@ void Game::generateClassicTower()
         }
     }
 
+    ensureFloor41DownstairsLayout();
+
     auto spawnEventMonster = [this](int level, int sourceX, int sourceY, int monsterId) {
         FloorData& fd = m_floors[level];
         const int x = sourceX + 7;
@@ -290,8 +501,81 @@ void Game::generateClassicTower()
     };
 
     // 原版脚本动态生成、因而不在静态 mapinfo 中的关键战斗。
-    spawnEventMonster(20, 0, 0, 16);
-    m_floors[20].map[(7 - (-3)) * m_width + (0 + 7)] = Tile_DoorMagic;
+    // 20层吸血鬼只有走到(7,9)剧情点后才出现，初始不能在地图上看到。
+    // 20层吸血鬼房入口初始为红门，开门后才转换为花门。
+    m_floors[20].map[(7 - (-3)) * m_width + (0 + 7)] = Tile_DoorRed;
+    // 顶部黄色上楼梯由击败吸血鬼后生成，底部紫色小楼梯不参与奖励替换。
+    m_floors[20].map[posKey(7, 2)] = Tile_Floor;
+    m_floors[20].map[posKey(7, 12)] = Tile_StairsDown;
+    // 20层上方的第二扇花门，和下方入口门各自绑定同一场吸血鬼事件。
+    m_floors[20].map[posKey(7, 4)] = Tile_DoorMagic;
+    // 19层十字架与35层魔龙是经典流程必备节点；资源缺失时补回默认位置。
+    const int crossKey = posKey(7, 4);
+    if (m_floors[19].items.find(crossKey) == m_floors[19].items.end()) {
+        m_floors[19].items[crossKey] = std::make_unique<Cross>();
+        m_floors[19].map[crossKey] = Tile_Item;
+    }
+    const int dragonKey = posKey(7, 5);
+    m_floors[35].monsters.erase(posKey(7, 7));
+    m_floors[35].monsters[dragonKey] = MonsterDB::get("薇欧拉SP·魔龙");
+    m_floors[35].map[posKey(7, 7)] = m_floors[35].items.count(posKey(7, 7)) ? Tile_Item : Tile_Floor;
+    m_floors[35].map[dragonKey] = Tile_Monster;
+
+    // 15层米歇尔左侧的原版暗墙。静态资源把这里标成普通墙，
+    // 导致对话后的“打开左边墙”逻辑找不到目标格。
+    m_floors[15].map[posKey(9, 2)] = Tile_DarkWall;
+    // 35层米歇尔剧情对应的是暗墙，不是花门；完成对话后才变为地板。
+    m_floors[35].map[posKey(7, 4)] = Tile_DarkWall;
+    // 35层魔龙附近的地面奖励在魔龙被击败前不可见；保留名称和值，击败后恢复原位。
+    m_floor35HiddenItems.clear();
+    for (auto it = m_floors[35].items.begin(); it != m_floors[35].items.end();) {
+        const int x = it->first % m_width;
+        const int y = it->first / m_width;
+        if (std::abs(x - 7) <= 2 && std::abs(y - 5) <= 2) {
+            m_floor35HiddenItems[it->first] = {it->second->GetName(), it->second->GetValue()};
+            m_floors[35].map[it->first] = Tile_Floor;
+            it = m_floors[35].items.erase(it);
+        } else ++it;
+    }
+    m_floor35RewardsHidden = !m_floor35HiddenItems.empty();
+    // 35层米歇尔在救出二楼牢笼中的米歇尔后由 activateFloor35Michelle() 生成；
+    // 龙房间地上的奖励则在击败魔龙后才显现。
+    // 14层左上奖励格在三只指定怪物被击败前是一面普通墙。
+    const int floor14RewardKey = posKey(2, 4);
+    m_floors[14].items.erase(floor14RewardKey);
+    m_floors[14].map[floor14RewardKey] = Tile_Wall;
+
+    // 32层保留原版两个楼梯：底部(6,12)为紫色下楼梯，右上(12,2)
+    // 为黄色上楼梯。剧情触发点两侧的(10,11)、(12,11)固定为墙。
+    m_floors[32].map[posKey(6, 12)] = Tile_StairsDown;
+    m_floors[32].map[posKey(12, 2)] = Tile_StairsUp;
+    for (const auto& wall : std::array<std::pair<int, int>, 2>{{{10, 11}, {12, 11}}}) {
+        const int key = posKey(wall.first, wall.second);
+        m_floors[32].monsters.erase(key);
+        m_floors[32].items.erase(key);
+        m_floors[32].npcs.erase(key);
+        m_floors[32].shops.erase(key);
+        m_floors[32].map[key] = Tile_Wall;
+    }
+
+    // 原版36层的四条对称暗道：左右两侧、上下各一条，每条三格。
+    // 导入资源把这些格子误标为普通墙，因此在脚本层恢复为暗墙。
+    const std::array<std::pair<int, int>, 12> floor36DarkWalls{{
+        {3, 6}, {4, 6}, {5, 6}, {9, 6}, {10, 6}, {11, 6},
+        {3, 8}, {4, 8}, {5, 8}, {9, 8}, {10, 8}, {11, 8}
+    }};
+    for (const auto& wall : floor36DarkWalls)
+        m_floors[36].map[posKey(wall.first, wall.second)] = Tile_DarkWall;
+    // 48层左上角的藤都子SP是开启圣剑房花门的专属守卫。
+    spawnEventMonster(48, -5, 5, 31);
+    // 38层剧情触发格与43层藤都子SP退场事件，即使地图资源已有同名格也以脚本为准。
+    m_floors[38].map[posKey(3, 7)] = Tile_Floor;
+    m_floors[38].map[posKey(3, 6)] = Tile_Floor;
+    const int miyako43Key = posKey(10, 2);
+    m_floors[43].monsters[miyako43Key] = MonsterDB::get("藤都子SP·魔法警卫");
+    m_floors[43].map[miyako43Key] = Tile_Monster;
+    // 49层假魔王一开始就出现，但处于未封印的满属性状态；
+    // 只有击败其上下左右四名魔法警卫后，封印才会生效并削弱魔王。
     spawnEventMonster(49, 0, 3, 33);
     const int guardPositions[][2] = {
         {-1, 4}, {0, 4}, {1, 4}, {-1, 3}, {1, 3}, {-1, 2}, {0, 2}, {1, 2}
@@ -301,6 +585,7 @@ void Game::generateClassicTower()
 
     prepareFloor3PrisonCell();
     m_currentFloor = &m_floors[m_floor];
+    m_visitedFloors.insert(m_floor);
     m_player = Player();
     m_player.x = 7;
     m_player.y = 12;
@@ -328,6 +613,12 @@ void Game::initFloor(int floor)
             fd.map[y*m_width + (m_width-2)] = Tile_Wall;
             fd.map[y*m_width + (m_width-1)] = Tile_Wall;
         }
+        if (floor == 0) {
+            const int luckyCoinKey = 7 * m_width + 7;
+            fd.items[luckyCoinKey] = std::make_unique<LuckyCoin>();
+            fd.map[luckyCoinKey] = Tile_Item;
+            fd.map[2 * m_width + 7] = Tile_StairsUp;
+        }
         m_floors[floor] = std::move(fd);
     }
     m_currentFloor = &m_floors[floor];
@@ -336,9 +627,34 @@ void Game::initFloor(int floor)
 
 bool Game::loadDefaultMap()
 {
+    m_lastTeleportPath.clear();
+    m_pendingTeleportPath.clear();
+    m_pendingTeleportTargetX = -1;
+    m_pendingTeleportTargetY = -1;
+    m_visitedFloors.clear();
+    m_visitedFloors.insert(1);
     m_floor3PrisonTriggered = false;
     m_floor3PrisonStoryPending = false;
     m_floor3TrapActive = false;
+    m_princessDollRescued = false;
+    m_floor20VampireTriggered = false;
+    m_floor20VampireStoryShown = false;
+    m_floor14RedKeyRewardGranted = false;
+    m_floor32KnightTriggered = false;
+    m_floor32KnightStoryPending = false;
+    m_floor42KnightStoryTriggered = false;
+    m_floor42KnightStoryPending = false;
+    m_floor34RewardGranted = false;
+    m_floor35RewardsHidden = false;
+    m_floor40BossDefeated = false;
+    m_floor40RewardsGranted = false;
+    m_floor32KnightMovements.clear();
+    m_floor33TrapTriggered = false;
+    m_michelleRescued = false;
+    m_michelleGuardDefeated = false;
+    m_floor38FlowerTriggered = false;
+    m_floor43MiyakoRetreated = false;
+    m_storyOnceKeys.clear();
     m_floor10AmbushTriggered = false;
     m_floor10AmbushMonsterKeys.clear();
     m_floor10AmbushDoorKeys.clear();
@@ -455,12 +771,13 @@ const ShopData* Game::shopAt(int x, int y) const
     return &it->second;
 }
 
-bool Game::isTeleportReachable(int targetX, int targetY) const
+std::vector<std::pair<int, int>> Game::findTeleportPath(int targetX, int targetY) const
 {
+    std::vector<std::pair<int, int>> noPath;
     if (targetX < 0 || targetY < 0 || targetX >= m_width || targetY >= m_height)
-        return false;
+        return noPath;
     if (targetX == m_player.x && targetY == m_player.y)
-        return true;
+        return {{m_player.x, m_player.y}};
 
     const auto walkable = [](int tile) {
         return tile == Tile_Floor || tile == Tile_Item ||
@@ -469,25 +786,28 @@ bool Game::isTeleportReachable(int targetX, int targetY) const
     const int targetTile = tileAt(targetX, targetY);
     const bool targetInteractable = targetTile == Tile_NPC || targetTile == Tile_Shop ||
                                     (targetTile == Tile_Monster && hasMonsterAt(targetX, targetY));
+    const bool princessPassageDoorLocked =
+        (m_floor == 24 && targetX == 7 && targetY == 9 && !m_princessDollRescued);
     const bool targetDoorWithKey =
-        (targetTile == Tile_DoorRed && (m_player.HasKey(KeyType::Red) || m_player.magicKeyUses > 0)) ||
-        (targetTile == Tile_DoorBlue && (m_player.HasKey(KeyType::Blue) || m_player.magicKeyUses > 0)) ||
+        (!princessPassageDoorLocked && targetTile == Tile_DoorRed && m_player.HasKey(KeyType::Red)) ||
+        (targetTile == Tile_DoorBlue && m_player.HasKey(KeyType::Blue)) ||
         (targetTile == Tile_DoorGreen && (m_player.HasKey(KeyType::Green) || m_player.magicKeyUses > 0));
     const bool targetMechanismDoor =
         (targetTile == Tile_DoorMagic || targetTile == Tile_DoorIron) &&
         ((m_floor == 48 && m_player.wallBreakerUsed) ||
          (m_currentFloor && mechanismDoorReadyAt(m_floor, *m_currentFloor, targetX, targetY)));
     if (!walkable(targetTile) && !targetInteractable && !targetDoorWithKey && !targetMechanismDoor)
-        return false;
+        return noPath;
     const int currentTile = tileAt(m_player.x, m_player.y);
     const bool currentInteractable =
         currentTile == Tile_NPC || currentTile == Tile_Shop ||
         (currentTile == Tile_Monster && hasMonsterAt(m_player.x, m_player.y));
     // 玩家可能正站在刚瞬移到的 NPC/商店格，仍应以该格为 BFS 起点。
-    if (!walkable(currentTile) && !currentInteractable) return false;
+    if (!walkable(currentTile) && !currentInteractable) return noPath;
 
     std::vector<unsigned char> visited(static_cast<size_t>(m_width * m_height), 0);
     std::queue<std::pair<int, int>> pending;
+    std::vector<std::pair<int, int>> parent(static_cast<size_t>(m_width * m_height), {-1, -1});
     const auto index = [this](int x, int y) { return y * m_width + x; };
     pending.emplace(m_player.x, m_player.y);
     visited[index(m_player.x, m_player.y)] = 1;
@@ -501,24 +821,292 @@ bool Game::isTeleportReachable(int targetX, int targetY) const
             const int ny = y + direction[1];
             if (nx < 0 || ny < 0 || nx >= m_width || ny >= m_height) continue;
             // 交互对象本身不可作为路径中间节点，但可以作为终点点击。
-            if (nx == targetX && ny == targetY) return true;
+            if (nx == targetX && ny == targetY) {
+                parent[index(nx, ny)] = {x, y};
+                std::vector<std::pair<int, int>> path;
+                std::pair<int, int> cursor{targetX, targetY};
+                while (cursor.first >= 0) {
+                    path.push_back(cursor);
+                    if (cursor.first == m_player.x && cursor.second == m_player.y) break;
+                    cursor = parent[index(cursor.first, cursor.second)];
+                }
+                if (path.back() != std::make_pair(m_player.x, m_player.y)) return noPath;
+                std::reverse(path.begin(), path.end());
+                return path;
+            }
             const int cell = index(nx, ny);
             if (visited[cell] || !walkable(tileAt(nx, ny))) continue;
             visited[cell] = 1;
+            parent[cell] = {x, y};
+            pending.emplace(nx, ny);
+        }
+    }
+    return noPath;
+}
+
+bool Game::isTeleportReachable(int targetX, int targetY) const
+{
+    return !findTeleportPath(targetX, targetY).empty();
+}
+
+bool Game::canUsePhone() const
+{
+    if (!m_currentFloor || m_floor <= 0 || m_floor == 44 || m_floor == 50)
+        return false;
+    const auto walkable = [this](int x, int y) {
+        const int tile = tileAt(x, y);
+        if (tile == Tile_Floor || tile == Tile_Item ||
+            tile == Tile_StairsUp || tile == Tile_StairsDown)
+            return true;
+        if (tile == Tile_DoorRed) return m_player.HasKey(KeyType::Red);
+        if (tile == Tile_DoorBlue) return m_player.HasKey(KeyType::Blue);
+        if (tile == Tile_DoorGreen)
+            return m_player.HasKey(KeyType::Green) || m_player.magicKeyUses > 0;
+        if (tile == Tile_DoorMagic || tile == Tile_DoorIron)
+            return mechanismDoorReadyAt(m_floor, *m_currentFloor, x, y);
+        return false;
+    };
+    if (!walkable(m_player.x, m_player.y)) return false;
+    std::vector<unsigned char> seen(static_cast<size_t>(m_width * m_height), 0);
+    std::queue<std::pair<int, int>> pending;
+    const auto index = [this](int x, int y) { return y * m_width + x; };
+    pending.emplace(m_player.x, m_player.y);
+    seen[index(m_player.x, m_player.y)] = 1;
+    static constexpr int directions[][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+    while (!pending.empty()) {
+        const auto [x, y] = pending.front();
+        pending.pop();
+        if (tileAt(x, y) == Tile_StairsUp || tileAt(x, y) == Tile_StairsDown)
+            return true;
+        for (const auto& direction : directions) {
+            const int nx = x + direction[0], ny = y + direction[1];
+            if (nx < 0 || ny < 0 || nx >= m_width || ny >= m_height) continue;
+            const int cell = index(nx, ny);
+            if (seen[cell] || !walkable(nx, ny)) continue;
+            seen[cell] = 1;
             pending.emplace(nx, ny);
         }
     }
     return false;
 }
 
-Game::MoveResult Game::teleportPlayerTo(int targetX, int targetY)
+bool Game::phoneTeleportToFloor(int targetFloor)
 {
-    if (m_floor3PrisonStoryPending) return Move_Block;
-    if (!isTeleportReachable(targetX, targetY)) return Move_Block;
+    bool hasPhone = false;
+    for (int i = 0; i < m_player.InventoryCount(); ++i)
+        if (dynamic_cast<const FlyingWand*>(m_player.GetItem(i)) != nullptr) {
+            hasPhone = true;
+            break;
+        }
+    if (!canUsePhone() || targetFloor <= 0 || targetFloor > 50 ||
+        targetFloor == 44 || targetFloor == 50 || !hasVisitedFloor(targetFloor) || !hasPhone)
+        return false;
+    if (m_floors.find(targetFloor) == m_floors.end()) initFloor(targetFloor);
+    m_floor = targetFloor;
+    m_currentFloor = &m_floors[m_floor];
+    m_visitedFloors.insert(m_floor);
+    prepareFloor3PrisonCell();
+
+    // 爱音手机固定落在目标层紫色下楼梯；若该层没有紫色楼梯则退回黄色上楼梯。
+    int stairX = -1, stairY = -1;
+    for (int y = 0; y < m_height && stairX < 0; ++y) {
+        for (int x = 0; x < m_width; ++x) {
+            if (tileAt(x, y) == Tile_StairsDown) {
+                stairX = x; stairY = y; break;
+            }
+        }
+    }
+    if (stairX < 0) {
+        for (int y = 0; y < m_height && stairX < 0; ++y)
+            for (int x = 0; x < m_width; ++x)
+                if (tileAt(x, y) == Tile_StairsUp) { stairX = x; stairY = y; break; }
+    }
+    if (stairX < 0) return false;
+    m_player.x = stairX;
+    m_player.y = stairY;
+    return true;
+}
+
+bool Game::isTeleportStoryPoint(int x, int y) const
+{
+    if (!m_currentFloor) return false;
+    const int tile = tileAt(x, y);
+    if (tile == Tile_NPC) return true;
+    return (m_floor == 3 && !m_floor3PrisonTriggered && x == 6 && y == 9) ||
+           (m_floor == 10 && !m_floor10AmbushTriggered && x == 7 && y == 6) ||
+           (m_floor == 38 && !m_floor38FlowerTriggered && x == 3 && y == 7);
+}
+
+int Game::applyApproachHazardsAt(int x, int y)
+{
+    if (!m_currentFloor) return 0;
+    // 33层(9,11)是伪装地板：玩家走到相邻格时才显现为墙。
+    if (m_floor == 33 && tileAt(9, 11) == Tile_Floor &&
+        std::abs(x - 9) + std::abs(y - 11) == 1)
+        setTile(9, 11, Tile_Wall);
+    if (m_player.hasHolyShield || m_floor3PrisonStoryPending) return 0;
+
+    int mageDamage = 0;
+    static constexpr int directions[][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+    for (const auto& direction : directions) {
+        const Monster* nearby = monsterAt(x + direction[0], y + direction[1]);
+        if (!nearby) continue;
+        const std::string& name = nearby->GetName();
+        if (name.find("高级巫师") != std::string::npos)
+            mageDamage += 200;
+        else if (name.find("初级巫师") != std::string::npos)
+            mageDamage += 100;
+    }
+
+    const auto isMagicGuard = [this](int gx, int gy) {
+        const Monster* guard = monsterAt(gx, gy);
+        return guard && guard->GetName().find("魔法警卫") != std::string::npos;
+    };
+    const bool horizontalPair = isMagicGuard(x - 1, y) && isMagicGuard(x + 1, y);
+    const bool verticalPair = isMagicGuard(x, y - 1) && isMagicGuard(x, y + 1);
+    const int beforeDamage = m_player.hp;
+    if (mageDamage > 0) m_player.hp = std::max(0, m_player.hp - mageDamage);
+    const int beforeHalving = m_player.hp;
+    if (horizontalPair || verticalPair) m_player.hp /= 2;
+    const int lost = (beforeDamage - m_player.hp);
+    return lost;
+}
+
+std::vector<std::pair<int, int>> Game::takeLastTeleportPath()
+{
+    auto path = std::move(m_lastTeleportPath);
+    m_lastTeleportPath.clear();
+    m_lastTeleportNeedsAnimation = false;
+    return path;
+}
+
+bool Game::beginTeleportPlayerTo(int targetX, int targetY)
+{
+    m_lastTeleportPath.clear();
+    m_lastTeleportNeedsAnimation = false;
+    if (!m_pendingTeleportPath.empty()) return false;
+    if (m_floor3PrisonStoryPending) return false;
+    m_lastTeleportPath = findTeleportPath(targetX, targetY);
+    if (m_lastTeleportPath.empty()) return false;
+
+    m_pendingTeleportPath = m_lastTeleportPath;
+    m_pendingTeleportTargetX = targetX;
+    m_pendingTeleportTargetY = targetY;
+
+    // 三层夹击和十层花门是“走到指定格后停下、显现机关”的剧情点。
+    // 规划阶段就截断到该格，避免动画继续走到原点击目标而剧情却在中途停住。
+    for (size_t i = 1; i + 1 < m_pendingTeleportPath.size(); ++i) {
+        const auto [pathX, pathY] = m_pendingTeleportPath[i];
+        const bool stopsAtStoryPoint =
+            (m_floor == 3 && !m_floor3PrisonTriggered && pathX == 6 && pathY == 9) ||
+            (m_floor == 10 && !m_floor10AmbushTriggered && pathX == 7 && pathY == 6);
+        if (stopsAtStoryPoint) {
+            m_pendingTeleportPath.resize(i + 1);
+            m_lastTeleportPath = m_pendingTeleportPath;
+            m_pendingTeleportTargetX = pathX;
+            m_pendingTeleportTargetY = pathY;
+            break;
+        }
+    }
+
+    // 只有会产生交互或沿途事件的瞬移才需要播放逐格动画；普通空地仍保持
+    // 原有的即时传送体验。副作用全部留到 completeTeleportPlayerTo()。
+    const int targetTile = tileAt(targetX, targetY);
+    const bool finalInteraction = targetTile != Tile_Floor;
+    const auto hasApproachHazard = [this](int x, int y) {
+        if (m_player.hasHolyShield || m_floor3PrisonStoryPending) return false;
+        static constexpr int directions[][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+        bool hasMage = false;
+        for (const auto& direction : directions) {
+            const Monster* nearby = monsterAt(x + direction[0], y + direction[1]);
+            if (!nearby) continue;
+            const std::string& name = nearby->GetName();
+            if (name.find("高级巫师") != std::string::npos ||
+                name.find("初级巫师") != std::string::npos) {
+                hasMage = true;
+                break;
+            }
+        }
+        const auto isMagicGuard = [this](int gx, int gy) {
+            const Monster* guard = monsterAt(gx, gy);
+            return guard && guard->GetName().find("魔法警卫") != std::string::npos;
+        };
+        return hasMage ||
+               (isMagicGuard(x - 1, y) && isMagicGuard(x + 1, y)) ||
+               (isMagicGuard(x, y - 1) && isMagicGuard(x, y + 1));
+    };
+    bool pathEvent = finalInteraction;
+    for (const auto& [pathX, pathY] : m_lastTeleportPath) {
+        if (isTeleportStoryPoint(pathX, pathY) || hasApproachHazard(pathX, pathY)) {
+            pathEvent = true;
+            break;
+        }
+    }
+    m_lastTeleportNeedsAnimation = m_lastTeleportPath.size() > 1 && pathEvent;
+    return true;
+}
+
+Game::MoveResult Game::completeTeleportPlayerTo()
+{
+    if (m_pendingTeleportPath.empty()) return Move_Block;
+    m_lastTeleportPath = std::move(m_pendingTeleportPath);
+    const int targetX = m_pendingTeleportTargetX;
+    const int targetY = m_pendingTeleportTargetY;
+    m_pendingTeleportTargetX = -1;
+    m_pendingTeleportTargetY = -1;
 
     const int tile = tileAt(targetX, targetY);
+    bool finalHazardApplied = false;
+    for (size_t i = 1; i < m_lastTeleportPath.size(); ++i) {
+        const auto [pathX, pathY] = m_lastTeleportPath[i];
+        const bool finalMonster = i + 1 == m_lastTeleportPath.size() && tile == Tile_Monster;
+        if (finalMonster) {
+            // 43层藤都子SP的首次点击是剧情退场，不应直接进入战斗。
+            if (m_floor == 43 && pathX == 10 && pathY == 2 && !m_floor43MiyakoRetreated) {
+                m_player.x = pathX;
+                m_player.y = pathY;
+                const auto result = tryMovePlayer(pathX, pathY);
+                m_lastTeleportNeedsAnimation = true;
+                return result;
+            }
+            break;
+        }
+        const bool storyPoint = isTeleportStoryPoint(pathX, pathY);
+        if (storyPoint && i + 1 < m_lastTeleportPath.size())
+            m_lastTeleportNeedsAnimation = true;
+        m_player.x = pathX;
+        m_player.y = pathY;
+        if (m_floor == 38 && pathX == 3 && pathY == 7 && !m_floor38FlowerTriggered) {
+            m_floor38FlowerTriggered = true;
+            setTile(3, 6, Tile_DoorMagic);
+        }
+        if (storyPoint) {
+            triggerFloor10AmbushIfNeeded();
+            if (m_floor3PrisonStoryPending ||
+                (m_floor == 10 && m_floor10AmbushTriggered && pathX == 7 && pathY == 6)) {
+                m_lastTeleportNeedsAnimation = true;
+                m_lastTeleportPath.resize(i + 1);
+                return Move_Ok;
+            }
+        }
+        const int hpBefore = m_player.hp;
+        applyApproachHazardsAt(pathX, pathY);
+        if (m_player.hp != hpBefore && i + 1 > 1)
+            m_lastTeleportNeedsAnimation = true;
+        if (i + 1 == m_lastTeleportPath.size()) finalHazardApplied = true;
+        if (m_player.hp <= 0) {
+            m_lastTeleportPath.resize(i + 1);
+            return Move_PlayerDead;
+        }
+    }
+    if (m_lastTeleportPath.size() > 1 && isTeleportStoryPoint(targetX, targetY))
+        m_lastTeleportNeedsAnimation = true;
     m_player.x = targetX;
     m_player.y = targetY;
+    if (m_floor == 38 && targetX == 3 && targetY == 7 && !m_floor38FlowerTriggered) {
+        m_floor38FlowerTriggered = true;
+        setTile(3, 6, Tile_DoorMagic);
+    }
     triggerFloor10AmbushIfNeeded();
 
     switch (tile) {
@@ -528,7 +1116,15 @@ Game::MoveResult Game::teleportPlayerTo(int targetX, int targetY)
             setTile(targetX, targetY, Tile_Floor);
             return Move_Ok;
         }
-        if (item->IsUseItem()) {
+        if (dynamic_cast<MagicKey*>(item.get()) != nullptr) {
+            // 大黄门钥匙沿用原版“一次使用、开启本层全部黄门”的效果。
+            for (int y = 0; y < m_height; ++y) {
+                for (int x = 0; x < m_width; ++x) {
+                    if (tileAt(x, y) == Tile_DoorGreen)
+                        setTile(x, y, Tile_Floor);
+                }
+            }
+        } else if (item->IsUseItem()) {
             m_player.AddItem(std::move(item));
         } else if (item->IsPassiveEffect()) {
             item->Apply(m_player);
@@ -540,8 +1136,12 @@ Game::MoveResult Game::teleportPlayerTo(int targetX, int targetY)
         return Move_Pickup;
     }
     case Tile_NPC:
+        if (!finalHazardApplied) applyApproachHazardsAt(targetX, targetY);
+        if (m_player.hp <= 0) return Move_PlayerDead;
         return Move_NPC;
     case Tile_Shop:
+        if (!finalHazardApplied) applyApproachHazardsAt(targetX, targetY);
+        if (m_player.hp <= 0) return Move_PlayerDead;
         return Move_Shop;
     case Tile_Monster:
         return hasMonsterAt(targetX, targetY) ? Move_Encounter : Move_Ok;
@@ -554,26 +1154,45 @@ Game::MoveResult Game::teleportPlayerTo(int targetX, int targetY)
     case Tile_DoorIron:
         return tryMovePlayer(targetX, targetY);
     case Tile_StairsUp:
+        if (!finalHazardApplied) applyApproachHazardsAt(targetX, targetY);
+        if (m_player.hp <= 0) return Move_PlayerDead;
         return Move_StairsUp;
     case Tile_StairsDown:
+        if (!finalHazardApplied) applyApproachHazardsAt(targetX, targetY);
+        if (m_player.hp <= 0) return Move_PlayerDead;
         return Move_StairsDown;
     default:
+        if (!finalHazardApplied) applyApproachHazardsAt(targetX, targetY);
+        if (m_player.hp <= 0) return Move_PlayerDead;
         return Move_Ok;
     }
 }
 
+Game::MoveResult Game::teleportPlayerTo(int targetX, int targetY)
+{
+    if (!beginTeleportPlayerTo(targetX, targetY)) return Move_Block;
+    return completeTeleportPlayerTo();
+}
+
 bool Game::debugTeleport(int floor, int x, int y)
 {
-    if (floor < 1 || floor > 50 || x < 0 || y < 0 || x >= m_width || y >= m_height)
+    if (floor < 0 || floor > 50 || x < 0 || y < 0 || x >= m_width || y >= m_height)
         return false;
     if (m_floors.find(floor) == m_floors.end())
         initFloor(floor);
     m_floor = floor;
     m_currentFloor = &m_floors[floor];
+    m_lastTeleportPath.clear();
+    m_pendingTeleportPath.clear();
+    m_pendingTeleportTargetX = -1;
+    m_pendingTeleportTargetY = -1;
+    m_lastTeleportNeedsAnimation = false;
+    m_visitedFloors.insert(m_floor);
     m_player.x = x;
     m_player.y = y;
     // 调试传送应能离开等待中的剧情现场，避免被事件锁死。
     m_floor3PrisonStoryPending = false;
+    m_floor32KnightStoryPending = false;
     return true;
 }
 
@@ -634,6 +1253,25 @@ void Game::openMechanismDoorsIfReady()
     }
 }
 
+void Game::resolveFloor39SymmetryFlyer()
+{
+    if (m_floor != 39 || !m_currentFloor) return;
+
+    // 原版提示中的“12点”和“3点”分别对应左上房间的上方中门
+    // (5,3) 与右侧中门 (7,5)。两扇黄门都打开后，中心格 (5,5)
+    // 才生成对称飞行器；重复检查不会重复生成。
+    const int twelveOClock = posKey(5, 3);
+    const int threeOClock = posKey(7, 5);
+    const int rewardKey = posKey(5, 5);
+    if (m_currentFloor->map[twelveOClock] != Tile_Floor ||
+        m_currentFloor->map[threeOClock] != Tile_Floor ||
+        m_currentFloor->items.find(rewardKey) != m_currentFloor->items.end()) {
+        return;
+    }
+    m_currentFloor->items.emplace(rewardKey, std::make_unique<SymmetryFlyer>());
+    setTile(5, 5, Tile_Item);
+}
+
 void Game::prepareFloor3PrisonCell()
 {
     if (m_floor3PrisonTriggered || m_floor3PrisonStoryPending) return;
@@ -645,6 +1283,378 @@ void Game::prepareFloor3PrisonCell()
     // 可能落在该格的普通怪物，触发时再由事件显现素世与四名警卫。
     floor3.monsters.erase(key);
     floor3.map[key] = Tile_DarkWall;
+}
+
+void Game::unlockPrincessDollPassage()
+{
+    auto floorIt = m_floors.find(24);
+    if (floorIt == m_floors.end()) {
+        initFloor(24);
+        floorIt = m_floors.find(24);
+    }
+    if (floorIt == m_floors.end()) return;
+
+    // 红门上方的隐藏格是原版完成26层假公主对话后显现的直通楼梯。
+    const int key = posKey(7, 8);
+    FloorData& floor24 = floorIt->second;
+    floor24.monsters.erase(key);
+    floor24.items.erase(key);
+    floor24.map[key] = Tile_StairsUp;
+    m_princessDollRescued = true;
+}
+
+void Game::activateFloor35Michelle()
+{
+    m_michelleRescued = true;
+    if (m_floors.find(35) == m_floors.end()) initFloor(35);
+    FloorData& floor35 = m_floors[35];
+    // 薇欧拉固定占据(7,5)，米歇尔改在其下方等待，避免覆盖Boss格。
+    const int key = posKey(7, 6);
+    for (auto it = floor35.npcs.begin(); it != floor35.npcs.end();) {
+        if (it->second.GetName() == "米歇尔" || it->second.ClassicId() == 26) {
+            floor35.map[it->first] = floor35.items.count(it->first) ? Tile_Item : Tile_Floor;
+            it = floor35.npcs.erase(it);
+        } else {
+            ++it;
+        }
+    }
+    floor35.npcs.emplace(key, NPC("米歇尔", {"我会去35层帮你打开魔龙房间的暗道。"}, nullptr,
+                                  false, 0, nullptr, 26));
+    floor35.map[key] = Tile_NPC;
+}
+
+void Game::returnMichelleToFloor2Cage()
+{
+    // 29层剧情结束时，米歇尔回到二层右下角；此时尚未获救，
+    // 35层的米歇尔不会提前出现。
+    m_michelleRescued = false;
+    if (m_floors.find(2) == m_floors.end()) initFloor(2);
+    FloorData& floor2 = m_floors[2];
+    for (auto it = floor2.npcs.begin(); it != floor2.npcs.end();) {
+        if (it->second.ClassicId() == 13 || it->second.GetName() == "米歇尔") {
+            floor2.map[it->first] = floor2.items.count(it->first) ? Tile_Item : Tile_Floor;
+            it = floor2.npcs.erase(it);
+        } else {
+            ++it;
+        }
+    }
+    // 29层剧情后的返场位置固定为二层右下角 (12,12)，与开局三层陷阱
+    // 使用的 (4,8) 小偷牢笼分开，避免两段剧情互相覆盖。
+    floor2.map[posKey(3, 8)] = Tile_DarkWall;
+    const int returnKey = posKey(12, 12);
+    floor2.npcs.emplace(returnKey,
+                        NPC("米歇尔", {"大家到35层集合吧，我会在那里打开魔龙房间的暗道。"},
+                            nullptr, false, 0, nullptr, 13));
+    floor2.map[returnKey] = Tile_NPC;
+}
+
+void Game::sendMichelleToFloor29()
+{
+    if (m_floors.find(29) == m_floors.end()) initFloor(29);
+    FloorData& floor29 = m_floors[29];
+    for (auto it = floor29.npcs.begin(); it != floor29.npcs.end();) {
+        if (it->second.GetName() == "米歇尔" || it->second.ClassicId() == 25) {
+            floor29.map[it->first] = floor29.items.count(it->first) ? Tile_Item : Tile_Floor;
+            it = floor29.npcs.erase(it);
+        } else ++it;
+    }
+    // 原版29层米歇尔位于中央通道 (7,3)，其下方 (7,4) 是对话后消失的暗墙。
+    const int key = posKey(7, 3);
+    floor29.npcs.emplace(key, NPC("米歇尔", {"二楼牢笼已经脱险了，接下来去35层打开魔龙房间的暗道吧。"},
+                                  nullptr, false, 0, nullptr, 25));
+    floor29.map[key] = Tile_NPC;
+}
+
+void Game::triggerFloor20VampireIfNeeded()
+{
+    if (m_floor != 20 || m_floor20VampireTriggered || !m_currentFloor) return;
+    if (m_player.x != 7 || m_player.y != 9) return;
+    m_floor20VampireTriggered = true;
+    // 事件触发前中央九格只有普通怪物；进入(7,9)后清空并显现中心吸血鬼。
+    for (int y = 6; y <= 8; ++y) {
+        for (int x = 6; x <= 8; ++x) {
+            const int key = posKey(x, y);
+            m_currentFloor->monsters.erase(key);
+            if (tileAt(x, y) == Tile_Monster)
+                setTile(x, y, m_currentFloor->items.count(key) ? Tile_Item : Tile_Floor);
+        }
+    }
+    const int center = posKey(7, 7);
+    m_currentFloor->monsters[center] = MonsterDB::get("凑友希那·吸血鬼");
+    setTile(7, 7, Tile_Monster);
+    // 原红门位置与顶端新增门都改为花门，必须击败中心吸血鬼才能开启。
+    setTile(7, 10, Tile_DoorMagic);
+    setTile(7, 4, Tile_DoorMagic);
+}
+
+std::vector<Game::MonsterMovementAnimation> Game::takeFloor32KnightMovementAnimations()
+{
+    auto result = std::move(m_floor32KnightMovements);
+    m_floor32KnightMovements.clear();
+    return result;
+}
+
+std::vector<std::pair<int, int>> Game::floor32KnightRoute() const
+{
+    if (!m_currentFloor || m_floor != 32) return {};
+    const std::pair<int, int> source{12, 2};
+    const std::pair<int, int> target{7, 10};
+    const int sourceKey = posKey(source.first, source.second);
+    const int targetKey = posKey(target.first, target.second);
+    std::queue<int> pending;
+    std::unordered_map<int, int> parent;
+    pending.push(sourceKey);
+    parent[sourceKey] = sourceKey;
+    constexpr int directions[4][2] = {{-1, 0}, {0, 1}, {1, 0}, {0, -1}};
+    while (!pending.empty() && parent.count(targetKey) == 0) {
+        const int key = pending.front();
+        pending.pop();
+        const int x = key % m_width;
+        const int y = key / m_width;
+        for (const auto& direction : directions) {
+            const int nx = x + direction[0];
+            const int ny = y + direction[1];
+            if (nx < 2 || nx > m_width - 3 || ny < 2 || ny > m_height - 3)
+                continue;
+            const int nextKey = posKey(nx, ny);
+            if (parent.count(nextKey) != 0) continue;
+            const int tile = m_currentFloor->map[nextKey];
+            const bool walkable = tile == Tile_Floor || tile == Tile_StairsUp ||
+                                  tile == Tile_StairsDown || nextKey == targetKey;
+            if (!walkable) continue;
+            parent[nextKey] = key;
+            pending.push(nextKey);
+        }
+    }
+    if (parent.count(targetKey) == 0) return {};
+    std::vector<std::pair<int, int>> route;
+    for (int key = targetKey;; key = parent[key]) {
+        route.push_back({key % m_width, key / m_width});
+        if (key == sourceKey) break;
+    }
+    std::reverse(route.begin(), route.end());
+    return route;
+}
+
+void Game::triggerFloor32KnightIfNeeded()
+{
+    if (m_floor != 32 || m_floor32KnightTriggered || !m_currentFloor) return;
+    if (m_player.x != 7 || m_player.y != 11) return;
+    const auto route = floor32KnightRoute();
+    if (route.size() < 2) return;
+    m_floor32KnightTriggered = true;
+    m_floor32KnightStoryPending = true;
+    // 骑士队长从右上黄色楼梯出现，但在行走动画结束前不写入终点格，
+    // 避免角色瞬间出现在主角面前。路径由地板寻路生成，不再穿墙。
+    const int sourceX = 12;
+    const int sourceY = 2;
+    const int sourceKey = posKey(sourceX, sourceY);
+    const int knightKey = posKey(7, 10);
+    m_currentFloor->monsters.erase(sourceKey);
+    m_currentFloor->monsters.erase(knightKey);
+    setTile(sourceX, sourceY, Tile_StairsUp);
+    setTile(7, 10, Tile_Floor);
+    const Monster knight = MonsterDB::get("幼年长崎素世·骑士队长");
+    for (std::size_t i = 1; i < route.size(); ++i) {
+        m_floor32KnightMovements.push_back({knight,
+            route[i - 1].first, route[i - 1].second,
+            route[i].first, route[i].second});
+    }
+    // 最后一格真正撞向站在(7,11)的爱音，动画完成后再把战斗实体
+    // 放回相邻的(7,10)，由界面自动结算先攻与战斗。
+    m_floor32KnightMovements.push_back({knight, 7, 10, 7, 11});
+}
+
+int Game::resolveFloor32KnightStory()
+{
+    if (!m_floor32KnightStoryPending) return 0;
+    m_floor32KnightStoryPending = false;
+    const int knightKey = posKey(7, 10);
+    if (!monsterAt(7, 10)) {
+        m_currentFloor->monsters[knightKey] = MonsterDB::get("幼年长崎素世·骑士队长");
+        setTile(7, 10, Tile_Monster);
+    }
+    Monster* knight = monsterAt(7, 10);
+    if (!knight) return 0;
+    const int damage = std::max(0, knight->Attack() - m_player.def);
+    m_player.hp = std::max(0, m_player.hp - damage);
+    return damage;
+}
+
+void Game::triggerFloor42KnightIfNeeded()
+{
+    if (m_floor != 42 || m_floor42KnightStoryTriggered || !m_currentFloor)
+        return;
+    m_floor42KnightStoryTriggered = true;
+    m_floor42KnightStoryPending = true;
+
+    // 首次抵达42层时，骑士队长逃跑并被魔王抓住；
+    // 由界面播放魔王与四名魔法警卫夹击的剧情，结束后仍留在42层。
+    const int knightKey = posKey(7, 11);
+    auto it = m_currentFloor->monsters.find(knightKey);
+    if (it != m_currentFloor->monsters.end() &&
+        it->second.GetName() == "幼年长崎素世·骑士队长") {
+        m_currentFloor->monsters.erase(it);
+        m_currentFloor->map[knightKey] =
+            m_currentFloor->items.count(knightKey) ? Tile_Item : Tile_Floor;
+    }
+}
+
+void Game::resolveFloor42KnightStory()
+{
+    if (!m_floor42KnightStoryPending || m_floor != 42)
+        return;
+    m_floor42KnightStoryPending = false;
+    // 剧情结束后不改变楼层，玩家继续探索42层。
+}
+
+void Game::triggerFloor14RewardIfCleared()
+{
+    if (m_floor != 14 || m_floor14RedKeyRewardGranted || !m_currentFloor) return;
+    // 只检测左上角这三只怪；(8,3)与红钥匙机关无关。
+    const std::pair<int, int> targets[] = {{2, 2}, {4, 2}, {3, 3}};
+    for (const auto& target : targets)
+        if (hasMonsterAt(target.first, target.second)) return;
+    m_floor14RedKeyRewardGranted = true;
+    const int rewardKey = posKey(2, 4);
+    m_currentFloor->monsters.erase(rewardKey);
+    m_currentFloor->items[rewardKey] = std::make_unique<Key>(KeyType::Red);
+    setTile(2, 4, Tile_Item);
+}
+
+void Game::resolveFloor34RewardIfCleared()
+{
+    if (m_floor != 34 || m_floor34RewardGranted || !m_currentFloor) return;
+    for (const auto& entry : m_currentFloor->monsters) {
+        const int y = entry.first / m_width;
+        if (y == 5 || y == 9) return;
+    }
+    m_floor34RewardGranted = true;
+    std::vector<std::unique_ptr<Item>> rewards;
+    rewards.emplace_back(std::make_unique<Key>(KeyType::Red));
+    for (int i = 0; i < 4; ++i) rewards.emplace_back(std::make_unique<Key>(KeyType::Green));
+    // 原版34层奖励固定围绕(3,7)摆放；中心格放红钥匙，四个正交邻格放黄钥匙。
+    const std::pair<int, int> fixedSpots[] = {{3, 7}, {2, 7}, {4, 7}, {3, 6}, {3, 8}};
+    size_t placed = 0;
+    for (const auto& spot : fixedSpots) {
+        if (placed >= rewards.size()) break;
+        const int key = posKey(spot.first, spot.second);
+        if (tileAt(spot.first, spot.second) != Tile_Floor || m_currentFloor->items.count(key) != 0)
+            continue;
+        addItemAt(spot.first, spot.second, std::move(rewards[placed++]));
+        setTile(spot.first, spot.second, Tile_Item);
+    }
+}
+
+void Game::revealFloor35RewardsIfDragonDefeated()
+{
+    if (m_floor != 35 || !m_currentFloor || !m_floor35RewardsHidden) return;
+    for (const auto& entry : m_floor35HiddenItems) {
+        const int key = entry.first;
+        if (m_currentFloor->items.count(key) != 0) continue;
+        auto item = createItemByName(entry.second.first, entry.second.second);
+        if (!item) continue;
+        m_currentFloor->items.emplace(key, std::move(item));
+        m_currentFloor->map[key] = Tile_Item;
+    }
+    m_floor35HiddenItems.clear();
+    m_floor35RewardsHidden = false;
+}
+
+void Game::spawnFloor40DeferredRewards()
+{
+    if (m_floor != 40 || !m_currentFloor || !m_floor40BossDefeated ||
+        m_floor40RewardsGranted)
+        return;
+    // 40层奖励的触发条件是红门上方（y<9）的怪物全部清空。
+    for (const auto& entry : m_currentFloor->monsters)
+        if (entry.first / m_width < 9)
+            return;
+
+    const ClassicItemTier tier = classicItemTierForFloor(40);
+    std::vector<std::unique_ptr<Item>> rewards;
+    for (int i = 0; i < 3; ++i) {
+        rewards.emplace_back(std::make_unique<RubyGem>(tier.rubyAttack, "舞台红宝石"));
+        rewards.emplace_back(std::make_unique<SapphireGem>(tier.sapphireDefense, "舞台蓝宝石"));
+        rewards.emplace_back(std::make_unique<Key>(KeyType::Green));
+        rewards.emplace_back(std::make_unique<LargePotion>(tier.largePotionHp));
+    }
+    size_t placed = 0;
+    for (int radius = 0; radius <= m_width + m_height && placed < rewards.size(); ++radius) {
+        for (int y = 2; y <= m_height - 3 && placed < rewards.size(); ++y) {
+            for (int x = 2; x <= m_width - 3 && placed < rewards.size(); ++x) {
+                if (y >= 9 || std::abs(x - 7) + std::abs(y - 9) != radius) continue;
+                const int key = posKey(x, y);
+                if (tileAt(x, y) != Tile_Floor || m_currentFloor->items.count(key) ||
+                    m_currentFloor->monsters.count(key)) continue;
+                addItemAt(x, y, std::move(rewards[placed++]));
+                setTile(x, y, Tile_Item);
+            }
+        }
+    }
+    if (placed == rewards.size()) {
+        setTile(m_width / 2, 2, Tile_StairsUp);
+        m_floor40RewardsGranted = true;
+    }
+}
+
+void Game::completeFloor35MichelleStory()
+{
+    if (!m_michelleRescued) activateFloor35Michelle();
+    FloorData& floor35 = m_floors[35];
+    for (auto it = floor35.npcs.begin(); it != floor35.npcs.end();) {
+        if (it->second.GetName() == "米歇尔" || it->second.ClassicId() == 26) {
+            floor35.map[it->first] = floor35.items.count(it->first) ? Tile_Item : Tile_Floor;
+            it = floor35.npcs.erase(it);
+        } else {
+            ++it;
+        }
+    }
+    // 米歇尔打开的是本层全部暗墙；花门和铁门仍保留各自的机关条件。
+    for (int& tile : floor35.map)
+        if (tile == Tile_DarkWall)
+            tile = Tile_Floor;
+
+    // 35层暗道打开后，米歇尔不回二楼，而是前往终幕的50层。
+    // 清理二楼牢笼中的旧NPC，避免玩家误以为她仍在那里等待对话。
+    if (m_floors.find(2) == m_floors.end()) initFloor(2);
+    FloorData& floor2 = m_floors[2];
+    for (auto it = floor2.npcs.begin(); it != floor2.npcs.end();) {
+        if (it->second.ClassicId() == 13 || it->second.GetName() == "米歇尔") {
+            floor2.map[it->first] = floor2.items.count(it->first) ? Tile_Item : Tile_Floor;
+            it = floor2.npcs.erase(it);
+        } else {
+            ++it;
+        }
+    }
+    if (m_floors.find(50) == m_floors.end()) initFloor(50);
+    FloorData& floor50 = m_floors[50];
+    const int revealKey = posKey(7, 5);
+    floor50.npcs.erase(revealKey);
+    floor50.npcs.emplace(revealKey, NPC("米歇尔",
+        {"终于到达终幕了……是时候让你看见我的真面目。"}, nullptr,
+        false, 0, nullptr, 47));
+    floor50.map[revealKey] = Tile_NPC;
+    // 在最终对话前隐藏王座处的素世本体，避免玩家跳过伪装揭示直接开战。
+    const int hiddenBossKey = posKey(7, 6);
+    floor50.monsters.erase(hiddenBossKey);
+    floor50.map[hiddenBossKey] = floor50.items.count(hiddenBossKey) ? Tile_Item : Tile_Floor;
+    // 救出后的35层剧情已经完成；保留该状态，避免重复生成35层NPC。
+    m_michelleRescued = true;
+}
+
+void Game::revealFloor50MichelleIdentity()
+{
+    if (m_floors.find(50) == m_floors.end()) initFloor(50);
+    FloorData& floor50 = m_floors[50];
+    const int revealKey = posKey(7, 5);
+    floor50.npcs.erase(revealKey);
+    floor50.map[revealKey] = floor50.items.count(revealKey) ? Tile_Item : Tile_Floor;
+
+    // 50层王座处显现长崎素世本体；若旧地图缺少Boss则补回原版终幕位置。
+    const int bossKey = posKey(7, 6);
+    floor50.monsters[bossKey] = MonsterDB::get("长崎素世·本体");
+    floor50.map[bossKey] = Tile_Monster;
 }
 
 void Game::triggerFloor3PrisonStoryIfNeeded()
@@ -699,7 +1709,10 @@ void Game::resolveFloor3PrisonStory()
 
 void Game::triggerFloor10AmbushIfNeeded()
 {
+    triggerFloor33TrapIfNeeded();
     triggerFloor3PrisonStoryIfNeeded();
+    triggerFloor20VampireIfNeeded();
+    triggerFloor32KnightIfNeeded();
     if (m_floor != 10 || m_floor10AmbushTriggered || !m_currentFloor)
         return;
 
@@ -753,35 +1766,68 @@ void Game::triggerFloor10AmbushIfNeeded()
     m_floor10AmbushMovements.clear();
     m_floor10AmbushMonsterKeys.clear();
 
-    // 取原版骷髅人/骷髅士兵（ID 5/6）中距离入口最近的六只作为侧翼守卫。
+    // 十层陷阱固定绑定地图内侧第三、第四排（坐标行 4、5）的八只侧翼怪物。
+    // 不按距离筛选，避免把楼层其他位置的怪物纳入条件。
     // 按当前十层规则，怪物保持原地图位置，不再移动或播放移动动画。
     std::vector<std::pair<int, Monster>> candidates;
     for (const auto& entry : m_currentFloor->monsters) {
-        const int classicId = MonsterDB::indexOf(entry.second.GetName()) + 1;
-        const int sourceY = entry.first / m_width;
-        if ((sourceY == 3 || sourceY == 4) && (classicId == 5 || classicId == 6))
+        const int row = entry.first / m_width;
+        if (row == 4 || row == 5)
             candidates.emplace_back(entry.first, entry.second);
     }
-    std::sort(candidates.begin(), candidates.end(), [this](const auto& lhs, const auto& rhs) {
-        const int lx = lhs.first % m_width, ly = lhs.first / m_width;
-        const int rx = rhs.first % m_width, ry = rhs.first / m_width;
-        const int ld = (lx - m_player.x) * (lx - m_player.x) + (ly - m_player.y) * (ly - m_player.y);
-        const int rd = (rx - m_player.x) * (rx - m_player.x) + (ry - m_player.y) * (ry - m_player.y);
-        return ld == rd ? lhs.first < rhs.first : ld < rd;
-    });
-    if (candidates.size() > 6) candidates.resize(6);
+    std::sort(candidates.begin(), candidates.end(),
+              [](const auto& lhs, const auto& rhs) { return lhs.first < rhs.first; });
+    if (candidates.size() > 8) candidates.resize(8);
 
     for (const auto& candidate : candidates) {
         m_floor10AmbushMonsterKeys.insert(candidate.first);
     }
     m_floor10AmbushMovements.clear();
+    m_scriptedMonsterMovements.clear();
     resolveFloor10AmbushIfCleared();
+}
+
+void Game::triggerFloor33TrapIfNeeded()
+{
+    if (m_floor != 33 || m_floor33TrapTriggered || !m_currentFloor) return;
+    if (m_player.x != 11 || m_player.y != 7) return;
+    m_floor33TrapTriggered = true;
+    setTile(11, 5, Tile_DoorMagic);
+    setTile(11, 9, Tile_DoorMagic);
+    // 资源缺失时补回四个固定位置的原版守卫，保证机关可测试。
+    const std::pair<int, int> positions[] = {{10, 6}, {12, 6}, {10, 8}, {12, 8}};
+    const int monsterIds[] = {18, 18, 19, 19};
+    for (int i = 0; i < 4; ++i) {
+        const int key = posKey(positions[i].first, positions[i].second);
+        if (!hasMonsterAt(positions[i].first, positions[i].second)) {
+            m_currentFloor->monsters[key] = MonsterDB::getByIndex(monsterIds[i] - 1);
+            setTile(positions[i].first, positions[i].second, Tile_Monster);
+        }
+    }
+}
+
+void Game::resolveFloor33TrapIfCleared()
+{
+    if (m_floor != 33 || !m_floor33TrapTriggered || !m_currentFloor) return;
+    const int guards[] = {posKey(10, 6), posKey(12, 6), posKey(10, 8), posKey(12, 8)};
+    for (const int key : guards)
+        if (m_currentFloor->monsters.find(key) != m_currentFloor->monsters.end()) return;
+    setTile(11, 5, Tile_Floor);
+    setTile(11, 9, Tile_Floor);
 }
 
 std::vector<Game::MonsterMovementAnimation> Game::takeFloor10AmbushMovementAnimations()
 {
     auto movements = std::move(m_floor10AmbushMovements);
     m_floor10AmbushMovements.clear();
+    m_scriptedMonsterMovements.clear();
+    return movements;
+}
+
+std::vector<Game::MonsterMovementAnimation> Game::takeScriptedMonsterMovementAnimations()
+{
+    auto movements = std::move(m_scriptedMonsterMovements);
+    m_scriptedMonsterMovements.clear();
     return movements;
 }
 
@@ -799,12 +1845,10 @@ void Game::resolveFloor10AmbushIfCleared()
             }
         }
     } else {
-        // 读档时不保存可变集合，按主角周围四格半径重建事件状态。
+        // 读档时不保存可变集合，按地图内侧第三、第四排重建十层侧翼守卫集合。
         for (const auto& entry : m_currentFloor->monsters) {
-            const int id = MonsterDB::indexOf(entry.second.GetName()) + 1;
-            if (id != 5 && id != 6) continue;
-            const int x = entry.first % m_width, y = entry.first / m_width;
-            if (std::abs(x - m_player.x) + std::abs(y - m_player.y) <= 4) {
+            const int row = entry.first / m_width;
+            if (row == 4 || row == 5) {
                 guardsRemain = true;
                 break;
             }
@@ -857,14 +1901,74 @@ int Game::useFreezeMagic()
     return frozen;
 }
 
+int Game::useMagicKey()
+{
+    if (!m_currentFloor) return 0;
+    int opened = 0;
+    for (int y = 0; y < m_height; ++y) {
+        for (int x = 0; x < m_width; ++x) {
+            if (tileAt(x, y) == Tile_DoorGreen) {
+                setTile(x, y, Tile_Floor);
+                ++opened;
+            }
+        }
+    }
+    return opened;
+}
+
+bool Game::canTeleportByStairItem(bool up, int srcX, int srcY) const
+{
+    const int targetFloor = up ? m_floor + 1 : m_floor - 1;
+    if (targetFloor < 0 || targetFloor > 50) return false;
+    const auto it = m_floors.find(targetFloor);
+    if (it == m_floors.end()) return false;
+
+    int targetX = std::clamp(srcX, 2, m_width - 3);
+    int targetY = std::clamp(srcY, 2, m_height - 3);
+    // 50层终幕入口由楼层切换逻辑固定为王座入口(7,8)。
+    if (up && targetFloor == 50) {
+        targetX = 7;
+        targetY = 8;
+    }
+    if (targetX < 0 || targetY < 0 || targetX >= m_width || targetY >= m_height)
+        return false;
+    const auto& targetMap = it->second.map;
+    if (static_cast<int>(targetMap.size()) != m_width * m_height) return false;
+    return targetMap[targetY * m_width + targetX] == Tile_Floor;
+}
+
 void Game::goUpFloor(int srcX, int srcY, bool findStairs)
 {
-    m_floor++;
+    if (m_floor == 24 && m_princessDollRescued && findStairs && srcX == 7 && srcY == 8) {
+        // 24层红门后的隐藏楼梯直通50层最终舞台。
+        m_floor = 50;
+        if (m_floors.find(m_floor) == m_floors.end())
+            initFloor(m_floor);
+        m_currentFloor = &m_floors[m_floor];
+        m_visitedFloors.insert(m_floor);
+        // 50层终幕固定从王座入口(7,8)开始，避免沿用来源楼层坐标落在错误区域。
+        m_player.x = 7;
+        m_player.y = 8;
+        return;
+    }
+    // 44层是独立异空间，原版楼梯路线从43层直接连到45层；
+    // 只有上楼器（findStairs=false）才能把目标设为44层。
+    m_floor = (findStairs && m_floor == 43) ? 45 : m_floor + 1;
     if (m_floors.find(m_floor) == m_floors.end()) {
         initFloor(m_floor);
     }
     m_currentFloor = &m_floors[m_floor];
+    m_visitedFloors.insert(m_floor);
     prepareFloor3PrisonCell();
+    if (m_floor == 42)
+        triggerFloor42KnightIfNeeded();
+
+    if (m_floor == 50) {
+        // 无论是楼梯还是楼层传送器，进入终幕都从固定入口(7,8)开始。
+        m_player.x = 7;
+        m_player.y = 8;
+        return;
+    }
 
     if (!findStairs) {
         // 上楼器：传送到当前位置
@@ -892,9 +1996,14 @@ void Game::goUpFloor(int srcX, int srcY, bool findStairs)
 
 void Game::goDownFloor(int srcX, int srcY, bool findStairs)
 {
-    if (m_floor <= 1) return;
-    m_floor--;
+    // 原版0层只能由1层使用下楼器/传送器抵达，普通下楼梯不通往0层。
+    if (m_floor <= 0 || (m_floor == 1 && findStairs)) return;
+    // 从45层沿普通楼梯返回时同样跳过44层；下楼器可显式落到44层。
+    m_floor = (findStairs && m_floor == 45) ? 43 : m_floor - 1;
+    if (m_floors.find(m_floor) == m_floors.end())
+        initFloor(m_floor);
     m_currentFloor = &m_floors[m_floor];
+    m_visitedFloors.insert(m_floor);
     prepareFloor3PrisonCell();
 
     if (!findStairs) {
@@ -924,9 +2033,13 @@ void Game::goDownFloor(int srcX, int srcY, bool findStairs)
 Game::MoveResult Game::tryMovePlayer(int nx, int ny)
 {
     // 夹击现场显现后必须由鼠标点击确认剧情，期间不允许继续移动。
-    if (m_floor3PrisonStoryPending) return Move_Block;
+    if (m_floor3PrisonStoryPending || m_floor32KnightStoryPending) return Move_Block;
     if (nx < 0 || ny < 0 || nx >= m_width || ny >= m_height) return Move_Block;
     int tile = tileAt(nx, ny);
+    const auto finishMove = [this](MoveResult result) {
+        applyApproachHazardsAt(m_player.x, m_player.y);
+        return m_player.hp <= 0 ? Move_PlayerDead : result;
+    };
 
     switch (tile) {
     case Tile_Wall:
@@ -936,7 +2049,7 @@ Game::MoveResult Game::tryMovePlayer(int nx, int ny)
                 m_player.wallBreakerUsed = false;
                 m_player.x = nx; m_player.y = ny;
                 triggerFloor10AmbushIfNeeded();
-                return Move_Ok;
+                return finishMove(Move_Ok);
             }
         }
         return Move_Block;
@@ -947,7 +2060,7 @@ Game::MoveResult Game::tryMovePlayer(int nx, int ny)
             setTile(nx, ny, Tile_Floor);
             m_player.x = nx; m_player.y = ny;
             triggerFloor10AmbushIfNeeded();
-            return Move_Ok;
+            return finishMove(Move_Ok);
         }
         return Move_Block;
     case Tile_StarRiver:
@@ -956,62 +2069,80 @@ Game::MoveResult Game::tryMovePlayer(int nx, int ny)
     case Tile_DoorMagic:
     case Tile_DoorIron:
         // 机关门不消耗钥匙，击败本楼层指定守卫后自动打开。
-        // 48 层圣剑房为原版损坏花门，只能用镐破坏。
+        // 48层圣剑房花门未触发专属事件前仍只能用镐破坏；
+        // 左上角藤都子SP被击败后由事件直接解锁。
         if (m_floor == 48 && m_player.wallBreakerUsed) {
             m_player.wallBreakerUsed = false;
             setTile(nx, ny, Tile_Floor);
             m_player.x = nx; m_player.y = ny;
             triggerFloor10AmbushIfNeeded();
-            return Move_Ok;
+            return finishMove(Move_Ok);
         }
         if (!mechanismDoorReadyAt(m_floor, *m_currentFloor, nx, ny)) return Move_DoorLocked;
         setTile(nx, ny, Tile_Floor);
         m_player.x = nx; m_player.y = ny;
         triggerFloor10AmbushIfNeeded();
-        return Move_Ok;
+        return finishMove(Move_Ok);
 
     case Tile_DarkWall:
+        if (m_floor == 35 && nx == 7 && ny == 4) {
+            // 魔龙房暗墙由35层米歇尔剧情开启，不能提前撞墙或用破墙锤绕过。
+            return Move_Block;
+        }
+        // 41层左上高级巫师被击败后，撞击右上对称暗墙(11,3)会显现隐藏的
+        // 第二名高级巫师；在此之前暗墙不可被普通撞击或破墙道具绕过。
+        if (m_floor == 41 && nx == 11 && ny == 3) {
+            if (hasMonsterAt(3, 3)) return Move_Block;
+            if (!hasMonsterAt(nx, ny)) {
+                setTile(nx, ny, Tile_Monster);
+                spawnMonster(nx, ny, MonsterDB::getByIndex(26)); // 峰月律SP·高级巫师
+                return Move_Block;
+            }
+        }
         // 暗墙是可撞开的机关墙：第一次碰撞只打开墙体，下一次移动才进入。
         // 破墙道具仍可立即打开并进入，普通墙不会走这条分支。
         if (m_player.wallBreakerUsed && breakWall(nx, ny)) {
             m_player.wallBreakerUsed = false;
             m_player.x = nx; m_player.y = ny;
             triggerFloor10AmbushIfNeeded();
-            return Move_Ok;
+            return finishMove(Move_Ok);
         }
         setTile(nx, ny, m_currentFloor->items.count(posKey(nx, ny)) ? Tile_Item : Tile_Floor);
         return Move_Block;
 
     case Tile_Floor:
         m_player.x = nx; m_player.y = ny;
+        if (m_floor == 38 && nx == 3 && ny == 7 && !m_floor38FlowerTriggered) {
+            // 到达38层(3,7)后才显现上方的剧情花门；该门始终由剧情控制。
+            m_floor38FlowerTriggered = true;
+            setTile(3, 6, Tile_DoorMagic);
+        }
         triggerFloor10AmbushIfNeeded();
-        return Move_Ok;
+        return finishMove(Move_Ok);
 
     case Tile_DoorRed:
+        if (m_floor == 24 && nx == 7 && ny == 9 && !m_princessDollRescued)
+            return Move_DoorLocked;
         if (m_player.HasKey(KeyType::Red)) {
             m_player.UseKey(KeyType::Red);
-        } else if (m_player.magicKeyUses > 0) {
-            m_player.magicKeyUses--;
         } else {
             return Move_DoorLocked;
         }
         setTile(nx, ny, Tile_Floor);
         m_player.x = nx; m_player.y = ny;
         triggerFloor10AmbushIfNeeded();
-        return Move_Ok;
+        return finishMove(Move_Ok);
 
     case Tile_DoorBlue:
         if (m_player.HasKey(KeyType::Blue)) {
             m_player.UseKey(KeyType::Blue);
-        } else if (m_player.magicKeyUses > 0) {
-            m_player.magicKeyUses--;
         } else {
             return Move_DoorLocked;
         }
         setTile(nx, ny, Tile_Floor);
         m_player.x = nx; m_player.y = ny;
         triggerFloor10AmbushIfNeeded();
-        return Move_Ok;
+        return finishMove(Move_Ok);
 
     case Tile_DoorGreen:
         if (m_player.HasKey(KeyType::Green)) {
@@ -1023,22 +2154,44 @@ Game::MoveResult Game::tryMovePlayer(int nx, int ny)
         }
         setTile(nx, ny, Tile_Floor);
         m_player.x = nx; m_player.y = ny;
+        resolveFloor39SymmetryFlyer();
         triggerFloor10AmbushIfNeeded();
-        return Move_Ok;
+        return finishMove(Move_Ok);
 
     case Tile_Monster:
+        if (m_floor == 43 && nx == 10 && ny == 2 && !m_floor43MiyakoRetreated) {
+            // 藤都子SP第一次交互是退场事件，不进入战斗；战斗位置改到右侧，
+            // 中间格同时被剧情墙封住，后续再次交互才会正常战斗。
+            const int fromKey = posKey(10, 2);
+            const int toKey = posKey(12, 2);
+            if (const auto it = m_currentFloor->monsters.find(fromKey);
+                it != m_currentFloor->monsters.end()) {
+                m_scriptedMonsterMovements.push_back({it->second, 10, 2, 12, 2});
+            }
+            m_currentFloor->monsters.erase(fromKey);
+            m_currentFloor->monsters.erase(toKey);
+            m_currentFloor->monsters.emplace(toKey, MonsterDB::get("藤都子SP·魔法警卫"));
+            setTile(10, 2, m_currentFloor->items.count(fromKey) ? Tile_Item : Tile_Floor);
+            setTile(11, 2, Tile_Wall);
+            setTile(12, 2, Tile_Monster);
+            m_floor43MiyakoRetreated = true;
+            return Move_Ok;
+        }
         if (hasMonsterAt(nx, ny))
             return Move_Encounter;
         else {
             m_player.x = nx; m_player.y = ny;
             triggerFloor10AmbushIfNeeded();
-            return Move_Ok;
+            return finishMove(Move_Ok);
         }
 
     case Tile_Item: {
         auto item = takeItemAt(nx, ny);
         if (item) {
-            if (item->IsUseItem()) {
+            if (dynamic_cast<MagicKey*>(item.get()) != nullptr) {
+                // 大黄门钥匙必须进入背包，改由背包中的“使用”动作开启本层全部黄门。
+                m_player.AddItem(std::move(item));
+            } else if (item->IsUseItem()) {
                 m_player.AddItem(std::move(item));
             } else if (item->IsPassiveEffect()) {
                 item->Apply(m_player);
@@ -1049,12 +2202,12 @@ Game::MoveResult Game::tryMovePlayer(int nx, int ny)
             setTile(nx, ny, Tile_Floor);
             m_player.x = nx; m_player.y = ny;
             triggerFloor10AmbushIfNeeded();
-            return Move_Pickup;
+            return finishMove(Move_Pickup);
         }
         setTile(nx, ny, Tile_Floor);
         m_player.x = nx; m_player.y = ny;
         triggerFloor10AmbushIfNeeded();
-        return Move_Ok;
+        return finishMove(Move_Ok);
     }
 
     case Tile_NPC:
@@ -1066,17 +2219,17 @@ Game::MoveResult Game::tryMovePlayer(int nx, int ny)
     case Tile_StairsUp:
         m_player.x = nx; m_player.y = ny;
         triggerFloor10AmbushIfNeeded();
-        return Move_StairsUp;
+        return finishMove(Move_StairsUp);
 
     case Tile_StairsDown:
         m_player.x = nx; m_player.y = ny;
         triggerFloor10AmbushIfNeeded();
-        return Move_StairsDown;
+        return finishMove(Move_StairsDown);
 
     default:
         m_player.x = nx; m_player.y = ny;
         triggerFloor10AmbushIfNeeded();
-        return Move_Ok;
+        return finishMove(Move_Ok);
     }
 }
 
@@ -1089,6 +2242,11 @@ Game::FightResult Game::fightAt(int x, int y, std::vector<std::string>& outLog)
     }
 
     std::string bossName = m->GetName();
+    if (m_floor == 49 && x == 7 && y == 4 && bossName == "长崎素世·幻影" &&
+        m->GetHP() >= 8000) {
+        outLog.push_back("长崎素世·幻影尚未解除封印，先击败她上下左右的四名魔法警卫！");
+        return Fight_Stalemate;
+    }
     if (m_floor == 10 && bossName == "八幡海铃·骷髅队长" && !m_floor10AmbushTriggered) {
         outLog.push_back("八幡海铃挡在花门前，先触发包围事件才能挑战她。");
         return Fight_Stalemate;
@@ -1151,7 +2309,66 @@ Game::FightResult Game::fightAt(int x, int y, std::vector<std::string>& outLog)
             int key = posKey(x, y);
             m_currentFloor->monsters.erase(key);
             setTile(x, y, m_currentFloor->items.count(key) ? Tile_Item : Tile_Floor);
+            if (m_floor == 2 && MonsterDB::indexOf(bossName) == 20)
+                m_michelleGuardDefeated = true;
+            triggerFloor14RewardIfCleared();
+            resolveFloor34RewardIfCleared();
+            const bool hadHiddenFloor35Rewards =
+                m_floor == 35 && bossName == "薇欧拉SP·魔龙" && !m_floor35HiddenItems.empty();
+            if (hadHiddenFloor35Rewards)
+                revealFloor35RewardsIfDragonDefeated();
+            if (m_floor == 32 && bossName == "幼年长崎素世·骑士队长") {
+                // 逆序播放来时的地板路径，确保撤退也不穿墙。
+                const auto route = floor32KnightRoute();
+                const Monster knight = MonsterDB::get("幼年长崎素世·骑士队长");
+                m_floor32KnightMovements.push_back({knight, 7, 11, 7, 10});
+                for (std::size_t i = route.size(); i > 1; --i) {
+                    m_floor32KnightMovements.push_back({knight,
+                        route[i - 1].first, route[i - 1].second,
+                        route[i - 2].first, route[i - 2].second});
+                }
+                m_currentFloor->map[posKey(6, 12)] = Tile_StairsDown;
+                m_currentFloor->map[posKey(12, 2)] = Tile_StairsUp;
+            }
             openMechanismDoorsIfReady();
+            resolveFloor33TrapIfCleared();
+            if (m_floor == 48 && x == 2 && y == 2 &&
+                bossName == "藤都子SP·魔法警卫") {
+                // 48层圣剑房花门只由这只左上角藤都子SP解锁，
+                // 不受其他魔法门的通用清怪规则影响。
+                if (tileAt(9, 9) == Tile_DoorMagic) {
+                    setTile(9, 9, Tile_Floor);
+                    outLog.push_back("藤都子SP被击败，48层圣剑房花门已解锁！");
+                }
+            }
+            if (m_floor == 41 && x == 11 && y == 3 &&
+                bossName == "峰月律SP·高级巫师") {
+                bool advancedWizardsRemain = false;
+                for (const auto& entry : m_currentFloor->monsters) {
+                    if (entry.second.GetName().find("高级巫师") != std::string::npos) {
+                        advancedWizardsRemain = true;
+                        break;
+                    }
+                }
+                if (advancedWizardsRemain) {
+                    outLog.push_back("41层仍有高级巫师，击败全部高级巫师后才能生成下楼器。");
+                } else {
+                    // 原版第二名高级巫师被击败后，魔法金币在(7,6)显现，
+                    // 并以三墙夹一通道的方式重排周围地形。
+                    const int rewardKey = posKey(7, 6);
+                    if (m_currentFloor->items.count(rewardKey) == 0) {
+                        setTile(7, 6, Tile_Floor);
+                        addItemAt(7, 6, std::make_unique<StairLower>());
+                        setTile(7, 6, Tile_Item);
+                        setTile(6, 7, Tile_Wall);
+                        setTile(7, 7, Tile_Wall);
+                        setTile(8, 7, Tile_Wall);
+                        setTile(6, 8, Tile_Floor);
+                        setTile(8, 8, Tile_Floor);
+                        outLog.push_back("隐藏的高级巫师被击败，(7,6)显现撤场通行卡（下楼器）；周围墙体随之重排！");
+                    }
+                }
+            }
             if (m_floor == 10 && m_floor10AmbushTriggered &&
                 bossName != "八幡海铃·骷髅队长")
                 m_floor10AmbushMonsterKeys.erase(key);
@@ -1173,9 +2390,13 @@ Game::FightResult Game::fightAt(int x, int y, std::vector<std::string>& outLog)
                     !m_currentFloor->monsters.count(eventKey(0, 2));
                 if (sealComplete) {
                     const int bossKey = eventKey(0, 3);
-                    m_currentFloor->monsters[bossKey] =
-                        Monster("长崎素世·幻影", 800, 500, 100, 500);
-                    outLog.push_back("四名魔法警卫形成的封印生效，长崎素世·幻影的属性降为原来的十分之一！");
+                    auto bossIt = m_currentFloor->monsters.find(bossKey);
+                    if (bossIt != m_currentFloor->monsters.end() &&
+                        bossIt->second.GetName() == "长崎素世·幻影" &&
+                        bossIt->second.GetHP() >= 8000) {
+                        bossIt->second = Monster("长崎素世·幻影", 800, 500, 100, 500);
+                        outLog.push_back("四名魔法警卫被击败，魔王封印解除；长崎素世·幻影的属性降为原来的十分之一！");
+                    }
                 }
             }
             if (m_floor == 49 && bossName == "长崎素世·幻影") {
@@ -1187,11 +2408,112 @@ Game::FightResult Game::fightAt(int x, int y, std::vector<std::string>& outLog)
             std::ostringstream ss;
             ss << "你击败了 " << bossName << " 并获得 " << gold << " 金币。";
             outLog.push_back(ss.str());
+            // 原版阶段 Boss 击败后会留下固定奖励并开启通往上一层的出口。
+            // 奖励按原版掉落组合放在 Boss 周围，避免覆盖地图上的其他静态物件。
+            std::vector<std::unique_ptr<Item>> bossRewards;
+            std::string rewardSummary;
+            bool spawnBossStair = false;
+            const int rewardStairX = m_width / 2;
+            const int rewardStairY = (m_floor == 20 || m_floor == 40) ? 2 : m_height - 3;
+            const auto appendClassicBossRewards = [&](const ClassicItemTier& tier) {
+                for (int i = 0; i < 3; ++i) {
+                    bossRewards.emplace_back(std::make_unique<RubyGem>(tier.rubyAttack, "舞台红宝石"));
+                    bossRewards.emplace_back(std::make_unique<SapphireGem>(tier.sapphireDefense, "舞台蓝宝石"));
+                    bossRewards.emplace_back(std::make_unique<Key>(KeyType::Green));
+                    bossRewards.emplace_back(std::make_unique<LargePotion>(tier.largePotionHp));
+                }
+                rewardSummary = "舞台红宝石×3、舞台蓝宝石×3、黄色Live票×3、爱音能量饮×3";
+            };
             if (m_floor == 10 && bossName == "八幡海铃·骷髅队长") {
-                // 原版奖励楼梯固定出现在地图正中间最下方。
-                setTile(m_width / 2, m_height - 3, Tile_StairsUp);
-                outLog.push_back("剧情奖励：10层地图正中间下方出现向上楼梯！");
+                const auto tier = classicItemTierForFloor(m_floor);
+                appendClassicBossRewards(tier);
+                spawnBossStair = true;
+            } else if (m_floor == 20 && bossName == "凑友希那·吸血鬼") {
+                const auto tier = classicItemTierForFloor(m_floor);
+                appendClassicBossRewards(tier);
+                spawnBossStair = true;
+            } else if (m_floor == 40 && bossName == "幼年长崎素世·骑士队长") {
+                m_floor40BossDefeated = true;
+                bool upperMonstersRemain = false;
+                for (const auto& entry : m_currentFloor->monsters) {
+                    if (entry.first / m_width < 9) {
+                        upperMonstersRemain = true;
+                        break;
+                    }
+                }
+                if (!upperMonstersRemain) {
+                    const auto tier = classicItemTierForFloor(m_floor);
+                    appendClassicBossRewards(tier);
+                    spawnBossStair = true;
+                }
+            } else if (m_floor == 25 && bossName == "户山香澄·大法师") {
+                for (int i = 0; i < 4; ++i)
+                    bossRewards.emplace_back(std::make_unique<Key>(KeyType::Red));
+                rewardSummary = "红色Live票×4";
+            } else if (m_floor == 35 && bossName == "薇欧拉SP·魔龙") {
+                rewardSummary = "海铃冷静指令×1、爱音能量饮×3";
+                // 正式经典地图已预埋这四件奖励并在战斗前隐藏，揭示后不重复生成；
+                // 无资源/测试地图没有预埋物品时才使用同样组合的后备掉落。
+                if (!hadHiddenFloor35Rewards) {
+                    bossRewards.emplace_back(std::make_unique<FreezeMagic>());
+                    for (int i = 0; i < 3; ++i)
+                        bossRewards.emplace_back(std::make_unique<LargePotion>(classicItemTierForFloor(m_floor).largePotionHp));
+                }
+            } else if (m_floor == 49 && bossName == "长崎素世·幻影") {
+                const auto tier = classicItemTierForFloor(m_floor);
+                for (int i = 0; i < 3; ++i) {
+                    bossRewards.emplace_back(std::make_unique<RubyGem>(tier.rubyAttack, "舞台红宝石"));
+                    bossRewards.emplace_back(std::make_unique<SapphireGem>(tier.sapphireDefense, "舞台蓝宝石"));
+                    bossRewards.emplace_back(std::make_unique<LargePotion>(tier.largePotionHp));
+                }
+                bossRewards.emplace_back(std::make_unique<Key>(KeyType::Red));
+                bossRewards.emplace_back(std::make_unique<DragonSlayer>());
+                rewardSummary = "舞台红宝石×3、舞台蓝宝石×3、爱音能量饮×3、红色Live票×1、祥子指挥棒×1";
             }
+            if (!bossRewards.empty()) {
+                const std::array<std::pair<int, int>, 9> offsets = {{
+                    {0, 0}, {1, 0}, {-1, 0}, {0, 1}, {0, -1},
+                    {1, 1}, {-1, 1}, {1, -1}, {-1, -1}
+                }};
+                std::vector<std::pair<int, int>> candidates;
+                std::unordered_set<int> seen;
+                const auto appendCandidate = [&](int rx, int ry) {
+                    if (rx < 2 || rx > m_width - 3 || ry < 2 || ry > m_height - 3) return;
+                    if (seen.insert(posKey(rx, ry)).second) candidates.emplace_back(rx, ry);
+                };
+                for (const auto& offset : offsets) appendCandidate(x + offset.first, y + offset.second);
+                for (int radius = 2; radius <= m_width + m_height; ++radius) {
+                    for (int dy = -radius; dy <= radius; ++dy) {
+                        const int dx = radius - std::abs(dy);
+                        appendCandidate(x + dx, y + dy);
+                        if (dx != 0) appendCandidate(x - dx, y + dy);
+                    }
+                }
+                size_t placed = 0;
+                for (const auto& candidate : candidates) {
+                    if (placed >= bossRewards.size()) break;
+                    const int rx = candidate.first;
+                    const int ry = candidate.second;
+                    const int key = posKey(rx, ry);
+                    if ((rx == rewardStairX && ry == rewardStairY) ||
+                        tileAt(rx, ry) != Tile_Floor ||
+                        m_currentFloor->monsters.count(key) != 0 ||
+                        m_currentFloor->items.count(key) != 0)
+                        continue;
+                    addItemAt(rx, ry, std::move(bossRewards[placed++]));
+                    setTile(rx, ry, Tile_Item);
+                }
+                if (spawnBossStair) {
+                    // 20层奖励生成顶部黄色上楼梯；底部原有紫色小楼梯保持不变。
+                    setTile(rewardStairX, rewardStairY, Tile_StairsUp);
+                    if (m_floor == 40) m_floor40RewardsGranted = true;
+                    outLog.push_back("Boss奖励：" + rewardSummary + "；地图正中间出现向上楼梯！");
+                } else {
+                    outLog.push_back("Boss奖励：" + rewardSummary + "！");
+                }
+            }
+            // 40层Boss先被击败但上方仍有怪物时，最后一只怪物倒下后补发奖励。
+            spawnFloor40DeferredRewards();
             if (hasShield) m_player.tempShieldCharges--;
             if (bossName == "长崎素世·本体")
                 return Fight_GameWin;
@@ -1327,7 +2649,33 @@ bool Game::saveToFile(const std::string& path) const
         << m_player.hasHolyShield << " " << m_player.freezeMagicUsed << " "
         << m_player.flyWandUses << " " << m_player.symmetryFlyerUses << " "
         << m_floor10AmbushTriggered << " " << m_floor3PrisonTriggered << " "
-        << m_floor3TrapActive << " " << m_floor3PrisonStoryPending << "\n";
+        << m_floor3TrapActive << " " << m_floor3PrisonStoryPending << " "
+        << m_princessDollRescued << " " << m_floor20VampireTriggered << " "
+        << m_michelleRescued << " " << m_floor33TrapTriggered << " "
+        << m_floor38FlowerTriggered << " " << m_floor43MiyakoRetreated << " "
+        << m_floor14RedKeyRewardGranted << " " << m_floor32KnightTriggered << " "
+        << m_floor32KnightStoryPending << " " << m_floor34RewardGranted << " "
+        << m_floor35RewardsHidden << " " << m_floor40BossDefeated << " "
+        << m_floor40RewardsGranted << " " << m_michelleGuardDefeated << " "
+        << m_floor20VampireStoryShown << " " << m_floor42KnightStoryTriggered << " "
+        << m_floor42KnightStoryPending << "\n";
+
+    // 35层魔龙奖励在击败前从地图暂时隐藏；把原始道具一并写入存档，
+    // 这样读档后仍能按原版流程在击败魔龙时显现奖励。
+    ofs << "HIDDEN35 " << m_floor35HiddenItems.size();
+    for (const auto& entry : m_floor35HiddenItems)
+        ofs << " " << entry.first << " " << entry.second.first << " " << entry.second.second;
+    ofs << "\n";
+
+    // 已访问楼层用于限制爱音手机目标；独立一行以兼容旧版存档。
+    ofs << "VISITED " << m_visitedFloors.size();
+    for (const int visited : m_visitedFloors) ofs << " " << visited;
+    ofs << "\n";
+
+    // 全局一次性剧情标记，保证读档后不会再次播放已完成剧情。
+    ofs << "STORIES " << m_storyOnceKeys.size();
+    for (const auto& key : m_storyOnceKeys) ofs << " " << key;
+    ofs << "\n";
 
     // 背包物品
     ofs << m_player.InventoryCount() << "\n";
@@ -1363,11 +2711,15 @@ std::string Game::canonicalItemName(const std::string& iname)
         {"Divine Shield", "Mujica终幕面具"}, {"神圣盾", "Mujica终幕面具"},
         {"Pickaxe", "睦的镐子"}, {"镐", "睦的镐子"}, {"Bomb", "Mujica烟雾弹"}, {"炸弹", "Mujica烟雾弹"},
         {"Earthquake Scroll", "Mujica舞台震响卷"}, {"地震卷轴", "Mujica舞台震响卷"},
-        {"Cross", "MyGO和解徽章"}, {"十字架", "MyGO和解徽章"}, {"Dragon Slayer", "祥子指挥棒"}, {"屠龙匕", "祥子指挥棒"},
-        {"Freeze Magic", "海铃冷静指令"}, {"冰冻魔法", "海铃冷静指令"}, {"Flying Wand", "爱音手机"}, {"飞行魔杖", "爱音手机"},
+        {"Cross", "MyGO和解徽章"}, {"十字架", "MyGO和解徽章"}, {"MyGO团结徽章", "MyGO和解徽章"}, {"Dragon Slayer", "祥子指挥棒"}, {"屠龙匕", "祥子指挥棒"}, {"屠龙匕首", "祥子指挥棒"},
+        {"Freeze Magic", "海铃冷静指令"}, {"冰冻魔法", "海铃冷静指令"}, {"冰冻徽章", "海铃冷静指令"}, {"冷静雪花徽章", "海铃冷静指令"}, {"Flying Wand", "爱音手机"}, {"飞行魔杖", "爱音手机"},
         {"Floor Teleporter", "楼层传送器"},
-        {"Symmetry Flyer", "Mujica镜面舞台票"}, {"对称飞行器", "Mujica镜面舞台票"}, {"Note Book", "灯的歌词本"}, {"记事本", "灯的歌词本"},
-        {"Magic Key", "后台万能通行证"}, {"万能钥匙", "后台万能通行证"}, {"Holy Water", "立希水壶"}, {"圣水", "立希水壶"},
+        {"Symmetry Flyer", "Mujica镜面舞台票"}, {"对称飞行器", "Mujica镜面舞台票"},
+        {"Monster Book", "怪物手册"}, {"怪物手册", "怪物手册"},
+        {"Note Book", "高松灯的单词本"}, {"记事本", "高松灯的单词本"},
+        {"灯的歌词本", "高松灯的单词本"}, {"灯的单词本", "高松灯的单词本"},
+        {"高松灯的歌词本", "高松灯的单词本"}, {"高松灯的单词本", "高松灯的单词本"},
+        {"Magic Key", "大黄门钥匙"}, {"万能钥匙", "大黄门钥匙"}, {"后台万能通行证", "大黄门钥匙"}, {"Holy Water", "立希水壶"}, {"圣水", "立希水壶"},
         {"Lucky Coin", "乐奈幸运硬币"}, {"幸运金币", "乐奈幸运硬币"}, {"Anon Glasses", "爱音自拍眼镜"}, {"匿名眼镜", "爱音自拍眼镜"},
         {"Wall Breaker", "破墙锤"}, {"破墙锤", "破墙锤"}, {"Up Flyer", "舞台升降卡"}, {"上楼器", "舞台升降卡"},
         {"Down Flyer", "撤场通行卡"}, {"下楼器", "撤场通行卡"}, {"临时护盾", "乐队护盾贴"},
@@ -1386,9 +2738,10 @@ std::string Game::canonicalItemName(const std::string& iname)
         QString::fromUtf8("铁盾"), QString::fromUtf8("银盾"), QString::fromUtf8("骑士盾"),
         QString::fromUtf8("圣盾"), QString::fromUtf8("神圣盾"), QString::fromUtf8("镐"),
         QString::fromUtf8("炸弹"), QString::fromUtf8("地震卷轴"), QString::fromUtf8("十字架"),
-        QString::fromUtf8("屠龙匕"), QString::fromUtf8("冰冻魔法"), QString::fromUtf8("飞行魔杖"),
+        QString::fromUtf8("屠龙匕"), QString::fromUtf8("屠龙匕首"), QString::fromUtf8("冰冻魔法"), QString::fromUtf8("冰冻徽章"), QString::fromUtf8("冷静雪花徽章"), QString::fromUtf8("飞行魔杖"),
         QString::fromUtf8("楼层传送器"),
-        QString::fromUtf8("对称飞行器"), QString::fromUtf8("记事本")
+        QString::fromUtf8("对称飞行器"), QString::fromUtf8("记事本"),
+        QString::fromUtf8("怪物手册"), QString::fromUtf8("高松灯的单词本")
     };
     for (const auto& name : specials)
         if (special == name) return name.toStdString();
@@ -1437,14 +2790,17 @@ std::unique_ptr<Item> Game::createItemByName(const std::string& iname, int ival)
     if (iname == "Pickaxe" || iname == "镐" || iname == "睦的镐子") return std::make_unique<Pickaxe>();
     if (iname == "Bomb" || iname == "炸弹" || iname == "Mujica烟雾弹") return std::make_unique<Bomb>();
     if (iname == "Earthquake Scroll" || iname == "地震卷轴" || iname == "Mujica舞台震响卷") return std::make_unique<EarthquakeScroll>();
-    if (iname == "Cross" || iname == "十字架" || iname == "MyGO和解徽章") return std::make_unique<Cross>();
-    if (iname == "Dragon Slayer" || iname == "屠龙匕" || iname == "祥子指挥棒") return std::make_unique<DragonSlayer>();
-    if (iname == "Freeze Magic" || iname == "冰冻魔法" || iname == "海铃冷静指令") return std::make_unique<FreezeMagic>();
+    if (iname == "Cross" || iname == "十字架" || iname == "MyGO和解徽章" || iname == "MyGO团结徽章") return std::make_unique<Cross>();
+    if (iname == "Dragon Slayer" || iname == "屠龙匕" || iname == "屠龙匕首" || iname == "祥子指挥棒") return std::make_unique<DragonSlayer>();
+    if (iname == "Freeze Magic" || iname == "冰冻魔法" || iname == "冰冻徽章" || iname == "冷静雪花徽章" || iname == "海铃冷静指令") return std::make_unique<FreezeMagic>();
     if (iname == "Flying Wand" || iname == "飞行魔杖" || iname == "爱音手机") return std::make_unique<FlyingWand>();
     if (iname == "Floor Teleporter" || iname == "楼层传送器") return std::make_unique<FloorTeleporter>();
     if (iname == "Symmetry Flyer" || iname == "对称飞行器" || iname == "Mujica镜面舞台票") return std::make_unique<SymmetryFlyer>();
-    if (iname == "Note Book" || iname == "记事本" || iname == "灯的歌词本") return std::make_unique<NoteBook>();
-    if (iname == "Magic Key" || iname == "万能钥匙" || iname == "后台万能通行证")
+    if (iname == "Monster Book" || iname == "怪物手册") return std::make_unique<MonsterBook>();
+    if (iname == "Note Book" || iname == "记事本" || iname == "灯的歌词本" ||
+        iname == "灯的单词本" || iname == "高松灯的歌词本" || iname == "高松灯的单词本")
+        return std::make_unique<NoteBook>();
+    if (iname == "Magic Key" || iname == "万能钥匙" || iname == "后台万能通行证" || iname == "大黄门钥匙")
         return std::make_unique<MagicKey>();
     if (iname == "Anon Glasses" || iname == "匿名眼镜" || iname == "爱音自拍眼镜")
         return std::make_unique<AnonGlasses>();
@@ -1474,6 +2830,13 @@ bool Game::loadFromFile(const std::string& path)
     if (!ifs) return false;
 
     m_floors.clear();
+    m_lastTeleportPath.clear();
+    m_pendingTeleportPath.clear();
+    m_pendingTeleportTargetX = -1;
+    m_pendingTeleportTargetY = -1;
+    m_lastTeleportNeedsAnimation = false;
+    // 读档前清空运行时隐藏奖励，避免把上一个游戏实例的状态带入当前存档。
+    m_floor35HiddenItems.clear();
 
     // 检测版本标记
     std::string version;
@@ -1621,6 +2984,23 @@ bool Game::loadFromFile(const std::string& path)
     bool floor3PrisonTriggered = false;
     bool floor3TrapActive = false;
     bool floor3PrisonStoryPending = false;
+    bool princessDollRescued = false;
+    bool floor20VampireTriggered = false;
+    bool floor20VampireStoryShown = false;
+    bool michelleRescued = false;
+    bool floor33TrapTriggered = false;
+    bool floor38FlowerTriggered = false;
+    bool floor43MiyakoRetreated = false;
+    bool floor14RedKeyRewardGranted = false;
+    bool floor32KnightTriggered = false;
+    bool floor32KnightStoryPending = false;
+    bool floor34RewardGranted = false;
+    bool floor35RewardsHidden = false;
+    bool floor40BossDefeated = false;
+    bool floor40RewardsGranted = false;
+    bool michelleGuardDefeated = false;
+    bool floor42KnightStoryTriggered = false;
+    bool floor42KnightStoryPending = false;
     std::string invToken;
     ifs >> invToken;
     if (invToken == "EXTRA") {
@@ -1639,9 +3019,83 @@ bool Game::loadFromFile(const std::string& path)
                     ifs >> floor3TrapActive;
                 if (ifs.peek() != '\n' && ifs.peek() != '\r' && ifs.peek() != EOF)
                     ifs >> floor3PrisonStoryPending;
+                if (ifs.peek() != '\n' && ifs.peek() != '\r' && ifs.peek() != EOF)
+                    ifs >> princessDollRescued;
+                if (ifs.peek() != '\n' && ifs.peek() != '\r' && ifs.peek() != EOF)
+                    ifs >> floor20VampireTriggered;
+                if (ifs.peek() != '\n' && ifs.peek() != '\r' && ifs.peek() != EOF)
+                    ifs >> michelleRescued;
+                if (ifs.peek() != '\n' && ifs.peek() != '\r' && ifs.peek() != EOF)
+                    ifs >> floor33TrapTriggered;
+                if (ifs.peek() != '\n' && ifs.peek() != '\r' && ifs.peek() != EOF)
+                    ifs >> floor38FlowerTriggered;
+                if (ifs.peek() != '\n' && ifs.peek() != '\r' && ifs.peek() != EOF)
+                    ifs >> floor43MiyakoRetreated;
+                if (ifs.peek() != '\n' && ifs.peek() != '\r' && ifs.peek() != EOF)
+                    ifs >> floor14RedKeyRewardGranted;
+                if (ifs.peek() != '\n' && ifs.peek() != '\r' && ifs.peek() != EOF)
+                    ifs >> floor32KnightTriggered;
+                if (ifs.peek() != '\n' && ifs.peek() != '\r' && ifs.peek() != EOF)
+                    ifs >> floor32KnightStoryPending;
+                if (ifs.peek() != '\n' && ifs.peek() != '\r' && ifs.peek() != EOF)
+                    ifs >> floor34RewardGranted;
+                if (ifs.peek() != '\n' && ifs.peek() != '\r' && ifs.peek() != EOF)
+                    ifs >> floor35RewardsHidden;
+                if (ifs.peek() != '\n' && ifs.peek() != '\r' && ifs.peek() != EOF)
+                    ifs >> floor40BossDefeated;
+                if (ifs.peek() != '\n' && ifs.peek() != '\r' && ifs.peek() != EOF)
+                    ifs >> floor40RewardsGranted;
+                if (ifs.peek() != '\n' && ifs.peek() != '\r' && ifs.peek() != EOF)
+                    ifs >> michelleGuardDefeated;
+                if (ifs.peek() != '\n' && ifs.peek() != '\r' && ifs.peek() != EOF)
+                    ifs >> floor20VampireStoryShown;
+                if (ifs.peek() != '\n' && ifs.peek() != '\r' && ifs.peek() != EOF)
+                    ifs >> floor42KnightStoryTriggered;
+                if (ifs.peek() != '\n' && ifs.peek() != '\r' && ifs.peek() != EOF)
+                    ifs >> floor42KnightStoryPending;
             }
+    }
+    ifs >> invToken;
+    }
+
+    // HIDDEN35 是在 VISITED 之前加入的可选扩展块。旧存档没有该标记，
+    // 此时 invToken 仍可能直接是 VISITED 或背包数量，保持向后兼容。
+    if (invToken == "HIDDEN35") {
+        size_t hiddenCount = 0;
+        ifs >> hiddenCount;
+        for (size_t i = 0; i < hiddenCount; ++i) {
+            int key = -1;
+            std::string itemName;
+            int itemValue = 0;
+            ifs >> key >> itemName >> itemValue;
+            if (key >= 0 && key < m_width * m_height && !itemName.empty() && itemName != "-")
+                m_floor35HiddenItems[key] = {itemName, itemValue};
         }
-        ifs >> invToken; // 下一个是背包数量
+        ifs >> invToken;
+    }
+
+    m_visitedFloors.clear();
+    if (invToken == "VISITED") {
+        int visitedCount = 0;
+        ifs >> visitedCount;
+        for (int i = 0; i < visitedCount; ++i) {
+            int visitedFloor = -1;
+            ifs >> visitedFloor;
+            if (visitedFloor >= 0 && visitedFloor <= 50)
+                m_visitedFloors.insert(visitedFloor);
+        }
+        ifs >> invToken;
+    }
+    m_storyOnceKeys.clear();
+    if (invToken == "STORIES") {
+        int storyCount = 0;
+        ifs >> storyCount;
+        for (int i = 0; i < storyCount; ++i) {
+            std::string key;
+            ifs >> key;
+            if (!key.empty()) m_storyOnceKeys.insert(key);
+        }
+        ifs >> invToken;
     }
     // invToken 现在是背包数量（或旧格式直接读取的数字）
     int invCount = std::stoi(invToken);
@@ -1674,9 +3128,51 @@ bool Game::loadFromFile(const std::string& path)
     m_floor3PrisonTriggered = floor3PrisonTriggered;
     m_floor3PrisonStoryPending = floor3PrisonStoryPending;
     m_floor3TrapActive = floor3TrapActive;
+    m_princessDollRescued = princessDollRescued;
+    m_floor20VampireTriggered = floor20VampireTriggered;
+    m_floor20VampireStoryShown = floor20VampireStoryShown;
+    m_michelleRescued = michelleRescued;
+    m_floor33TrapTriggered = floor33TrapTriggered;
+    m_floor38FlowerTriggered = floor38FlowerTriggered;
+    m_floor43MiyakoRetreated = floor43MiyakoRetreated;
+    m_floor14RedKeyRewardGranted = floor14RedKeyRewardGranted;
+    m_floor32KnightTriggered = floor32KnightTriggered;
+    m_floor32KnightStoryPending = floor32KnightStoryPending;
+    m_floor34RewardGranted = floor34RewardGranted;
+    m_floor35RewardsHidden = floor35RewardsHidden;
+    m_floor40BossDefeated = floor40BossDefeated;
+    m_floor40RewardsGranted = floor40RewardsGranted;
+    m_michelleGuardDefeated = michelleGuardDefeated;
+    m_floor42KnightStoryTriggered = floor42KnightStoryTriggered;
+    m_floor42KnightStoryPending = floor42KnightStoryPending;
+    // 兼容旧存档：若二层已经没有中级守卫，视为该前置战斗已完成。
+    if (!m_michelleGuardDefeated) {
+        const auto floor2It = m_floors.find(2);
+        if (floor2It != m_floors.end()) {
+            bool hasIntermediateGuard = false;
+            for (const auto& entry : floor2It->second.monsters) {
+                if (MonsterDB::indexOf(entry.second.GetName()) == 20) {
+                    hasIntermediateGuard = true;
+                    break;
+                }
+            }
+            if (!hasIntermediateGuard) m_michelleGuardDefeated = true;
+        }
+    }
+    // 兼容旧存档：20层入口已转为花门即代表吸血鬼事件已触发。
+    auto floor20It = m_floors.find(20);
+    if (floor20It != m_floors.end() &&
+        floor20It->second.map[posKey(7, 10)] == Tile_DoorMagic)
+        m_floor20VampireTriggered = true;
+    // 兼容没有 EXTRA 扩展字段但已经保存隐藏楼梯的旧存档。
+    auto floor24It = m_floors.find(24);
+    if (floor24It != m_floors.end() &&
+        floor24It->second.map[posKey(7, 8)] == Tile_StairsUp)
+        m_princessDollRescued = true;
     m_floor10AmbushMonsterKeys.clear();
     m_floor10AmbushDoorKeys.clear();
     m_floor10AmbushMovements.clear();
+    m_scriptedMonsterMovements.clear();
 
     for (int i = 0; i < invCount; ++i) {
         std::string iname; int ival;
@@ -1686,5 +3182,6 @@ bool Game::loadFromFile(const std::string& path)
     }
 
     m_currentFloor = &m_floors[m_floor];
+    if (m_visitedFloors.empty()) m_visitedFloors.insert(m_floor);
     return true;
 }

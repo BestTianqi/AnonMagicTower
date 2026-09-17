@@ -9,6 +9,7 @@
 #include <QFrame>
 #include <QFont>
 #include <QScrollArea>
+#include <QGridLayout>
 #include "MapWidget.h"
 
 QT_BEGIN_NAMESPACE
@@ -29,20 +30,21 @@ public:
     QLabel*      goldLabel    = nullptr;
     QLabel*      keysLabel    = nullptr;
     QLabel*      invItemsLabel = nullptr;
+    QWidget*     itemPanel     = nullptr;
+    QScrollArea* itemScroll    = nullptr;
+    QGridLayout* itemLayout    = nullptr;
     QLabel*      battleLabel   = nullptr;
-    QPushButton* invButton    = nullptr;
     QPushButton* saveButton   = nullptr;
     QPushButton* quickSaveButton = nullptr;
     QPushButton* undoButton   = nullptr;
     QPushButton* loadButton   = nullptr;
     QPushButton* settingsButton = nullptr;
-    QPushButton* editorButton = nullptr;
     QPushButton* modButton    = nullptr;
 
     void setupUi(QWidget* parent) {
         if (parent->objectName().isEmpty())
             parent->setObjectName("MainWindow");
-        parent->resize(1920, 1080);
+        parent->resize(1600, 900);
         parent->setMinimumSize(1280, 960);
 
         // === 侧边栏 ===
@@ -141,11 +143,35 @@ public:
         keysLabel->setStyleSheet("color: #aaccaa;");
         vbox->addWidget(keysLabel);
 
+        auto* itemTitle = new QLabel(QString::fromUtf8("持有道具"), sidePanel);
+        itemTitle->setStyleSheet("color: #f1cf7a; font-size: 13px; font-weight: 700; padding: 2px 0;");
+        vbox->addWidget(itemTitle);
+
+        itemScroll = new QScrollArea(sidePanel);
+        itemScroll->setObjectName("itemScroll");
+        itemScroll->setFixedHeight(330);
+        itemScroll->setWidgetResizable(true);
+        itemScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        itemScroll->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        itemScroll->setFrameShape(QFrame::NoFrame);
+        itemScroll->setStyleSheet("QScrollArea#itemScroll { background: rgba(10,11,20,110); border: 1px solid #45465d; border-radius: 4px; }");
+
+        itemPanel = new QWidget();
+        itemPanel->setObjectName("itemPanel");
+        itemPanel->setStyleSheet("QWidget#itemPanel { background: transparent; }");
+        itemLayout = new QGridLayout(itemPanel);
+        itemLayout->setContentsMargins(4, 4, 4, 4);
+        itemLayout->setHorizontalSpacing(2);
+        itemLayout->setVerticalSpacing(2);
+        itemScroll->setWidget(itemPanel);
+        vbox->addWidget(itemScroll);
+
         invItemsLabel = new QLabel(sidePanel);
         invItemsLabel->setObjectName("invItemsLabel");
         invItemsLabel->setText("");
         invItemsLabel->setWordWrap(true);
         invItemsLabel->setStyleSheet("color: #c2c8df; font-size: 12px; padding: 6px 4px; background: rgba(10,11,20,120); border: 1px solid #45465d; border-radius: 4px;");
+        invItemsLabel->setVisible(false);
         vbox->addWidget(invItemsLabel);
 
         battleLabel = new QLabel(sidePanel);
@@ -171,78 +197,60 @@ public:
         sep3->setStyleSheet("color: #555;");
         vbox->addWidget(sep3);
 
-        invButton = new QPushButton(sidePanel);
-        invButton->setObjectName("invButton");
-        invButton->setText(QString::fromUtf8("🎒 背包"));
-        invButton->setMinimumHeight(40);
-        invButton->setStyleSheet(
-            "QPushButton { background: #3a3a6a; color: #d0d0d0; border: 1px solid #66a; "
-            "border-radius: 4px; padding: 8px; font-size: 14px; }"
-            "QPushButton:hover { background: #4a4a8a; }"
-        );
-        vbox->addWidget(invButton);
-
         saveButton = new QPushButton(sidePanel);
         saveButton->setObjectName("saveButton");
         saveButton->setText(QString::fromUtf8("💾 保存"));
-        saveButton->setMinimumHeight(40);
-        saveButton->setStyleSheet(
-            "QPushButton { background: #3a5a3a; color: #d0d0d0; border: 1px solid #5a5; "
-            "border-radius: 4px; padding: 8px; font-size: 14px; }"
-            "QPushButton:hover { background: #4a7a4a; }"
-        );
-        vbox->addWidget(saveButton);
+        saveButton->setMinimumWidth(84);
+        saveButton->setFixedHeight(34);
 
         quickSaveButton = new QPushButton(sidePanel);
         quickSaveButton->setObjectName("quickSaveButton");
         quickSaveButton->setText(QString::fromUtf8("⚡ 即时存档"));
-        quickSaveButton->setMinimumHeight(40);
-        vbox->addWidget(quickSaveButton);
+        quickSaveButton->setMinimumWidth(84);
+        quickSaveButton->setFixedHeight(34);
 
         undoButton = new QPushButton(sidePanel);
         undoButton->setObjectName("undoButton");
         undoButton->setText(QString::fromUtf8("↶ 撤销"));
-        undoButton->setMinimumHeight(40);
-        vbox->addWidget(undoButton);
+        undoButton->setMinimumWidth(84);
+        undoButton->setFixedHeight(34);
 
         loadButton = new QPushButton(sidePanel);
         loadButton->setObjectName("loadButton");
         loadButton->setText(QString::fromUtf8("📂 读取"));
-        loadButton->setMinimumHeight(40);
-        loadButton->setStyleSheet(
-            "QPushButton { background: #4a4a5a; color: #d0d0d0; border: 1px solid #66a; "
-            "border-radius: 4px; padding: 8px; font-size: 14px; }"
-            "QPushButton:hover { background: #5a5a7a; }"
-        );
-        vbox->addWidget(loadButton);
+        loadButton->setMinimumWidth(84);
+        loadButton->setFixedHeight(34);
 
         settingsButton = new QPushButton(sidePanel);
         settingsButton->setObjectName("settingsButton");
         settingsButton->setText(QString::fromUtf8("⚙ 设置"));
-        settingsButton->setMinimumHeight(40);
-        vbox->addWidget(settingsButton);
-
-        editorButton = new QPushButton(sidePanel);
-        editorButton->setObjectName("editorButton");
-        editorButton->setText(QString::fromUtf8("🛠 地图编辑器"));
-        editorButton->setMinimumHeight(40);
-        editorButton->setStyleSheet(
-            "QPushButton { background: #5a4a3a; color: #d0d0d0; border: 1px solid #a85; "
-            "border-radius: 4px; padding: 8px; font-size: 14px; }"
-            "QPushButton:hover { background: #7a6a4a; }"
-        );
-        vbox->addWidget(editorButton);
+        settingsButton->setMinimumWidth(84);
+        settingsButton->setFixedHeight(34);
 
         modButton = new QPushButton(sidePanel);
         modButton->setObjectName("modButton");
         modButton->setText(QString::fromUtf8("⚙ 修改器"));
-        modButton->setMinimumHeight(40);
-        modButton->setStyleSheet(
-            "QPushButton { background: #6a3a3a; color: #ffd; border: 1px solid #d55; "
-            "border-radius: 4px; padding: 8px; font-size: 14px; }"
-            "QPushButton:hover { background: #8a4a4a; }"
-        );
-        vbox->addWidget(modButton);
+        modButton->setMinimumWidth(84);
+        modButton->setFixedHeight(34);
+
+        auto* controlsGrid = new QGridLayout();
+        controlsGrid->setContentsMargins(0, 0, 0, 0);
+        controlsGrid->setHorizontalSpacing(4);
+        controlsGrid->setVerticalSpacing(4);
+        controlsGrid->addWidget(saveButton, 0, 0);
+        controlsGrid->addWidget(quickSaveButton, 0, 1);
+        controlsGrid->addWidget(undoButton, 0, 2);
+        controlsGrid->addWidget(loadButton, 1, 0);
+        controlsGrid->addWidget(settingsButton, 1, 1);
+        controlsGrid->addWidget(modButton, 1, 2);
+        for (int column = 0; column < 3; ++column)
+            controlsGrid->setColumnStretch(column, 1);
+        for (QPushButton* button : {saveButton, quickSaveButton, undoButton,
+                                    loadButton, settingsButton, modButton}) {
+            button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+            button->setFixedHeight(34);
+        }
+        vbox->addLayout(controlsGrid);
 
         // === 左侧怪物面板 ===
         monsterScroll = new QScrollArea(parent);

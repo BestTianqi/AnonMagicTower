@@ -24,6 +24,7 @@ private slots:
 private:
     void enterGame(class Game* game);
     void setMenuControlsVisible(bool visible);
+    void positionMenuPortraits();
 
     Ui::MenuWindow ui;
     QPixmap m_backgroundImage;

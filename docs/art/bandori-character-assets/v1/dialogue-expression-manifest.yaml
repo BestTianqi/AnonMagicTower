@@ -1,0 +1,18 @@
+---
+manifest_version: "1.0.0"
+purpose: "魔塔剧情 Galgame 对话中的角色动作与表情映射"
+dialogue_layout: "下方对话框；左侧默认爱音，右侧为当前非爱音说话者；当前说话者不透明，另一侧 42% 透明度"
+transition: "每页立绘 180ms 淡入，避免剧情翻页时突变"
+story_expression_map:
+  - {story_key: floor3_prison_dialogue, scene: "三层夹击", anon: "images/characters/portraits/variants/anon_surprised.png -> anon_more_shocked.png", soyo: "images/characters/portraits/variants/soyo_witch_angry.png -> soyo_witch_more_battle.png", narrator: "images/characters/portraits/marina.png"}
+  - {story_key: floor3_prison_return, scene: "返回二层并遇见米歇尔", anon: "images/characters/portraits/variants/anon_sad.png", michelle: "images/characters/portraits/variants/michelle_caring.png"}
+  - {story_key: floor20_vampire, scene: "凑友希那吸血鬼显现", anon: "images/characters/portraits/variants/anon_surprised.png", yukina: "images/characters/portraits/variants/yukina_new_stage_surprised.png"}
+  - {story_key: floor32_knight_dialogue, scene: "小长崎素世骑士队长先攻", anon: "images/characters/portraits/variants/anon_extra_determined.png", soyo_child: "images/characters/portraits/variants/soyo_child_angry.png"}
+  - {story_key: floor33_trap_dialogue, scene: "四角怪物围攻", anon: "images/characters/portraits/variants/anon_extra_worried.png", narrator: "images/characters/portraits/marina.png"}
+  - {story_key: floor42_knight_capture, scene: "魔王与四名魔法警卫夹击", anon: "images/characters/portraits/variants/anon_worried.png", soyo_boss: "images/characters/portraits/variants/soyo_witch_extra_commanding.png"}
+  - {story_key: floor35_michelle, scene: "米歇尔开启魔龙层暗道", anon: "images/characters/portraits/variants/anon_confident.png", michelle: "images/characters/portraits/variants/michelle_confident.png"}
+  - {story_key: floor50_reveal, scene: "米歇尔揭开长崎素世伪装", anon: "images/characters/portraits/variants/anon_more_shocked.png", soyo_witch: "images/characters/portraits/variants/soyo_witch_calm.png"}
+npc_states:
+  michelle: {first_contact: "michelle_wave.png", cage_rescue: "michelle_caring.png", after_departure: "michelle_confident.png"}
+  anon: {calm: "anon_calm.png", worried: "anon_worried.png", surprised: "anon_surprised.png", determined: "anon_extra_determined.png", shocked: "anon_more_shocked.png"}
+  soyo: {calm: "soyo_school_calm.png", angry: "soyo_witch_angry.png", commanding: "soyo_witch_extra_commanding.png", battle: "soyo_witch_more_battle.png"}

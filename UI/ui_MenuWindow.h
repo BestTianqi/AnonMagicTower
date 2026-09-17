@@ -7,12 +7,15 @@
 #include <QPushButton>
 #include <QSpacerItem>
 #include <QFont>
+#include <QPixmap>
 
 QT_BEGIN_NAMESPACE
 
 class Ui_MenuWindow {
 public:
     QLabel*      titleLabel   = nullptr;
+    QLabel*      anonPortrait = nullptr;
+    QLabel*      soyoPortrait = nullptr;
     QPushButton* newGameBtn   = nullptr;
     QPushButton* loadGameBtn  = nullptr;
     QPushButton* mapEditorBtn = nullptr;
@@ -21,7 +24,7 @@ public:
     void setupUi(QWidget* parent) {
         if (parent->objectName().isEmpty())
             parent->setObjectName("MenuWindow");
-        parent->resize(1920, 1080);
+        parent->resize(1600, 900);
         parent->setMinimumSize(960, 540);
         parent->setStyleSheet("QWidget#MenuWindow { background-color: #0d0d1a; }");
 
@@ -40,6 +43,21 @@ public:
         titleLabel->setFont(titleFont);
         titleLabel->setStyleSheet("color: #c8a23b;");
         vbox->addWidget(titleLabel);
+
+        // 两侧立绘独立于中央菜单布局，运行时按窗口大小缩放定位。
+        anonPortrait = new QLabel(parent);
+        anonPortrait->setObjectName("anonPortrait");
+        anonPortrait->setAlignment(Qt::AlignCenter | Qt::AlignBottom);
+        anonPortrait->setAttribute(Qt::WA_TransparentForMouseEvents);
+        anonPortrait->setStyleSheet("background: transparent;");
+        anonPortrait->setPixmap(QPixmap(QStringLiteral(":/images/characters/portraits/anon.png")));
+
+        soyoPortrait = new QLabel(parent);
+        soyoPortrait->setObjectName("soyoPortrait");
+        soyoPortrait->setAlignment(Qt::AlignCenter | Qt::AlignBottom);
+        soyoPortrait->setAttribute(Qt::WA_TransparentForMouseEvents);
+        soyoPortrait->setStyleSheet("background: transparent;");
+        soyoPortrait->setPixmap(QPixmap(QStringLiteral(":/images/characters/portraits/soyo_stage.png")));
 
         // 副标题
         auto* subtitle = new QLabel(parent);
