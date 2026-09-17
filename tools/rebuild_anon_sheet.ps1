@@ -72,6 +72,45 @@ finally {
     $srcBmp.Dispose()
 }
 
+# Normalize the tile anchor after pose extraction. Generated frames can have
+# consistent outer bounds while the feet still drift horizontally, which is
+# perceived as the whole character shaking during animation.
+$alignedBmp = [System.Drawing.Bitmap]::new(480, 480, [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
+for ($row = 0; $row -lt 8; $row++) {
+    for ($col = 0; $col -lt 8; $col++) {
+        $sumFootX = 0.0
+        $footCount = 0
+        $bottomY = -1
+        for ($y = 8; $y -lt 52; $y++) {
+            for ($x = 8; $x -lt 52; $x++) {
+                $pixel = $dstBmp.GetPixel($col * 60 + $x, $row * 60 + $y)
+                if ($pixel.A -gt 32) { $bottomY = [math]::Max($bottomY, $y) }
+                if ($y -ge 44 -and $pixel.A -gt 64) {
+                    $sumFootX += $x
+                    $footCount++
+                }
+            }
+        }
+        $footX = if ($footCount -gt 0) { $sumFootX / $footCount } else { 30.0 }
+        $shiftX = [int][math]::Round(30.0 - $footX)
+        $shiftY = if ($bottomY -ge 0) { 51 - $bottomY } else { 0 }
+        for ($y = 8; $y -lt 52; $y++) {
+            for ($x = 8; $x -lt 52; $x++) {
+                $pixel = $dstBmp.GetPixel($col * 60 + $x, $row * 60 + $y)
+                if ($pixel.A -eq 0) { continue }
+                $targetX = $x + $shiftX
+                $targetY = $y + $shiftY
+                if ($targetX -ge 8 -and $targetX -lt 52 -and
+                    $targetY -ge 8 -and $targetY -lt 52) {
+                    $alignedBmp.SetPixel($col * 60 + $targetX, $row * 60 + $targetY, $pixel)
+                }
+            }
+        }
+    }
+}
+$dstBmp.Dispose()
+$dstBmp = $alignedBmp
+
 $dstBmp.Save($Destination, [System.Drawing.Imaging.ImageFormat]::Png)
 $dstBmp.Dispose()
 

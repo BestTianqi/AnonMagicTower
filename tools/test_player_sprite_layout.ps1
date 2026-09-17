@@ -31,6 +31,32 @@ try {
             }
         }
     }
+
+    # Walking frames must share a stable foot anchor. A large horizontal
+    # spread makes the character visibly wobble even when map interpolation
+    # itself is smooth.
+    foreach ($row in 1, 3, 5, 7) {
+        $anchors = @()
+        for ($col = 0; $col -lt 8; $col++) {
+            $sumX = 0.0
+            $count = 0
+            for ($y = 44; $y -lt 52; $y++) {
+                for ($x = 8; $x -lt 52; $x++) {
+                    if ($bitmap.GetPixel($col * 60 + $x, $row * 60 + $y).A -gt 64) {
+                        $sumX += $x
+                        $count++
+                    }
+                }
+            }
+            if ($count -eq 0) { throw "missing foot anchor at row=$row col=$col" }
+            $anchors += $sumX / $count
+        }
+        $spread = ($anchors | Measure-Object -Maximum).Maximum -
+                  ($anchors | Measure-Object -Minimum).Minimum
+        if ($spread -gt 1.5) {
+            throw "walking foot anchors wobble by $([math]::Round($spread, 2))px on row=$row"
+        }
+    }
 }
 finally { $bitmap.Dispose() }
 
