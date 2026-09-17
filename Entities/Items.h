@@ -89,6 +89,7 @@ enum class ItemType {
     FlyingWand,
     FloorTeleporter,
     SymmetryFlyer,
+    MonsterBook,
     NoteBook,
     HolyShield,
     DivineShield
@@ -232,6 +233,7 @@ class MagicKey : public Item {
 public:
     MagicKey();
     void Apply(Player& player) const override;
+    bool IsUseItem() const override { return true; }
 };
 
 class AnonGlasses : public Item {
@@ -269,12 +271,14 @@ class Cross : public Item {
 public:
     Cross();
     void Apply(Player& player) const override;
+    bool IsPassiveEffect() const override { return true; }
 };
 
 class DragonSlayer : public Item {
 public:
     DragonSlayer();
     void Apply(Player& player) const override;
+    bool IsPassiveEffect() const override { return true; }
 };
 
 class FreezeMagic : public Item {
@@ -282,6 +286,7 @@ public:
     FreezeMagic();
     void Apply(Player& player) const override;
     bool IsUseItem() const override { return true; }
+    bool IsReusable() const override { return true; }
 };
 
 class FlyingWand : public Item {
@@ -289,6 +294,7 @@ public:
     FlyingWand();
     void Apply(Player& player) const override;
     bool IsUseItem() const override { return true; }
+    bool IsReusable() const override { return true; }
 };
 
 // 楼层传送器：本地化的飞行魔杖变体，使用时由界面选择目标楼层。
@@ -310,6 +316,14 @@ public:
 class NoteBook : public Item {
 public:
     NoteBook();
+    bool IsPassiveEffect() const override { return true; }
+};
+
+// 三层奖励：怪物手册。拾取后解锁地图上的怪物属性提示，保留在道具栏中。
+class MonsterBook : public Item {
+public:
+    MonsterBook();
+    void Apply(Player& player) const override;
     bool IsPassiveEffect() const override { return true; }
 };
 

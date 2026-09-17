@@ -7,6 +7,7 @@
 #include <QString>
 #include <vector>
 #include <unordered_set>
+#include <memory>
 #include <QTemporaryFile>
 
 class MainWindow : public QWidget {
@@ -28,8 +29,14 @@ private:
 
     void updateHUD();
     void updateMonsterPanel();
-    void showInventory();
+    void showInventory(int focusIndex = -1);
+    void activateItem(int index);
+    void updateItemPanel();
     void showOpeningFloorStory(int fromFloor, int toFloor);
+    void showFloor20VampireStoryIfNeeded(int floorBefore);
+    void showFloor33TrapStoryIfNeeded(int floorBefore);
+    void showFloor32KnightStoryIfNeeded(int floorBefore);
+    void showFloor32KnightStoryAfterMovement(int floorBefore);
     void showPrisonTrapPrompt();
     void showFloor3PrisonVisualNovel();
     void showVisualNovelDialogue(const std::vector<VisualNovelPage>& pages);
@@ -42,14 +49,22 @@ private:
     void showShopDialog(int x, int y);
     void showModifier();
     void showSettings();
+    void showSaveLoadDialog(bool initialSave);
     void captureUndoSnapshot();
+    void clearUndoHistory();
     void undoLastAction();
     void quickSave();
+    void quickLoad();
     void gameOver();
     void gameWin();
     QString getItemDescription(const Item* item) const;
     void showBattleFeedback(const QString& message);
     void startMonsterMovementAnimation();
+    void handleTeleportResult(int x, int y, int floorBefore,
+                              const QString& pickedName,
+                              const QString& pickedDescription,
+                              Game::MoveResult result);
+    void completePendingTeleport();
     void flushPendingMove();
 
     Game* m_game;
@@ -58,12 +73,23 @@ private:
     int m_pendingMoveDx = 0;
     int m_pendingMoveDy = 0;
     bool m_hasPendingMove = false;
+    struct PendingTeleport {
+        bool active = false;
+        int x = 0;
+        int y = 0;
+        int floorBefore = 0;
+        QString pickedName;
+        QString pickedDescription;
+    };
+    PendingTeleport m_pendingTeleport;
     bool m_adminMode = false;
     bool m_battleFeedbackEnabled = true;
-    QTemporaryFile m_undoFile;
-    bool m_hasUndoSnapshot = false;
+    std::vector<std::unique_ptr<QTemporaryFile>> m_undoHistory;
     bool m_floor2OpeningShown = false;
     bool m_floor3OpeningShown = false;
+    bool m_prisonReturnStoryShown = false;
+    bool m_floor33TrapStoryShown = false;
+    int m_floor32KnightStoryFloor = -1;
     std::unordered_set<int> m_floorStoriesShown;
     Ui::MainWindow ui;
 };

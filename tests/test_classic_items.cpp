@@ -60,8 +60,18 @@ int main() {
     assert(Game::canonicalItemName("Cross") == "MyGO和解徽章");
     assert(Game::canonicalItemName("Dragon Slayer") == "祥子指挥棒");
     assert(Game::canonicalItemName("Freeze Magic") == "海铃冷静指令");
+    assert(Game::canonicalItemName("冷静雪花徽章") == "海铃冷静指令");
+    assert(Game::isKnownItemName("冰冻徽章"));
+    assert(Game::createItemByName("冰冻徽章", 0) != nullptr);
     assert(Game::canonicalItemName("Flying Wand") == "爱音手机");
     assert(Game::canonicalItemName("Floor Teleporter") == "楼层传送器");
+    assert(Game::canonicalItemName("Monster Book") == "怪物手册");
+    assert(Game::canonicalItemName("灯的歌词本") == "高松灯的单词本");
+    auto monsterBook = Game::createItemByName("怪物手册", 0);
+    assert(monsterBook && monsterBook->GetName() == "怪物手册");
+    assert(monsterBook->IsPassiveEffect());
+    auto tomoriWordBook = Game::createItemByName("高松灯的单词本", 0);
+    assert(tomoriWordBook && tomoriWordBook->GetName() == "高松灯的单词本");
     assert(Game::isKnownItemName("楼层传送器"));
     assert(Game::canonicalItemName("Earthquake Scroll") == "Mujica舞台震响卷");
     assert(Game::isKnownItemName("Mujica镜面舞台票"));
@@ -107,7 +117,7 @@ int main() {
     Key redKey(KeyType::Red);
     assert(redKey.GetName() == "红色Live票");
     MagicKey backstagePass;
-    assert(backstagePass.GetName() == "后台万能通行证");
+    assert(backstagePass.GetName() == "大黄门钥匙");
     HolyWater kettle;
     assert(kettle.GetName() == "立希水壶");
 
@@ -117,9 +127,27 @@ int main() {
     DragonSlayer dragonSlayer;
     dragonSlayer.Apply(player);
     assert(player.hasDragonSlayer);
+
+    Game passiveRelics;
+    passiveRelics.player().x = 2;
+    passiveRelics.player().y = 2;
+    passiveRelics.setTile(3, 2, Tile_Item);
+    passiveRelics.addItemAt(3, 2, std::make_unique<Cross>());
+    assert(passiveRelics.tryMovePlayer(3, 2) == Game::Move_Pickup);
+    assert(passiveRelics.player().hasCross && passiveRelics.player().InventoryCount() == 1);
+    passiveRelics.setTile(4, 2, Tile_Item);
+    passiveRelics.addItemAt(4, 2, std::make_unique<DragonSlayer>());
+    assert(passiveRelics.tryMovePlayer(4, 2) == Game::Move_Pickup);
+    assert(passiveRelics.player().hasDragonSlayer && passiveRelics.player().InventoryCount() == 2);
     FreezeMagic freeze;
+    assert(freeze.IsUseItem());
+    assert(freeze.IsReusable());
     freeze.Apply(player);
     assert(player.freezeMagicUsed);
+    player.AddItem(std::make_unique<FreezeMagic>());
+    const int freezeCount = player.InventoryCount();
+    assert(player.UseItem(freezeCount - 1));
+    assert(player.InventoryCount() == freezeCount);
     FlyingWand flying;
     flying.Apply(player);
     assert(player.flyWandUses == 1);
@@ -156,6 +184,23 @@ int main() {
     assert(restored.player().flyWandUses == 2);
     assert(restored.player().symmetryFlyerUses == 1);
     std::remove(savePath.c_str());
+
+    // 读档后仍应保留35层魔龙周围尚未显现的奖励。
+    Game hiddenRewards;
+    hiddenRewards.generateClassicTower();
+    hiddenRewards.debugTeleport(35, 7, 7);
+    const std::string hiddenRewardsPath = "classic_hidden_rewards_roundtrip.sav";
+    assert(hiddenRewards.saveToFile(hiddenRewardsPath));
+    Game restoredHiddenRewards;
+    assert(restoredHiddenRewards.loadFromFile(hiddenRewardsPath));
+    restoredHiddenRewards.player().hp = 100000;
+    restoredHiddenRewards.player().atk = 100000;
+    restoredHiddenRewards.player().def = 100000;
+    std::vector<std::string> hiddenDragonLog;
+    assert(restoredHiddenRewards.fightAt(7, 5, hiddenDragonLog) == Game::Fight_PlayerWin);
+    assert(countItem(restoredHiddenRewards, "爱音能量饮") == 3);
+    assert(countItem(restoredHiddenRewards, "海铃冷静指令") == 1);
+    std::remove(hiddenRewardsPath.c_str());
 
     Game combat;
     combat.player().hp = 100;
@@ -226,6 +271,33 @@ int main() {
     assert(teleportItem.player().hp == hpBeforeTeleport + 200);
     assert(teleportItem.itemAt(4, 3) == nullptr);
 
+    // 鼠标瞬移的交互必须等逐格动画走完后才提交：动画期间玩家仍在起点，
+    // 道具和目标机关保持原状，完成阶段才执行拾取/剧情副作用。
+    Game deferredTeleport;
+    deferredTeleport.player().x = 3;
+    deferredTeleport.player().y = 3;
+    deferredTeleport.addItemAt(4, 3, std::make_unique<SmallPotion>(200));
+    deferredTeleport.setTile(4, 3, Tile_Item);
+    assert(deferredTeleport.beginTeleportPlayerTo(4, 3));
+    assert(deferredTeleport.player().x == 3 && deferredTeleport.player().y == 3);
+    assert(deferredTeleport.itemAt(4, 3) != nullptr);
+    assert(deferredTeleport.completeTeleportPlayerTo() == Game::Move_Pickup);
+    assert(deferredTeleport.player().x == 4 && deferredTeleport.player().y == 3);
+    assert(deferredTeleport.itemAt(4, 3) == nullptr);
+
+    Game deferredDoor;
+    deferredDoor.player().x = 3;
+    deferredDoor.player().y = 3;
+    deferredDoor.player().AddKey(KeyType::Red);
+    deferredDoor.setTile(4, 3, Tile_DoorRed);
+    assert(deferredDoor.beginTeleportPlayerTo(4, 3));
+    assert(deferredDoor.player().x == 3 && deferredDoor.player().y == 3);
+    assert(deferredDoor.tileAt(4, 3) == Tile_DoorRed);
+    assert(deferredDoor.player().KeyCount(KeyType::Red) == 1);
+    assert(deferredDoor.completeTeleportPlayerTo() == Game::Move_Ok);
+    assert(deferredDoor.tileAt(4, 3) == Tile_Floor);
+    assert(deferredDoor.player().KeyCount(KeyType::Red) == 0);
+
     Game teleportNpc;
     teleportNpc.player().x = 3;
     teleportNpc.player().y = 3;
@@ -255,6 +327,22 @@ int main() {
     assert(teleportDoor.player().x == 4 && teleportDoor.player().y == 3);
     assert(teleportDoor.tileAt(4, 3) == Tile_Floor);
     assert(teleportDoor.player().KeyCount(KeyType::Red) == 0);
+
+    // 大黄门钥匙拾取后一次性打开当前楼层全部黄门。
+    Game allYellowDoors;
+    allYellowDoors.player().x = 2;
+    allYellowDoors.player().y = 4;
+    allYellowDoors.setTile(3, 4, Tile_Item);
+    allYellowDoors.addItemAt(3, 4, std::make_unique<MagicKey>());
+    allYellowDoors.setTile(4, 4, Tile_DoorGreen);
+    allYellowDoors.setTile(5, 4, Tile_DoorGreen);
+    assert(allYellowDoors.tryMovePlayer(3, 4) == Game::Move_Pickup);
+    assert(allYellowDoors.player().InventoryCount() == 1);
+    assert(allYellowDoors.player().GetItem(0)->GetName() == "大黄门钥匙");
+    assert(allYellowDoors.tileAt(4, 4) == Tile_DoorGreen);
+    assert(allYellowDoors.useMagicKey() == 2);
+    assert(allYellowDoors.tileAt(4, 4) == Tile_Floor);
+    assert(allYellowDoors.tileAt(5, 4) == Tile_Floor);
 
     Game bombGame;
     bombGame.player().x = 5;
@@ -459,6 +547,7 @@ int main() {
     floor20Boss.player().y = 7;
     floor20Boss.player().atk = 100000;
     floor20Boss.player().hp = 1000000000;
+    floor20Boss.setTile(7, 12, Tile_StairsDown);
     floor20Boss.setTile(7, 6, Tile_Monster);
     floor20Boss.spawnMonster(7, 6, MonsterDB::getByIndex(15));
     log.clear();
@@ -473,7 +562,8 @@ int main() {
     assert(countItem(floor20Boss, "舞台蓝宝石") == 3);
     assert(countItem(floor20Boss, "黄色Live票") == 3);
     assert(countItem(floor20Boss, "爱音能量饮") == 3);
-    assert(floor20Boss.tileAt(7, 12) == Tile_StairsUp);
+    assert(floor20Boss.tileAt(7, 2) == Tile_StairsUp);
+    assert(floor20Boss.tileAt(7, 12) == Tile_StairsDown);
 
     // 40层 Boss 击败后生成原版红蓝宝石和黄钥匙奖励与向上楼梯。
     Game floor40Boss;
@@ -498,6 +588,69 @@ int main() {
     assert(countItem(floor40Boss, "黄色Live票") == 3);
     assert(countItem(floor40Boss, "爱音能量饮") == 3);
     assert(floor40Boss.tileAt(7, 2) == Tile_StairsUp);
+
+    // 40层击败Boss后，红门上方仍有怪物时暂缓奖励；清完后再生成。
+    Game floor40Deferred;
+    floor40Deferred.debugTeleport(40, 7, 7);
+    floor40Deferred.player().atk = 100000;
+    floor40Deferred.player().hp = 1000000000;
+    floor40Deferred.setTile(7, 6, Tile_Monster);
+    floor40Deferred.spawnMonster(7, 6, MonsterDB::getByIndex(24));
+    floor40Deferred.setTile(7, 8, Tile_Monster);
+    floor40Deferred.spawnMonster(7, 8, MonsterDB::getByIndex(1));
+    assert(floor40Deferred.fightAt(7, 6, log) == Game::Fight_PlayerWin);
+    assert(countItem(floor40Deferred, "舞台红宝石") == 0);
+    assert(floor40Deferred.tileAt(7, 2) != Tile_StairsUp);
+    assert(floor40Deferred.fightAt(7, 8, log) == Game::Fight_PlayerWin);
+    assert(countItem(floor40Deferred, "舞台红宝石") == 3);
+    assert(floor40Deferred.tileAt(7, 2) == Tile_StairsUp);
+
+    Game floor50Entry;
+    floor50Entry.debugTeleport(49, 3, 3);
+    floor50Entry.goUpFloor(3, 3, false);
+    assert(floor50Entry.currentFloor() == 50);
+    assert(floor50Entry.player().x == 7 && floor50Entry.player().y == 8);
+
+    Game floor14Reward;
+    floor14Reward.generateClassicTower();
+    floor14Reward.debugTeleport(14, 7, 7);
+    floor14Reward.player().atk = 100000;
+    floor14Reward.player().hp = 1000000000;
+    assert(floor14Reward.tileAt(2, 4) == Tile_Wall);
+    assert(floor14Reward.itemAt(2, 4) == nullptr);
+    for (const auto& point : std::vector<std::pair<int, int>>{{2, 2}, {4, 2}, {3, 3}, {8, 3}}) {
+        floor14Reward.setTile(point.first, point.second, Tile_Monster);
+        floor14Reward.spawnMonster(point.first, point.second, MonsterDB::get("藤都子·兽人武士"));
+    }
+    std::vector<std::string> unrelatedRewardLog;
+    assert(floor14Reward.fightAt(8, 3, unrelatedRewardLog) == Game::Fight_PlayerWin);
+    assert(!floor14Reward.floor14RedKeyRewardGranted());
+    assert(floor14Reward.itemAt(2, 4) == nullptr);
+    for (const auto& point : std::vector<std::pair<int, int>>{{2, 2}, {4, 2}, {3, 3}}) {
+        std::vector<std::string> rewardLog;
+        assert(floor14Reward.fightAt(point.first, point.second, rewardLog) == Game::Fight_PlayerWin);
+    }
+    assert(floor14Reward.floor14RedKeyRewardGranted());
+    assert(floor14Reward.tileAt(2, 4) == Tile_Item);
+    assert(floor14Reward.itemAt(2, 4) != nullptr);
+    assert(floor14Reward.itemAt(2, 4)->GetName() == "红色Live票");
+
+    Game floor34FixedReward;
+    floor34FixedReward.debugTeleport(34, 3, 7);
+    floor34FixedReward.currentFloorData().monsters.clear();
+    floor34FixedReward.currentFloorData().items.clear();
+    for (const auto& point : std::vector<std::pair<int, int>>{{6, 5}, {6, 9}}) {
+        floor34FixedReward.setTile(point.first, point.second, Tile_Monster);
+        floor34FixedReward.spawnMonster(point.first, point.second, MonsterDB::getByIndex(0));
+    }
+    floor34FixedReward.player().atk = 100000;
+    floor34FixedReward.player().hp = 1000000000;
+    for (const auto& point : std::vector<std::pair<int, int>>{{6, 5}, {6, 9}}) {
+        std::vector<std::string> rewardLog;
+        assert(floor34FixedReward.fightAt(point.first, point.second, rewardLog) == Game::Fight_PlayerWin);
+    }
+    for (const auto& point : std::vector<std::pair<int, int>>{{3, 7}, {2, 7}, {4, 7}, {3, 6}, {3, 8}})
+        assert(floor34FixedReward.itemAt(point.first, point.second) != nullptr);
 
     // 前三层原版序章：3层先显现包围怪物，等待点击确认后才传送回2层。
     Game openingStory;
@@ -620,7 +773,427 @@ int main() {
     // 管理员调试传送可跨楼层定位到任意地图坐标，但拒绝越界楼层/坐标。
     Game adminTeleport;
     adminTeleport.generateClassicTower();
-    assert(!adminTeleport.debugTeleport(0, 7, 7));
+    // 0层是原版下楼器专属的幸运金币房间，管理员传送也必须可直接定位。
+    assert(adminTeleport.debugTeleport(0, 7, 7));
+    assert(adminTeleport.currentFloor() == 0);
+    assert(adminTeleport.tileAt(7, 7) == Tile_Item);
+    assert(adminTeleport.tileAt(7, 2) == Tile_StairsUp);
+    assert(adminTeleport.itemAt(7, 7) != nullptr);
+    assert(adminTeleport.itemAt(7, 7)->GetName() == "乐奈幸运硬币");
+    assert(adminTeleport.tryMovePlayer(7, 7) == Game::Move_Pickup);
+    assert(adminTeleport.player().hasLuckyCoin);
+    adminTeleport.player().hp = 1000;
+    adminTeleport.player().atk = 100;
+    adminTeleport.player().def = 100;
+    adminTeleport.spawnMonster(8, 7, Monster("金币测试怪", 10, 1, 0, 25));
+    std::vector<std::string> coinLog;
+    assert(adminTeleport.fightAt(8, 7, coinLog) == Game::Fight_PlayerWin);
+    assert(adminTeleport.player().gold == 50);
+    adminTeleport.goUpFloor(7, 7, false);
+    assert(adminTeleport.currentFloor() == 1);
+    adminTeleport.goDownFloor(7, 7, false);
+    assert(adminTeleport.currentFloor() == 0);
+
+    // 爱音手机只能从连通楼梯使用，并落在目标层紫色楼梯；未访问层及0/44/50层均拒绝。
+    Game phoneRules;
+    phoneRules.debugTeleport(1, 2, 3);
+    phoneRules.setTile(3, 3, Tile_StairsDown);
+    phoneRules.debugTeleport(2, 2, 3);
+    phoneRules.setTile(3, 3, Tile_StairsDown);
+    phoneRules.player().x = 2;
+    phoneRules.player().y = 3;
+    phoneRules.player().AddItem(std::make_unique<FlyingWand>());
+    assert(phoneRules.canUsePhone());
+    assert(!phoneRules.phoneTeleportToFloor(3));
+    assert(!phoneRules.phoneTeleportToFloor(44));
+    assert(phoneRules.phoneTeleportToFloor(1));
+    assert(phoneRules.currentFloor() == 1);
+    assert(phoneRules.player().x == 3 && phoneRules.player().y == 3);
+    const std::string phoneSave = "mota_phone_rules_test.save";
+    assert(phoneRules.saveToFile(phoneSave));
+    Game restoredPhone;
+    assert(restoredPhone.loadFromFile(phoneSave));
+    assert(restoredPhone.hasVisitedFloor(1) && restoredPhone.hasVisitedFloor(2));
+    std::remove(phoneSave.c_str());
+
+    // 41层隐藏高级巫师事件：击败首只后撞暗墙显现第二只，击败后生成下楼器。
+    Game downstairsEvent;
+    downstairsEvent.generateClassicTower();
+    downstairsEvent.player().hp = 100000;
+    downstairsEvent.player().atk = 100000;
+    downstairsEvent.player().def = 100000;
+    assert(downstairsEvent.debugTeleport(41, 3, 4));
+    std::vector<std::string> lowerLog;
+    assert(downstairsEvent.fightAt(3, 3, lowerLog) == Game::Fight_PlayerWin);
+    assert(downstairsEvent.tileAt(11, 3) == Tile_DarkWall);
+    assert(downstairsEvent.debugTeleport(41, 10, 3));
+    assert(downstairsEvent.tryMovePlayer(11, 3) == Game::Move_Block);
+    assert(downstairsEvent.tileAt(11, 3) == Tile_Monster);
+    assert(downstairsEvent.monsterAt(11, 3) != nullptr);
+    assert(downstairsEvent.fightAt(11, 3, lowerLog) == Game::Fight_PlayerWin);
+    assert(downstairsEvent.itemAt(7, 6) != nullptr);
+    assert(downstairsEvent.itemAt(7, 6)->GetName() == "撤场通行卡");
+    assert(downstairsEvent.tileAt(6, 7) == Tile_Wall);
+    assert(downstairsEvent.tileAt(7, 7) == Tile_Wall);
+    assert(downstairsEvent.tileAt(8, 7) == Tile_Wall);
+    assert(downstairsEvent.tileAt(6, 8) == Tile_Floor);
+    assert(downstairsEvent.tileAt(8, 8) == Tile_Floor);
+    assert(downstairsEvent.debugTeleport(41, 7, 6));
+    assert(downstairsEvent.tryMovePlayer(7, 6) == Game::Move_Pickup);
+    assert(downstairsEvent.player().InventoryCount() == 1);
+    assert(dynamic_cast<const StairLower*>(downstairsEvent.player().GetItem(0)) != nullptr);
+    assert(downstairsEvent.debugTeleport(1, 7, 7));
+    assert(downstairsEvent.player().UseItem(0));
+    assert(downstairsEvent.player().stairDownUsed);
+    downstairsEvent.goDownFloor(7, 7, false);
+    assert(downstairsEvent.currentFloor() == 0);
+    assert(downstairsEvent.tryMovePlayer(7, 7) == Game::Move_Pickup);
+    assert(downstairsEvent.player().hasLuckyCoin);
+    const std::string luckySave = "mota_lucky_coin_test.save";
+    assert(downstairsEvent.saveToFile(luckySave));
+    Game restoredLucky;
+    assert(restoredLucky.loadFromFile(luckySave));
+    assert(restoredLucky.currentFloor() == 0);
+    assert(restoredLucky.player().hasLuckyCoin);
+    std::remove(luckySave.c_str());
+
+    // 大法师掉落四把红钥匙，假魔王掉落红钥匙与屠龙匕。
+    Game mageReward;
+    mageReward.debugTeleport(25, 7, 7);
+    mageReward.player().hp = 100000;
+    mageReward.player().atk = 100000;
+    mageReward.player().def = 100000;
+    mageReward.setTile(7, 6, Tile_Monster);
+    mageReward.spawnMonster(7, 6, MonsterDB::getByIndex(16));
+    std::vector<std::string> mageLog;
+    assert(mageReward.fightAt(7, 6, mageLog) == Game::Fight_PlayerWin);
+    assert(countItem(mageReward, "红色Live票") == 4);
+
+    Game fakeKingReward;
+    fakeKingReward.debugTeleport(49, 7, 7);
+    fakeKingReward.player().hp = 100000;
+    fakeKingReward.player().atk = 100000;
+    fakeKingReward.player().def = 100000;
+    fakeKingReward.setTile(7, 4, Tile_Monster);
+    fakeKingReward.spawnMonster(7, 4, Monster("长崎素世·幻影", 800, 500, 100, 500));
+    std::vector<std::string> fakeLog;
+    assert(fakeKingReward.fightAt(7, 4, fakeLog) == Game::Fight_PlayerWin);
+    assert(countItem(fakeKingReward, "红色Live票") == 1);
+    assert(countItem(fakeKingReward, "祥子指挥棒") == 1);
+    assert(countItem(fakeKingReward, "舞台红宝石") == 3);
+    assert(countItem(fakeKingReward, "舞台蓝宝石") == 3);
+    assert(countItem(fakeKingReward, "爱音能量饮") == 3);
+
+    // 42层首次上楼触发“骑士队长逃跑后被魔王与四名魔法警卫夹击”剧情，
+    // 魔王离场后仍停留42层；只触发一次。
+    Game floor42Story;
+    floor42Story.generateClassicTower();
+    floor42Story.debugTeleport(41, 7, 12);
+    floor42Story.goUpFloor(7, 12, false);
+    assert(floor42Story.currentFloor() == 42);
+    assert(floor42Story.floor42KnightStoryPending());
+    assert(floor42Story.monsterAt(7, 11) == nullptr);
+    floor42Story.resolveFloor42KnightStory();
+    assert(floor42Story.currentFloor() == 42);
+    assert(!floor42Story.floor42KnightStoryPending());
+
+    Game dragonReward;
+    dragonReward.debugTeleport(35, 7, 7);
+    dragonReward.player().hp = 100000;
+    dragonReward.player().atk = 100000;
+    dragonReward.player().def = 100000;
+    dragonReward.setTile(7, 6, Tile_Monster);
+    dragonReward.spawnMonster(7, 6, MonsterDB::getByIndex(22));
+    std::vector<std::string> dragonLog;
+    assert(dragonReward.fightAt(7, 6, dragonLog) == Game::Fight_PlayerWin);
+    assert(countItem(dragonReward, "海铃冷静指令") == 1);
+    assert(countItem(dragonReward, "爱音能量饮") == 3);
+
+    // 35层魔龙、19层十字架、20层吸血鬼红门/花门事件与28层黄钥匙商人。
+    Game classicMidTower;
+    classicMidTower.generateClassicTower();
+    classicMidTower.debugTeleport(35, 7, 5);
+    assert(classicMidTower.monsterAt(7, 5) != nullptr);
+    assert(classicMidTower.monsterAt(7, 5)->GetName() == "薇欧拉SP·魔龙");
+    assert(classicMidTower.npcAt(7, 5) == nullptr);
+    classicMidTower.returnMichelleToFloor2Cage();
+    classicMidTower.debugTeleport(2, 12, 12);
+    assert(classicMidTower.npcAt(12, 12) != nullptr);
+    assert(classicMidTower.npcAt(12, 12)->GetName() == "米歇尔");
+    assert(!classicMidTower.canReleaseMichelleFromCage());
+    classicMidTower.player().atk = 100000;
+    classicMidTower.player().def = 100000;
+    std::vector<std::string> guardLog;
+    assert(classicMidTower.fightAt(7, 3, guardLog) == Game::Fight_PlayerWin);
+    assert(classicMidTower.canReleaseMichelleFromCage());
+    classicMidTower.debugTeleport(19, 7, 4);
+    assert(classicMidTower.itemAt(7, 4) != nullptr);
+    assert(classicMidTower.itemAt(7, 4)->GetName() == "MyGO和解徽章");
+    classicMidTower.player().x = 6;
+    classicMidTower.player().y = 4;
+    assert(classicMidTower.tryMovePlayer(7, 4) == Game::Move_Pickup);
+    assert(classicMidTower.player().hasCross);
+    assert(classicMidTower.player().InventoryCount() == 1);
+
+    Game floor15Michelle;
+    floor15Michelle.generateClassicTower();
+    floor15Michelle.debugTeleport(15, 10, 2);
+    assert(floor15Michelle.tileAt(9, 2) == Tile_DarkWall);
+    assert(floor15Michelle.tileAt(7, 4) == Tile_DoorMagic);
+    floor15Michelle.player().atk = 100000;
+    floor15Michelle.player().def = 100000;
+    std::vector<std::string> octopusLog;
+    assert(floor15Michelle.fightAt(7, 6, octopusLog) == Game::Fight_PlayerWin);
+    assert(floor15Michelle.tileAt(7, 4) == Tile_Floor);
+
+    Game knightStory;
+    knightStory.generateClassicTower();
+    knightStory.debugTeleport(32, 7, 10);
+    assert(knightStory.tileAt(6, 12) == Tile_StairsDown);
+    assert(knightStory.tileAt(12, 2) == Tile_StairsUp);
+    assert(knightStory.tileAt(10, 11) == Tile_Wall);
+    assert(knightStory.tileAt(12, 11) == Tile_Wall);
+    assert(knightStory.tryMovePlayer(7, 11) == Game::Move_Ok);
+    assert(knightStory.floor32KnightStoryPending());
+    assert(knightStory.monsterAt(7, 10) == nullptr);
+    const auto knightApproach = knightStory.takeFloor32KnightMovementAnimations();
+    assert(!knightApproach.empty());
+    assert(knightApproach.front().fromX == 12 && knightApproach.front().fromY == 2);
+    assert(knightApproach.back().fromX == 7 && knightApproach.back().fromY == 10);
+    assert(knightApproach.back().toX == 7 && knightApproach.back().toY == 11);
+    for (const auto& step : knightApproach) {
+        assert(std::abs(step.fromX - step.toX) + std::abs(step.fromY - step.toY) == 1);
+        const int tile = knightStory.tileAt(step.toX, step.toY);
+        assert(tile == Tile_Floor || tile == Tile_StairsUp || tile == Tile_StairsDown);
+    }
+    knightStory.player().atk = 100000;
+    knightStory.player().def = 100000;
+    knightStory.resolveFloor32KnightStory();
+    assert(knightStory.monsterAt(7, 10) != nullptr);
+    std::vector<std::string> knightLog;
+    assert(knightStory.fightAt(7, 10, knightLog) == Game::Fight_PlayerWin);
+    const auto knightRetreat = knightStory.takeFloor32KnightMovementAnimations();
+    assert(knightRetreat.size() == knightApproach.size());
+    assert(knightRetreat.front().fromX == 7 && knightRetreat.front().fromY == 11);
+    assert(knightRetreat.back().toX == 12 && knightRetreat.back().toY == 2);
+    for (std::size_t i = 0; i < knightRetreat.size(); ++i) {
+        const auto& outward = knightApproach[knightApproach.size() - 1 - i];
+        const auto& returning = knightRetreat[i];
+        assert(returning.fromX == outward.toX && returning.fromY == outward.toY);
+        assert(returning.toX == outward.fromX && returning.toY == outward.fromY);
+    }
+    assert(knightStory.tileAt(6, 12) == Tile_StairsDown);
+    assert(knightStory.tileAt(12, 2) == Tile_StairsUp);
+    classicMidTower.debugTeleport(20, 7, 11);
+    assert(classicMidTower.tileAt(7, 10) == Tile_DoorRed);
+    classicMidTower.player().AddKey(KeyType::Red);
+    assert(classicMidTower.tryMovePlayer(7, 10) == Game::Move_Ok);
+    assert(classicMidTower.tileAt(7, 10) == Tile_Floor);
+    assert(classicMidTower.tryMovePlayer(7, 9) == Game::Move_Ok);
+    assert(classicMidTower.tileAt(7, 10) == Tile_DoorMagic);
+    assert(classicMidTower.tileAt(7, 4) == Tile_DoorMagic);
+    assert(classicMidTower.tileAt(7, 2) == Tile_Floor);
+    assert(classicMidTower.tileAt(7, 12) == Tile_StairsDown);
+    assert(classicMidTower.monsterAt(7, 7) != nullptr);
+    classicMidTower.player().atk = 100000;
+    classicMidTower.player().def = 100000;
+    std::vector<std::string> vampireLog;
+    assert(classicMidTower.fightAt(7, 7, vampireLog) == Game::Fight_PlayerWin);
+    assert(classicMidTower.tileAt(7, 10) == Tile_Floor);
+    assert(classicMidTower.tileAt(7, 2) == Tile_StairsUp);
+    assert(classicMidTower.tileAt(7, 12) == Tile_StairsDown);
+    classicMidTower.debugTeleport(28, 9, 5);
+    assert(classicMidTower.shopAt(9, 5) != nullptr);
+    assert(classicMidTower.shopAt(9, 5)->classicNpcId == 24);
+
+    classicMidTower.activateFloor35Michelle();
+    classicMidTower.debugTeleport(35, 7, 6);
+    assert(classicMidTower.npcAt(7, 6) != nullptr);
+    assert(classicMidTower.npcAt(7, 6)->GetName() == "米歇尔");
+    assert(classicMidTower.tileAt(7, 4) == Tile_DarkWall);
+    assert(classicMidTower.tryMovePlayer(7, 4) == Game::Move_Block);
+    classicMidTower.completeFloor35MichelleStory();
+    assert(classicMidTower.tileAt(7, 4) == Tile_Floor);
+    for (int y = 0; y < classicMidTower.height(); ++y)
+        for (int x = 0; x < classicMidTower.width(); ++x)
+            assert(classicMidTower.tileAt(x, y) != Tile_DarkWall);
+    assert(classicMidTower.npcAt(7, 6) == nullptr);
+
+    Game floor36HiddenRoutes;
+    floor36HiddenRoutes.generateClassicTower();
+    floor36HiddenRoutes.debugTeleport(36, 7, 7);
+    const std::vector<std::pair<int, int>> floor36DarkWalls{
+        {3, 6}, {4, 6}, {5, 6}, {9, 6}, {10, 6}, {11, 6},
+        {3, 8}, {4, 8}, {5, 8}, {9, 8}, {10, 8}, {11, 8}
+    };
+    for (const auto& point : floor36DarkWalls)
+        assert(floor36HiddenRoutes.tileAt(point.first, point.second) == Tile_DarkWall);
+    classicMidTower.debugTeleport(50, 7, 5);
+    assert(classicMidTower.npcAt(7, 5) != nullptr);
+    assert(classicMidTower.npcAt(7, 5)->GetName() == "米歇尔");
+    assert(classicMidTower.monsterAt(7, 6) == nullptr);
+    classicMidTower.revealFloor50MichelleIdentity();
+    assert(classicMidTower.npcAt(7, 5) == nullptr);
+    assert(classicMidTower.monsterAt(7, 6) != nullptr);
+    assert(classicMidTower.monsterAt(7, 6)->GetName() == "长崎素世·本体");
+    classicMidTower.sendMichelleToFloor29();
+    classicMidTower.debugTeleport(29, 7, 3);
+    assert(classicMidTower.npcAt(7, 3) != nullptr);
+    assert(classicMidTower.npcAt(7, 3)->GetName() == "米歇尔");
+    assert(classicMidTower.tileAt(7, 4) == Tile_Wall);
+    classicMidTower.debugTeleport(2, 12, 12);
+    assert(classicMidTower.npcAt(12, 12) == nullptr);
+
+    Game floor30AllMonsters;
+    floor30AllMonsters.initFloor(30);
+    floor30AllMonsters.debugTeleport(30, 7, 7);
+    floor30AllMonsters.setTile(7, 6, Tile_DoorMagic);
+    floor30AllMonsters.spawnMonster(3, 3, Monster("远处的怪物", 10, 1, 0, 0));
+    floor30AllMonsters.player().atk = 100000;
+    floor30AllMonsters.player().def = 100000;
+    assert(floor30AllMonsters.tryMovePlayer(7, 6) == Game::Move_DoorLocked);
+    std::vector<std::string> floor30Log;
+    assert(floor30AllMonsters.fightAt(3, 3, floor30Log) == Game::Fight_PlayerWin);
+    assert(floor30AllMonsters.tileAt(7, 6) == Tile_Floor);
+
+    Game floor33Trap;
+    floor33Trap.generateClassicTower();
+    floor33Trap.debugTeleport(33, 11, 8);
+    assert(floor33Trap.tryMovePlayer(11, 7) == Game::Move_Ok);
+    assert(floor33Trap.floor33TrapTriggered());
+    assert(floor33Trap.tileAt(11, 5) == Tile_DoorMagic);
+    assert(floor33Trap.tileAt(11, 9) == Tile_DoorMagic);
+    floor33Trap.player().atk = 100000;
+    floor33Trap.player().def = 100000;
+    for (const auto& guard : std::vector<std::pair<int, int>>{{10, 6}, {12, 6}, {10, 8}, {12, 8}}) {
+        std::vector<std::string> guardLog;
+        assert(floor33Trap.fightAt(guard.first, guard.second, guardLog) == Game::Fight_PlayerWin);
+    }
+    assert(floor33Trap.tileAt(11, 5) == Tile_Floor);
+    assert(floor33Trap.tileAt(11, 9) == Tile_Floor);
+
+    auto phone = Game::createItemByName("爱音手机", 0);
+    assert(phone != nullptr && phone->IsUseItem() && phone->IsReusable());
+
+    Game princessPassage;
+    princessPassage.initFloor(24);
+    princessPassage.debugTeleport(24, 7, 10);
+    princessPassage.setTile(7, 9, Tile_DoorRed);
+    princessPassage.player().AddKey(KeyType::Red);
+    assert(princessPassage.tryMovePlayer(7, 9) == Game::Move_DoorLocked);
+    princessPassage.unlockPrincessDollPassage();
+    assert(princessPassage.tileAt(7, 8) == Tile_StairsUp);
+    assert(princessPassage.tryMovePlayer(7, 9) == Game::Move_Ok);
+    princessPassage.debugTeleport(24, 7, 8);
+    princessPassage.goUpFloor(7, 8);
+    assert(princessPassage.currentFloor() == 50);
+    princessPassage.debugTeleport(24, 7, 8);
+    const std::string princessSave = "mota_princess_doll_test.save";
+    assert(princessPassage.saveToFile(princessSave));
+    Game restoredPrincess;
+    assert(restoredPrincess.loadFromFile(princessSave));
+    restoredPrincess.debugTeleport(24, 7, 8);
+    restoredPrincess.goUpFloor(7, 8);
+    assert(restoredPrincess.currentFloor() == 50);
+    std::remove(princessSave.c_str());
+
+    // 巫师领域：只有初级/高级巫师靠近时扣100/200，法师不会造成领域伤害。
+    Game mageContact;
+    mageContact.initFloor(1);
+    mageContact.debugTeleport(1, 5, 5);
+    mageContact.player().hp = 1000;
+    mageContact.setTile(6, 4, Tile_Monster);
+    mageContact.spawnMonster(6, 4, MonsterDB::get("高松灯·初级法师"));
+    assert(mageContact.tryMovePlayer(5, 4) == Game::Move_Ok);
+    assert(mageContact.player().hp == 1000);
+    mageContact.setTile(6, 4, Tile_Floor);
+    mageContact.currentFloorData().monsters.erase(mageContact.posKey(6, 4));
+    mageContact.player().hp = 1000;
+    mageContact.setTile(6, 4, Tile_Monster);
+    mageContact.spawnMonster(6, 4, MonsterDB::get("薇欧拉·高级法师"));
+    assert(mageContact.tryMovePlayer(5, 4) == Game::Move_Ok);
+    assert(mageContact.player().hp == 1000);
+    mageContact.currentFloorData().monsters.erase(mageContact.posKey(6, 4));
+    mageContact.setTile(6, 4, Tile_Monster);
+    mageContact.spawnMonster(6, 4, MonsterDB::get("仲町あられSP·初级巫师"));
+    mageContact.player().hp = 1000;
+    assert(mageContact.tryMovePlayer(5, 4) == Game::Move_Ok);
+    assert(mageContact.player().hp == 900);
+    mageContact.currentFloorData().monsters.erase(mageContact.posKey(6, 4));
+    mageContact.setTile(6, 4, Tile_Monster);
+    mageContact.spawnMonster(6, 4, MonsterDB::get("峰月律SP·高级巫师"));
+    mageContact.player().hp = 1000;
+    assert(mageContact.tryMovePlayer(5, 4) == Game::Move_Ok);
+    assert(mageContact.player().hp == 800);
+    mageContact.player().hasHolyShield = true;
+    mageContact.player().hp = 1000;
+    assert(mageContact.tryMovePlayer(5, 5) == Game::Move_Ok);
+    assert(mageContact.player().hp == 1000);
+
+    // 魔法守卫夹击：进入两名相对魔法守卫的中间格时生命减半，神圣盾免疫。
+    Game guardAmbush;
+    guardAmbush.initFloor(1);
+    guardAmbush.debugTeleport(1, 5, 6);
+    guardAmbush.player().hp = 1000;
+    guardAmbush.setTile(4, 5, Tile_Monster);
+    guardAmbush.spawnMonster(4, 5, MonsterDB::get("藤都子SP·魔法警卫"));
+    guardAmbush.setTile(6, 5, Tile_Monster);
+    guardAmbush.spawnMonster(6, 5, MonsterDB::get("藤都子SP·魔法警卫"));
+    assert(guardAmbush.tryMovePlayer(5, 5) == Game::Move_Ok);
+    assert(guardAmbush.player().hp == 500);
+    guardAmbush.player().hasHolyShield = true;
+    guardAmbush.player().hp = 1000;
+    assert(guardAmbush.tryMovePlayer(5, 6) == Game::Move_Ok);
+    assert(guardAmbush.tryMovePlayer(5, 5) == Game::Move_Ok);
+    assert(guardAmbush.player().hp == 1000);
+
+    // 鼠标瞬移必须保留逐格路径，并对经过的巫师领域结算伤害。
+    Game pathHazard;
+    pathHazard.initFloor(1);
+    pathHazard.debugTeleport(1, 2, 2);
+    pathHazard.player().hp = 1000;
+    pathHazard.setTile(4, 3, Tile_Monster);
+    pathHazard.spawnMonster(4, 3, MonsterDB::get("仲町あられSP·初级巫师"));
+    assert(pathHazard.teleportPlayerTo(5, 2) == Game::Move_Ok);
+    assert(pathHazard.player().x == 5 && pathHazard.player().y == 2);
+    assert(pathHazard.player().hp == 900);
+    assert(pathHazard.lastTeleportNeedsAnimation());
+    const auto path = pathHazard.takeLastTeleportPath();
+    assert(path.size() == 4);
+    assert(path.front() == std::make_pair(2, 2));
+    assert(path.back() == std::make_pair(5, 2));
+
+    Game plainTeleport;
+    plainTeleport.initFloor(1);
+    plainTeleport.debugTeleport(1, 2, 2);
+    assert(plainTeleport.teleportPlayerTo(5, 2) == Game::Move_Ok);
+    assert(!plainTeleport.lastTeleportNeedsAnimation());
+
+    Game guardPath;
+    guardPath.initFloor(1);
+    guardPath.debugTeleport(1, 2, 3);
+    guardPath.player().hp = 1000;
+    guardPath.setTile(4, 2, Tile_Monster);
+    guardPath.spawnMonster(4, 2, MonsterDB::get("藤都子SP·魔法警卫"));
+    guardPath.setTile(4, 4, Tile_Monster);
+    guardPath.spawnMonster(4, 4, MonsterDB::get("藤都子SP·魔法警卫"));
+    assert(guardPath.teleportPlayerTo(6, 3) == Game::Move_Ok);
+    assert(guardPath.player().hp == 500);
+
+    // 44层为异空间：常规楼梯跳过44层，只有上/下楼器的跨层传送可进入。
+    Game otherSpace;
+    otherSpace.debugTeleport(43, 7, 7);
+    otherSpace.goUpFloor(7, 7, true);
+    assert(otherSpace.currentFloor() == 45);
+    otherSpace.debugTeleport(45, 7, 7);
+    otherSpace.goDownFloor(7, 7, true);
+    assert(otherSpace.currentFloor() == 43);
+    otherSpace.debugTeleport(43, 7, 7);
+    otherSpace.goUpFloor(7, 7, false);
+    assert(otherSpace.currentFloor() == 44);
+    otherSpace.goDownFloor(7, 7, false);
+    assert(otherSpace.currentFloor() == 43);
+
     assert(!adminTeleport.debugTeleport(51, 7, 7));
     assert(!adminTeleport.debugTeleport(10, -1, 7));
     assert(!adminTeleport.debugTeleport(10, 7, 15));

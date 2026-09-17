@@ -211,10 +211,12 @@ void WallBreaker::Apply(Player& player) const {
 }
 
 MagicKey::MagicKey()
-    : Item(QString::fromUtf8("后台万能通行证").toStdString(), 0) {}
+    : Item(QString::fromUtf8("大黄门钥匙").toStdString(), 0) {}
 
 void MagicKey::Apply(Player& player) const {
-    player.magicKeyUses += 3;
+    // 楼层上下文由 Game 在拾取时处理；保留 Apply 为空，避免把一次性
+    // 的“大黄门钥匙”错误地变成可重复消耗的万能门次数。
+    (void)player;
 }
 
 LuckyCoin::LuckyCoin()
@@ -280,7 +282,14 @@ void SymmetryFlyer::Apply(Player& player) const {
 }
 
 NoteBook::NoteBook()
-    : Item(QString::fromUtf8("灯的歌词本").toStdString(), 0) {}
+    : Item(QString::fromUtf8("高松灯的单词本").toStdString(), 0) {}
+
+MonsterBook::MonsterBook()
+    : Item(QString::fromUtf8("怪物手册").toStdString(), 0) {}
+
+void MonsterBook::Apply(Player& player) const {
+    player.hasGlasses = true;
+}
 
 HolyShield::HolyShield(int defBonus, const std::string& displayName)
     : Armor(defBonus, displayName) {}

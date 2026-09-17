@@ -10,7 +10,8 @@ int main() {
     assert(motion.isMoving());
     motion.advance(100);
     assert(std::fabs(motion.progress() - 0.30f) < 0.001f);
-    assert(std::fabs(motion.x() - 2.216f) < 0.002f);
+    // 连续移动采用恒速插值，避免每个格子边界因减速而产生卡顿。
+    assert(std::fabs(motion.x() - 2.300f) < 0.002f);
     assert(motion.walkingFrame() == 1);
     assert(motion.isMoving());
     motion.advance(240);

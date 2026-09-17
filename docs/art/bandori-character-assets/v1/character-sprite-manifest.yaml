@@ -1,0 +1,28 @@
+---
+manifest_version: "1.0.0"
+sheet_format: "4x4 grid, 16 frames, each cell 60x60"
+frame_order: "rows=down,left,right,up; columns=walking frame 1..4"
+selection_rule: "无SP使用casual；有SP的标准形态使用stage；怪物另用monster_sprite"
+characters:
+  - {id: anon, name: "千早爱音", casual: "images/characters/pilot/anon_casual.png", stage: "images/characters/pilot/anon_stage.png", monster_sprite: null}
+  - {id: soyo, name: "长崎素世", casual: "images/characters/mygo/soyo_casual.png", stage: "images/characters/mygo/soyo_stage.png", monster_sprite: [20, 33, 34]}
+  - {id: tomori, name: "高松灯", casual: "images/characters/mygo/tomori_casual.png", stage: "images/characters/mygo/tomori_stage.png", monster_sprite: [4, 19]}
+  - {id: taki, name: "椎名立希", casual: "images/characters/extended/taki_casual.png", stage: "images/characters/extended/taki_stage.png", monster_sprite: [5, 21]}
+  - {id: rana, name: "要乐奈", casual: "images/characters/extended/rana_casual.png", stage: "images/characters/extended/rana_stage.png", monster_sprite: [1, 18]}
+  - {id: sakiko, name: "丰川祥子", casual: "images/characters/extended/sakiko_casual.png", stage: "images/characters/extended/sakiko_stage.png", monster_sprite: [3, 22]}
+  - {id: mutsumi, name: "若叶睦", casual: "images/characters/extended/mutsumi_casual.png", stage: "images/characters/extended/mutsumi_stage.png", monster_sprite: [2, 24]}
+  - {id: umiri, name: "八幡海铃", casual: "images/characters/extended/umiri_casual.png", stage: "images/characters/extended/umiri_stage.png", monster_sprite: [8, 30]}
+  - {id: nyamu, name: "祐天寺若麦", casual: "images/characters/extended/nyamu_casual.png", stage: "images/characters/extended/nyamu_stage.png", monster_sprite: [6, 28]}
+  - {id: nonoka, name: "宫永ののか", casual: "images/characters/extended/nonoka_casual.png", stage: "images/characters/extended/nonoka_stage.png", monster_sprite: [9, 10, 15]}
+  - {id: ritsu, name: "峰月律", casual: "images/characters/extended/ritsu_casual.png", stage: "images/characters/extended/ritsu_stage.png", monster_sprite: [12, 27]}
+  - {id: miyako, name: "藤都子", casual: "images/characters/extended/miyako_casual.png", stage: "images/characters/extended/miyako_stage.png", monster_sprite: [13, 31]}
+  - {id: yuno, name: "千石ユノ", casual: "images/characters/extended/yuno_casual.png", stage: "images/characters/extended/yuno_stage.png", monster_sprite: [14, 29]}
+  - {id: arale, name: "仲町あられ", casual: "images/characters/mugendai_mewtype/arale_casual.png", stage: "images/characters/mugendai_mewtype/arale_stage.png", monster_sprite: [9, 26]}
+  - {id: viola, name: "薇欧拉", casual: "images/characters/mugendai_mewtype/viola_normal.png", stage: "images/characters/mugendai_mewtype/viola_corrupted.png", monster_sprite: [11, 23]}
+  - {id: uika, name: "三角初华 / Doloris", casual: "images/characters/ave_mujica/uika_casual.png", stage: "images/characters/ave_mujica/doloris_stage.png", monster_sprite: [7, 32]}
+  - {id: yukina, name: "凑友希那", casual: "images/characters/extended/yukina_casual.png", stage: "images/characters/extended/yukina_stage.png", monster_sprite: [16]}
+  - {id: kasumi, name: "户山香澄", casual: "images/characters/extended/kasumi_casual.png", stage: "images/characters/extended/kasumi_stage.png", monster_sprite: [17]}
+npcs:
+  - {id: marina, name: "月岛麻里奈", casual: "images/characters/npcs/marina.png", icon: "images/characters/npcs/marina_icon.png"}
+  - {id: michelle, name: "米歇尔", casual: "images/characters/npcs/michelle.png", icon: "images/characters/npcs/michelle_icon.png"}
+  - {id: ririko, name: "凛凛子", casual: "images/characters/npcs/ririko.png", icon: "images/characters/npcs/ririko_icon.png"}

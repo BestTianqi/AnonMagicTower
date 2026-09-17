@@ -1,0 +1,18 @@
+---
+manifest_version: "1.0.0"
+character_id: anon
+character_name: "千早爱音"
+sheet_format: "8x8 grid, 64 frames, each cell 60x60 (480x480 total)"
+frame_order: "rows 1-2=down, rows 3-4=left, rows 5-6=right, rows 7-8=up; even row=idle-to-walk, odd row=brisk walk; columns=8 sequential poses"
+anchor: "脚底固定在每格底部，所有服装共用同一脚底基线"
+transparency: "透明背景，单格四周保留至少 2px 透明边界，无地面阴影"
+generated_at: "2026-09-17"
+outfits:
+  - {id: school, name: "校服", path: "images/characters/player_outfits/anon_school_8x8.png", reference: "images/characters/portraits/anon.png"}
+  - {id: casual, name: "常服", path: "images/characters/player_outfits/anon_casual_8x8.png", reference: "images/characters/portraits/anon.png"}
+  - {id: mygo_stage, name: "MyGO演出服", path: "images/characters/player_outfits/anon_mygo_stage_8x8.png", reference: "images/characters/pilot/anon_stage.png"}
+  - {id: mujica_stage, name: "Mujica暗色演出服", path: "images/characters/player_outfits/anon_mujica_stage_8x8.png", reference: "images/characters/portraits/variants/anon_official_outfits_sheet.png"}
+  - {id: summer, name: "夏季轻装", path: "images/characters/player_outfits/anon_summer_8x8.png", reference: "images/characters/portraits/anon.png"}
+  - {id: school_actions, name: "校服动作扩展（手比取景框）", path: "images/characters/player_outfits/anon_school_actions_8x8.png", reference: "用户提供动画截图 + images/characters/portraits/anon.png"}
+  - {id: casual_actions, name: "常服动作扩展（手机与互动）", path: "images/characters/player_outfits/anon_casual_actions_8x8.png", reference: "images/characters/pilot/anon_casual.png"}
+  - {id: mygo_stage_actions, name: "MyGO演出动作扩展（麦克风与舞台）", path: "images/characters/player_outfits/anon_stage_actions_8x8.png", reference: "images/characters/pilot/anon_stage.png"}

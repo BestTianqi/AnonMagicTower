@@ -14,6 +14,7 @@
 #include <QDialogButtonBox>
 #include <QLabel>
 #include <QSettings>
+#include <QStandardPaths>
 
 MenuWindow::MenuWindow(QWidget* parent)
     : QWidget(parent)
@@ -23,6 +24,8 @@ MenuWindow::MenuWindow(QWidget* parent)
     setWindowTitle(QString::fromUtf8("MYGO!!!!! × Ave Mujica：梦限大魔塔"));
     // 与游戏页的布局尺寸一致，嵌入后窗口不会把地图和侧栏压缩到不可用。
     setMinimumSize(1100, 760);
+    // 默认以 1600×900 启动，窗口仍可手动放大到更高分辨率。
+    resize(1600, 900);
     setStyleSheet(
         "QWidget#MenuWindow { background-color: #0a0812; color: #e8e9f2; }"
         "QPushButton { color: #fff7d0; border-image: url(:/images/runtime/ui/button_texture.png) 18 24 18 24 stretch stretch; padding: 10px 18px; font-size: 15px; font-weight: 700; }"
@@ -45,7 +48,8 @@ MenuWindow::MenuWindow(QWidget* parent)
     ui.mapEditorBtn->setText(QString::fromUtf8("地 图 编 辑 器"));
     ui.settingsBtn->setText(QString::fromUtf8("设 置"));
     ui.titleLabel->setStyleSheet(
-        "color: #fff2bd; border-image: url(:/images/runtime/ui/title_plaque.png) 18 32 18 32 stretch stretch; padding: 18px 70px;");
+        "color: #fff2bd; background: transparent; padding: 8px 0;");
+    positionMenuPortraits();
 
     connect(ui.newGameBtn,   &QPushButton::clicked, this, &MenuWindow::onNewGame);
     connect(ui.loadGameBtn,  &QPushButton::clicked, this, &MenuWindow::onLoadGame);
@@ -69,9 +73,33 @@ void MenuWindow::paintEvent(QPaintEvent* /*event*/)
 void MenuWindow::resizeEvent(QResizeEvent* event)
 {
     QWidget::resizeEvent(event);
+    positionMenuPortraits();
     // 游戏页与菜单共用同一个顶层窗口，始终覆盖整个客户区。
     if (m_gameWindow)
         m_gameWindow->setGeometry(rect());
+}
+
+void MenuWindow::positionMenuPortraits()
+{
+    if (!ui.anonPortrait || !ui.soyoPortrait) return;
+    const int portraitWidth = qBound(220, width() / 5, 330);
+    const int portraitHeight = qBound(340, height() * 5 / 6, 560);
+    const int top = qMax(0, height() - portraitHeight - 18);
+    const int sideMargin = qMax(12, (width() - portraitWidth * 2 - 400) / 2);
+
+    auto place = [portraitWidth, portraitHeight, top](QLabel* label, const QString& path) {
+        if (!label) return;
+        label->setGeometry(0, top, portraitWidth, portraitHeight);
+        const QPixmap source(path);
+        label->setPixmap(source.scaled(portraitWidth, portraitHeight,
+                                       Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    };
+    place(ui.anonPortrait, QStringLiteral(":/images/characters/portraits/anon.png"));
+    place(ui.soyoPortrait, QStringLiteral(":/images/characters/portraits/soyo_stage.png"));
+    ui.anonPortrait->move(sideMargin, top);
+    ui.soyoPortrait->move(width() - sideMargin - portraitWidth, top);
+    ui.anonPortrait->raise();
+    ui.soyoPortrait->raise();
 }
 
 void MenuWindow::setMenuControlsVisible(bool visible)
@@ -80,7 +108,9 @@ void MenuWindow::setMenuControlsVisible(bool visible)
                              static_cast<QWidget*>(ui.newGameBtn),
                              static_cast<QWidget*>(ui.loadGameBtn),
                              static_cast<QWidget*>(ui.mapEditorBtn),
-                             static_cast<QWidget*>(ui.settingsBtn)}) {
+                             static_cast<QWidget*>(ui.settingsBtn),
+                             static_cast<QWidget*>(ui.anonPortrait),
+                             static_cast<QWidget*>(ui.soyoPortrait)}) {
         control->setVisible(visible);
     }
 }
@@ -96,8 +126,8 @@ void MenuWindow::onLoadGame()
 {
     QString file = QFileDialog::getOpenFileName(this,
         QString::fromUtf8("读取存档"),
-        QString(),
-        QString::fromUtf8("保存文件 (*.txt)"));
+        QStandardPaths::writableLocation(QStandardPaths::AppDataLocation),
+        QString::fromUtf8("存档文件 (*.txt *.sav);;文本存档 (*.txt);;即时存档 (*.sav)"));
     if (file.isEmpty()) return;
 
     auto* game = new Game();

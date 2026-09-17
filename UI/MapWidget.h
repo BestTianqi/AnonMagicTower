@@ -29,17 +29,27 @@ public:
     void loadMonsterImage(const std::string& name, const QString& path);
     void loadPlayerImage(const QString& path);
     void loadPlayerSpriteSheet(const QString& path);
+    // 注册并切换主角服装；每套可为 4×4 旧表或 8×8 精细表。
+    void loadPlayerOutfitSpriteSheet(const QString& outfitId, const QString& path);
+    bool setPlayerOutfit(const QString& outfitId);
+    QString playerOutfit() const;
     void setPlayerDirection(int dx, int dy);
+    // 播放鼠标点击的逐格路径；游戏状态仍由 Game 保持最终格坐标。
+    void playPlayerPath(const std::vector<std::pair<int, int>>& path);
     bool isPlayerMoving() const { return m_motionInitialized && m_playerMotion.isMoving(); }
     void playMonsterMovement(const std::vector<Game::MonsterMovementAnimation>& movements);
     bool isMonsterMoving() const { return m_monsterMotionActive; }
-    bool isSceneAnimating() const { return isPlayerMoving() || isMonsterMoving(); }
+    bool isSceneAnimating() const {
+        return isPlayerMoving() || !m_scriptedPlayerPath.empty() || isMonsterMoving();
+    }
     void loadBackgroundImage(const QString& path);
     QSize sizeHint() const override;
 
 signals:
     void tileClicked(int x, int y);
     void playerMotionFinished();
+    // 所有逐格怪物移动完成后发出；用于把剧情对白严格排在行走动画之后。
+    void monsterMotionFinished();
 
 protected:
     void paintEvent(QPaintEvent* event) override;
@@ -74,8 +84,12 @@ private:
     QPixmap m_backgroundScaled;
     QSize m_backgroundViewport;
 
-    std::array<QPixmap, 16> m_playerFrames;
+    std::array<QPixmap, 64> m_playerFrames;
+    std::unordered_map<std::string, QString> m_playerOutfitPaths;
+    std::string m_activePlayerOutfit;
     bool m_hasPlayerSheet = false;
+    int m_playerSheetColumns = 4;
+    int m_playerSheetRows = 4;
     int m_playerDirectionRow = 0; // down, left, right, up
     int m_playerFrame = 1;
     int m_lastPlayerTileX = 0;
@@ -86,6 +100,9 @@ private:
     QElapsedTimer m_motionClock;
     QElapsedTimer m_monsterMotionClock;
     std::vector<MonsterMotion> m_monsterMotions;
+    size_t m_monsterMotionIndex = 0;
     bool m_monsterMotionActive = false;
     bool m_movementAnimationEnabled = true;
+    std::vector<std::pair<int, int>> m_scriptedPlayerPath;
+    size_t m_scriptedPlayerPathIndex = 0;
 };
