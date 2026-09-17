@@ -16,14 +16,14 @@ try {
         throw "player sheet must be 480x480, got $($bitmap.Width)x$($bitmap.Height)"
     }
 
-    # Every 60x60 frame must keep a two-pixel transparent guard band so that
+    # Every 60x60 frame must keep an eight-pixel transparent guard band so that
     # a previous frame's feet cannot bleed into the next frame's head.
     for ($row = 0; $row -lt 8; $row++) {
         for ($col = 0; $col -lt 8; $col++) {
-            foreach ($offset in 0, 1, 58, 59) {
+            foreach ($offset in 0, 1, 2, 3, 4, 5, 6, 7, 52, 53, 54, 55, 56, 57, 58, 59) {
                 for ($i = 0; $i -lt 60; $i++) {
-                    $x = if ($offset -lt 2 -or $offset -gt 57) { $col * 60 + $offset } else { $col * 60 + $i }
-                    $y = if ($offset -lt 2 -or $offset -gt 57) { $row * 60 + $offset } else { $row * 60 + $i }
+                    $x = if ($offset -lt 8 -or $offset -gt 51) { $col * 60 + $offset } else { $col * 60 + $i }
+                    $y = if ($offset -lt 8 -or $offset -gt 51) { $row * 60 + $offset } else { $row * 60 + $i }
                     if ($bitmap.GetPixel($x, $y).A -ne 0) {
                         throw "opaque pixel in frame guard at row=$row col=$col"
                     }

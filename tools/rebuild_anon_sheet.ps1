@@ -17,7 +17,7 @@ try {
     for ($row = 0; $row -lt 8; $row++) {
         for ($col = 0; $col -lt 8; $col++) {
             # Ignore the generated cell's outer pixels, then find the actual
-            # character bounds and fit that character into a 52px interior.
+            # character bounds and fit that character into a 44px interior.
             # This gives every frame the same baseline and prevents any source
             # frame from contributing pixels to a neighboring frame.
             $cellLeft = [int][math]::Floor($col * $srcBmp.Width / 8) + 12
@@ -41,11 +41,11 @@ try {
             if ($maxX -lt $minX -or $maxY -lt $minY) { continue }
             $sourceWidth = $maxX - $minX + 1
             $sourceHeight = $maxY - $minY + 1
-            $scale = [math]::Min(52.0 / $sourceWidth, 52.0 / $sourceHeight)
+            $scale = [math]::Min(44.0 / $sourceWidth, 44.0 / $sourceHeight)
             $destWidth = [math]::Max(1, [int][math]::Round($sourceWidth * $scale))
             $destHeight = [math]::Max(1, [int][math]::Round($sourceHeight * $scale))
             $destX = $col * 60 + [int][math]::Round((60 - $destWidth) / 2.0)
-            $destY = $row * 60 + 56 - $destHeight
+            $destY = $row * 60 + 52 - $destHeight
             $sourceRect = [System.Drawing.Rectangle]::new($minX, $minY, $sourceWidth, $sourceHeight)
             $destinationRect = [System.Drawing.Rectangle]::new($destX, $destY, $destWidth, $destHeight)
             $gfx.DrawImage($srcBmp, $destinationRect, $sourceRect.X, $sourceRect.Y,
@@ -53,13 +53,13 @@ try {
         }
     }
     # Remove any anti-aliased pixels that landed on a grid edge in the
-    # generated source. The first four pixels of every frame are reserved as
+    # generated source. The first eight pixels of every frame are reserved as
     # a hard transparent guard.
     for ($row = 0; $row -lt 8; $row++) {
         for ($col = 0; $col -lt 8; $col++) {
             for ($y = 0; $y -lt 60; $y++) {
                 for ($x = 0; $x -lt 60; $x++) {
-                    if ($x -lt 4 -or $y -lt 4 -or $x -ge 56 -or $y -ge 56) {
+                    if ($x -lt 8 -or $y -lt 8 -or $x -ge 52 -or $y -ge 52) {
                         $dstBmp.SetPixel($col * 60 + $x, $row * 60 + $y, [System.Drawing.Color]::Transparent)
                     }
                 }
@@ -83,7 +83,7 @@ if ($check.Width -ne 480 -or $check.Height -ne 480) {
 }
 for ($row = 0; $row -lt 8; $row++) {
     for ($col = 0; $col -lt 8; $col++) {
-        for ($i = 0; $i -lt 4; $i++) {
+        for ($i = 0; $i -lt 8; $i++) {
             for ($j = 0; $j -lt 60; $j++) {
                 $edgePixels = @(
                     $check.GetPixel($col * 60 + $j, $row * 60 + $i),
@@ -93,11 +93,11 @@ for ($row = 0; $row -lt 8; $row++) {
                 )
                 if ($edgePixels | Where-Object { $_.A -ne 0 }) {
                     $check.Dispose()
-                    throw "frame ($col,$row) touches its 4px transparent guard"
+                    throw "frame ($col,$row) touches its 8px transparent guard"
                 }
             }
         }
     }
 }
 $check.Dispose()
-Write-Output 'PASS: rebuilt 480x480 sheet with 4px per-frame guards'
+Write-Output 'PASS: rebuilt 480x480 sheet with 8px per-frame guards'
