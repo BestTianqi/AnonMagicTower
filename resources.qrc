@@ -153,6 +153,7 @@
         <file>images/runtime/ui/menu_backdrop.png</file>
         <!-- 游戏内角色头像（从 4x4 图集裁剪的首帧） -->
         <file>images/characters/portraits/anon.png</file>
+        <file>images/characters/portraits/anon_dialogue.png</file>
         <file>images/characters/portraits/soyo.png</file>
         <file>images/characters/portraits/tomori.png</file>
         <file>images/characters/portraits/rana.png</file>
@@ -189,5 +190,6 @@
         <file>images/characters/portraits/kasumi_stage.png</file>
         <file>images/characters/pilot/anon_casual.png</file>
         <file>images/characters/pilot/anon_stage.png</file>
+        <file>images/characters/player_outfits/anon_reference_walk_8x8.png</file>
     </qresource>
 </RCC>

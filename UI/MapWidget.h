@@ -74,8 +74,10 @@ private:
     QPixmap m_backgroundScaled;
     QSize m_backgroundViewport;
 
-    std::array<QPixmap, 16> m_playerFrames;
+    std::array<QPixmap, 64> m_playerFrames;
     bool m_hasPlayerSheet = false;
+    int m_playerSheetColumns = 4;
+    int m_playerSheetRows = 4;
     int m_playerDirectionRow = 0; // down, left, right, up
     int m_playerFrame = 1;
     int m_lastPlayerTileX = 0;

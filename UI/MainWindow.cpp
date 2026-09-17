@@ -40,6 +40,14 @@ static QString formatNumber(int value)
     return QLocale(QLocale::Chinese, QLocale::China).toString(value);
 }
 
+static QString dialoguePortraitPath(const QString& path)
+{
+    // 地图继续使用原有 60×60 头像；Galgame 使用同样人物的去背景副本。
+    if (path.endsWith(QStringLiteral("/anon.png")))
+        return QStringLiteral(":/images/characters/portraits/anon_dialogue.png");
+    return path;
+}
+
 static QString monsterPortraitPath(const std::string& name)
 {
     // 与 MapWidget::loadAssets 中的原版怪物 ID 映射保持一致。
@@ -434,9 +442,9 @@ void MainWindow::loadAssets()
 {
     auto* mw = ui.mapWidget;
 
-    // 加载玩家图片
+    // Galgame/头像继续使用原有透明小立绘；地图行走角色单独使用最新 8×8 素材。
     mw->loadPlayerImage(":/images/characters/portraits/anon.png");
-    mw->loadPlayerSpriteSheet(":/images/characters/pilot/anon_stage.png");
+    mw->loadPlayerSpriteSheet(":/images/characters/player_outfits/anon_reference_walk_8x8.png");
     mw->loadBackgroundImage(":/images/backgrounds/bangdream_gbp_cover.jpg");
 
     // 运行时地图图块全部来自已生成图集的裁切素材。
@@ -826,10 +834,14 @@ void MainWindow::showVisualNovelDialogue(const std::vector<VisualNovelPage>& pag
     stage->setContentsMargins(18, 0, 18, 0);
     auto* leftPortrait = new QLabel(&dlg);
     leftPortrait->setObjectName("vnPortrait");
+    leftPortrait->setAttribute(Qt::WA_TranslucentBackground);
+    leftPortrait->setAutoFillBackground(false);
     leftPortrait->setFixedSize(300, 400);
     leftPortrait->setAlignment(Qt::AlignBottom | Qt::AlignHCenter);
     auto* rightPortrait = new QLabel(&dlg);
     rightPortrait->setObjectName("vnPortrait");
+    rightPortrait->setAttribute(Qt::WA_TranslucentBackground);
+    rightPortrait->setAutoFillBackground(false);
     rightPortrait->setFixedSize(300, 400);
     rightPortrait->setAlignment(Qt::AlignBottom | Qt::AlignHCenter);
     stage->addWidget(leftPortrait, 0, Qt::AlignLeft | Qt::AlignBottom);
@@ -868,10 +880,10 @@ void MainWindow::showVisualNovelDialogue(const std::vector<VisualNovelPage>& pag
         name->setStyleSheet(QStringLiteral("color: %1;").arg(page.accent));
         text->setText(page.text);
         const bool playerSpeaking = page.speaker.contains(QString::fromUtf8("爱音"));
-        const QString leftPath = playerSpeaking ? page.portrait
-                                                : QStringLiteral(":/images/characters/portraits/anon.png");
-        const QString rightPath = playerSpeaking
-            ? QStringLiteral(":/images/characters/portraits/soyo.png") : page.portrait;
+        const QString leftPath = dialoguePortraitPath(playerSpeaking ? page.portrait
+                                                : QStringLiteral(":/images/characters/portraits/anon.png"));
+        const QString rightPath = dialoguePortraitPath(playerSpeaking
+            ? QStringLiteral(":/images/characters/portraits/soyo.png") : page.portrait);
         const auto setPortrait = [](QLabel* target, const QString& path) {
             const QPixmap image(path);
             if (!image.isNull())
@@ -923,17 +935,21 @@ bool MainWindow::showVisualNovelChoice(const QString& speaker, const QString& me
     stage->setContentsMargins(18, 0, 18, 0);
     auto* leftPortrait = new QLabel(&dlg);
     leftPortrait->setObjectName("vnPortrait");
+    leftPortrait->setAttribute(Qt::WA_TranslucentBackground);
+    leftPortrait->setAutoFillBackground(false);
     leftPortrait->setFixedSize(300, 400);
     leftPortrait->setAlignment(Qt::AlignBottom | Qt::AlignHCenter);
     auto* rightPortrait = new QLabel(&dlg);
     rightPortrait->setObjectName("vnPortrait");
+    rightPortrait->setAttribute(Qt::WA_TranslucentBackground);
+    rightPortrait->setAutoFillBackground(false);
     rightPortrait->setFixedSize(300, 400);
     rightPortrait->setAlignment(Qt::AlignBottom | Qt::AlignHCenter);
     const bool playerSpeaking = speaker.contains(QString::fromUtf8("爱音"));
-    const QString leftPath = playerSpeaking ? portraitPath
-                                            : QStringLiteral(":/images/characters/portraits/anon.png");
-    const QString rightPath = playerSpeaking
-        ? QStringLiteral(":/images/characters/portraits/soyo.png") : portraitPath;
+    const QString leftPath = dialoguePortraitPath(playerSpeaking ? portraitPath
+                                            : QStringLiteral(":/images/characters/portraits/anon.png"));
+    const QString rightPath = dialoguePortraitPath(playerSpeaking
+        ? QStringLiteral(":/images/characters/portraits/soyo.png") : portraitPath);
     const auto setPortrait = [](QLabel* target, const QString& path) {
         const QPixmap image(path);
         if (!image.isNull())

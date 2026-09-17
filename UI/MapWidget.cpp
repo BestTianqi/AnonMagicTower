@@ -168,13 +168,24 @@ void MapWidget::loadPlayerImage(const QString& path)
 void MapWidget::loadPlayerSpriteSheet(const QString& path)
 {
     const QPixmap sheet(path);
-    if (sheet.isNull() || sheet.width() < TILE_SIZE * 4 || sheet.height() < TILE_SIZE * 4)
+    if (sheet.isNull())
         return;
-    for (int row = 0; row < 4; ++row) {
-        for (int col = 0; col < 4; ++col)
-            m_playerFrames[row * 4 + col] = sheet.copy(col * TILE_SIZE, row * TILE_SIZE,
-                                                        TILE_SIZE, TILE_SIZE);
+    const bool eightByEight = sheet.width() >= TILE_SIZE * 8 &&
+                              sheet.height() >= TILE_SIZE * 8;
+    const int columns = eightByEight ? 8 : 4;
+    const int rows = eightByEight ? 8 : 4;
+    if (sheet.width() < TILE_SIZE * columns || sheet.height() < TILE_SIZE * rows)
+        return;
+    for (auto& frame : m_playerFrames)
+        frame = QPixmap();
+    for (int row = 0; row < rows; ++row) {
+        for (int col = 0; col < columns; ++col) {
+            m_playerFrames[row * columns + col] = sheet.copy(col * TILE_SIZE, row * TILE_SIZE,
+                                                               TILE_SIZE, TILE_SIZE);
+        }
     }
+    m_playerSheetColumns = columns;
+    m_playerSheetRows = rows;
     m_hasPlayerSheet = true;
     update();
 }
@@ -249,7 +260,7 @@ void MapWidget::advancePlayerMotion()
     const bool wasMoving = m_playerMotion.isMoving();
     if (wasMoving) {
         m_playerMotion.advance(static_cast<float>(elapsedMs));
-        m_playerFrame = m_playerMotion.walkingFrame(4);
+        m_playerFrame = m_playerMotion.walkingFrame(m_playerSheetColumns == 8 ? 8 : 4);
         const bool finished = !m_playerMotion.isMoving();
         if (finished) {
             m_playerFrame = 1;
@@ -983,8 +994,15 @@ void MapWidget::paintEvent(QPaintEvent*)
     const int py = qRound(m_playerMotion.y() * TILE_SIZE);
     QRect pr(px, py, TILE_SIZE, TILE_SIZE);
 
-    if (m_hasPlayerSheet && !m_playerFrames[m_playerDirectionRow * 4 + m_playerFrame].isNull()) {
-        painter.drawPixmap(pr, m_playerFrames[m_playerDirectionRow * 4 + m_playerFrame]);
+    int playerFrameIndex = 0;
+    if (m_playerSheetColumns == 8 && m_playerSheetRows == 8) {
+        const int actionRow = m_playerDirectionRow * 2 + (m_playerMotion.isMoving() ? 1 : 0);
+        playerFrameIndex = actionRow * 8 + std::clamp(m_playerFrame, 0, 7);
+    } else {
+        playerFrameIndex = m_playerDirectionRow * 4 + std::clamp(m_playerFrame, 0, 3);
+    }
+    if (m_hasPlayerSheet && !m_playerFrames[static_cast<size_t>(playerFrameIndex)].isNull()) {
+        painter.drawPixmap(pr, m_playerFrames[static_cast<size_t>(playerFrameIndex)]);
     } else if (!m_playerPix.isNull()) {
         painter.drawPixmap(pr, m_playerPix);
     }
