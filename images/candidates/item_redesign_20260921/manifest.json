@@ -1,0 +1,466 @@
+{
+  "version": 1,
+  "status": "pending",
+  "source_root": "images/runtime/items",
+  "candidate_root": "images/candidates/item_redesign_20260921/items",
+  "item_count": 57,
+  "style": "classic 50-floor mota object silhouette with BanG Dream band and stage motifs; no border; transparent background",
+  "items": [
+    {
+      "relative_path": "armor.png",
+      "semantic_label": "乐队主题防具",
+      "asset_group": "group_1",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "3a6054ede4deb92d7c2fb42739b51a776041ac6086dec911a52535e61fab62a1"
+    },
+    {
+      "relative_path": "artifact.png",
+      "semantic_label": "神秘神器",
+      "asset_group": "group_1",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "3439e105af36048371b98a050b2438be4ccce6db0ca3a1b5215be4f4b8aa21e8"
+    },
+    {
+      "relative_path": "glasses.png",
+      "semantic_label": "查看隐藏信息的眼镜",
+      "asset_group": "group_1",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "8f3cc3c62a45c2ab385f32b1e6215e6020ece45d25b85e4f96e7769108ce62aa"
+    },
+    {
+      "relative_path": "holy_water.png",
+      "semantic_label": "圣水",
+      "asset_group": "group_1",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "89d29841b525ffc695b4283acc5652df38ee04fea7f255a0f2e0bf764087195a"
+    },
+    {
+      "relative_path": "key_blue.png",
+      "semantic_label": "蓝钥匙",
+      "asset_group": "group_1",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "0c38520ab82226f5034031d3183cce378ce5b0d989395d77db382b93eda04a72"
+    },
+    {
+      "relative_path": "key_magic.png",
+      "semantic_label": "大黄门万能钥匙",
+      "asset_group": "group_1",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "c2709e86f8c5a7fc658519aed772b00f3e9375587e1f930859d0f65291604d21"
+    },
+    {
+      "relative_path": "key_red.png",
+      "semantic_label": "红钥匙",
+      "asset_group": "group_1",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "7e106f66834036d4b17d6c008d88842fb59200323b2528e02c1b0f15a9e08d04"
+    },
+    {
+      "relative_path": "key_yellow.png",
+      "semantic_label": "黄钥匙",
+      "asset_group": "group_1",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "2e0c42c64fe39a7a7f123b67ca29f17aa9179f623674c7a8beef01170dab6dd5"
+    },
+    {
+      "relative_path": "lucky_coin.png",
+      "semantic_label": "幸运金币",
+      "asset_group": "group_1",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "c62380789c0b21d8b08bfef80af2473706583356bd4291a51b8c0de87eefe159"
+    },
+    {
+      "relative_path": "matcha_parfait.png",
+      "semantic_label": "抹茶芭菲",
+      "asset_group": "group_1",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "80b85a2863c4ca6dcc6d147aa83fcfc85b9252b4f8293db7de1dd1fac601437a"
+    },
+    {
+      "relative_path": "penguin_doll.png",
+      "semantic_label": "企鹅玩偶",
+      "asset_group": "group_1",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "1e428fec714f6a44f2cbaa2a1ad2b4d5208ea223ec552001c02490ec5a7bdc1a"
+    },
+    {
+      "relative_path": "potion_large.png",
+      "semantic_label": "大血瓶",
+      "asset_group": "group_1",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "b74fed6879fa8b4eea770583f53d9aeda52010feeb42da98b647d5a7b1debb27"
+    },
+    {
+      "relative_path": "potion_small.png",
+      "semantic_label": "小血瓶",
+      "asset_group": "group_1",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "e9ee31093b66a2dbd6c43737e2d86b0bf510c78f8614557241da0914936701cd"
+    },
+    {
+      "relative_path": "potion.png",
+      "semantic_label": "中血瓶",
+      "asset_group": "group_1",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "a4884401c1a033a280e23ebee610525bf6792166e18eecafc82989ae098004c3"
+    },
+    {
+      "relative_path": "ruby_gem.png",
+      "semantic_label": "红宝石攻击强化",
+      "asset_group": "group_1",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "534198e4c8af236b40ebc58f16c632d8f603c75e8762e3e9b3c093eadbaaded2"
+    },
+    {
+      "relative_path": "sapphire_gem.png",
+      "semantic_label": "蓝宝石防御强化",
+      "asset_group": "group_1",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "b6bb398b765f8a40f5d3806783015bb992654e484d7cafa76e1ad35f22fef8e2"
+    },
+    {
+      "relative_path": "stairs_down.png",
+      "semantic_label": "下楼器",
+      "asset_group": "group_2",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "d06cf683d84f239ed9560470082f840cd4bf4fc35c24c25134ce9e490d58cbe6"
+    },
+    {
+      "relative_path": "stairs_up.png",
+      "semantic_label": "上楼器",
+      "asset_group": "group_2",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "0ff7c1ab9d64213611e1094edf752291d1f2071873cdc0a2a743f538f434bc23"
+    },
+    {
+      "relative_path": "temp_shield.png",
+      "semantic_label": "神圣盾",
+      "asset_group": "group_2",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "a989ac5519d1413de3ca38b67fdacd4de42822c1f6bdcd12dbf19a545f2c009f"
+    },
+    {
+      "relative_path": "treasure.png",
+      "semantic_label": "宝箱",
+      "asset_group": "group_2",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "79b71d4b3d1ca4078c4d555173c4c45305264c73db2255c57780f9ad53a97e63"
+    },
+    {
+      "relative_path": "wall_breaker.png",
+      "semantic_label": "破墙工具",
+      "asset_group": "group_2",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "2fa28717bf6dd690519ecba990e4ed69732c6149a44cced08b29ac00a7c1dcc7"
+    },
+    {
+      "relative_path": "weapon.png",
+      "semantic_label": "乐队主题武器",
+      "asset_group": "group_2",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "d72dd9ef0ecf2bbcb2d400f3835af92903b22ce26e8f521a8bc00d00055e0dd0"
+    },
+    {
+      "relative_path": "mygo/anon_energy_drink.png",
+      "semantic_label": "千早爱音能量饮料",
+      "asset_group": "group_2",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "aec50db18753e33c867bdcc17ddd8d0a31b12742d059045f3c8fd8ee7c3f1cc5"
+    },
+    {
+      "relative_path": "mygo/anon_guitar_pick.png",
+      "semantic_label": "千早爱音吉他拨片",
+      "asset_group": "group_2",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "04f45fe65123ba3fcbdc2982a2e576034632fe84ffb1a925472acd7c3125f9da"
+    },
+    {
+      "relative_path": "mygo/anon_selfie_glasses.png",
+      "semantic_label": "千早爱音自拍眼镜",
+      "asset_group": "group_2",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "83f11cb7c9f33c83e0b265e55775a5dc1e534fe5a7121c16cceccc2da04202fa"
+    },
+    {
+      "relative_path": "mygo/anon_smartphone.png",
+      "semantic_label": "爱音手机楼层传送器",
+      "asset_group": "group_2",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "906e7a7efd277744300f33d8adacbb0d87420160e6da404c6c6d6dcb3950789b"
+    },
+    {
+      "relative_path": "mygo/backstage_pass.png",
+      "semantic_label": "后台通行证",
+      "asset_group": "group_2",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "6e9d1f0c9f520fbed29bfa6b0c3010e8dd486614bd590255d24ba2b1341baa33"
+    },
+    {
+      "relative_path": "mygo/band_shield_sticker.png",
+      "semantic_label": "乐队神圣盾贴纸",
+      "asset_group": "group_2",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "1d3a7dc7eba494ea0b0b27fac21909cd02045a81fc9ba496305dc9e46a1aafa6"
+    },
+    {
+      "relative_path": "mygo/exit_pass.png",
+      "semantic_label": "离塔通行证",
+      "asset_group": "group_2",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "5353f46b932903688aa3f1e079221bde5cbd0c51ac56294149004b634f130a86"
+    },
+    {
+      "relative_path": "mygo/live_ticket_blue.png",
+      "semantic_label": "蓝色演出票",
+      "asset_group": "group_2",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "9b7489ffb77490063a809239dac5e095cfac9031aa39f3193833e6f790a9caaa"
+    },
+    {
+      "relative_path": "mygo/live_ticket_red.png",
+      "semantic_label": "红色演出票",
+      "asset_group": "group_2",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "61b9d5163c43d0b911ba244aedc104d51339c4272475a56ae63b86514d86420d"
+    },
+    {
+      "relative_path": "mygo/live_ticket_yellow.png",
+      "semantic_label": "黄色演出票",
+      "asset_group": "group_2",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "acea11a4a12715423c590f30ef08469dcc77fa3fa8ca269244bd4fe5983b4a4e"
+    },
+    {
+      "relative_path": "mygo/mujica_finale_mask.png",
+      "semantic_label": "Ave Mujica终幕面具",
+      "asset_group": "group_3",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "4b0044de25b6a45e7c74e9e069285061d98972376e3bae0f440e4c95c7d64e59"
+    },
+    {
+      "relative_path": "mygo/mujica_mirror_ticket.png",
+      "semantic_label": "Mujica对称飞行器",
+      "asset_group": "group_3",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "378a5eeb040412988714ba3e32cecc7c02b246a9e3dabb7f3ddf60a0c32a1de8"
+    },
+    {
+      "relative_path": "mygo/mujica_smoke_bomb.png",
+      "semantic_label": "Mujica烟雾弹",
+      "asset_group": "group_3",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "4e5143b98b9ff5003ff2654a5e9b05dc797de7f2a9569135be27569851a6ae72"
+    },
+    {
+      "relative_path": "mygo/mujica_stage_quake_scroll.png",
+      "semantic_label": "舞台地震卷轴",
+      "asset_group": "group_3",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "728bb2cb13d449ec4149426524bf23f95881e985a116a01fa8a72edc633b38ec"
+    },
+    {
+      "relative_path": "mygo/mujica_support_badge_blue.png",
+      "semantic_label": "Mujica防御增益徽章",
+      "asset_group": "group_3",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "5d5db7125cb37b2204afecb7b4d6653e7ff37570dddc251762f58aef6546b742"
+    },
+    {
+      "relative_path": "mygo/mutsumi_bass.png",
+      "semantic_label": "若叶睦贝斯",
+      "asset_group": "group_3",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "28de261dc5c6c60537abb5933dcdfc15570c3138f4938ff834e2a6ace6ba3a6a"
+    },
+    {
+      "relative_path": "mygo/mutsumi_pickaxe_toolbox.png",
+      "semantic_label": "若叶睦镐与工具箱",
+      "asset_group": "group_3",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "091d87a2a77c2896589bae7f0a80b0182e2723c15ce8a2421ad7cd91fc63b9ef"
+    },
+    {
+      "relative_path": "mygo/mygo_reconciliation_badge.png",
+      "semantic_label": "MyGO团结徽章",
+      "asset_group": "group_3",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "6c753f8a26c217518bb81f0aaee449db44bb100c5f8fb6bd98ff13a6d3226c5c"
+    },
+    {
+      "relative_path": "mygo/mygo_support_badge_red.png",
+      "semantic_label": "MyGO攻击增益徽章",
+      "asset_group": "group_3",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "d536c0279bb3910da8685116ac1e617f88f67d70eeeda46a9a5496f4808f6ad8"
+    },
+    {
+      "relative_path": "mygo/rana_cat_claw.png",
+      "semantic_label": "要乐奈猫爪",
+      "asset_group": "group_3",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "a78e0af5cd9ce5cee1619905259a4f55cd730152e7f650fa17628e8c049aaeac"
+    },
+    {
+      "relative_path": "mygo/rana_lucky_coin.png",
+      "semantic_label": "要乐奈幸运金币",
+      "asset_group": "group_3",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "0793f2e6d30dedd72e7838f733e2d6ee474d135c6c169f96ea7e7f96433bd5bf"
+    },
+    {
+      "relative_path": "mygo/rana_matcha_parfait.png",
+      "semantic_label": "要乐奈抹茶芭菲",
+      "asset_group": "group_3",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "766cf7e42f8c8e46b24cb2f1ceea368649347cdbc7c0b1f0968d8b79daf6f6ec"
+    },
+    {
+      "relative_path": "mygo/rikki_penguin_keychain.png",
+      "semantic_label": "椎名立希企鹅钥匙扣",
+      "asset_group": "group_3",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "8b67fcee4eb4a621ed770ea627f094a46c52444ee0eb87197d09e69a67a8f112"
+    },
+    {
+      "relative_path": "mygo/rikki_water_kettle.png",
+      "semantic_label": "椎名立希水壶",
+      "asset_group": "group_3",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "bd68a743a909d79a7222818bd73f53641b412568a9e6d8409887b6fda12098dd"
+    },
+    {
+      "relative_path": "mygo/sakiko_conductor_baton.png",
+      "semantic_label": "丰川祥子指挥棒",
+      "asset_group": "group_3",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "9f21dd253bb711c718d7670c90d922b275232498e980790f911ccdfc58725bb1"
+    },
+    {
+      "relative_path": "mygo/sakiko_sheet_music.png",
+      "semantic_label": "丰川祥子乐谱",
+      "asset_group": "group_3",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "6d3e7523acbc85480d563dfc8833064707987d43af872fcbc600daf60b66ced9"
+    },
+    {
+      "relative_path": "mygo/soyo_music_stand.png",
+      "semantic_label": "长崎素世谱架",
+      "asset_group": "group_4",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "6ff86b89e0ecfb34c9407e0ac9e526671b270f001a7d4ab55cf0082e10aee68c"
+    },
+    {
+      "relative_path": "mygo/stage_lift_card.png",
+      "semantic_label": "舞台升降卡",
+      "asset_group": "group_4",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "75db1de652f37092720f3c5e690823d6d7cb7127f88afb2c17934a7443e3520b"
+    },
+    {
+      "relative_path": "mygo/taki_drumsticks.png",
+      "semantic_label": "椎名立希鼓棒",
+      "asset_group": "group_4",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "29306c20c356ff14879c5cc1f65e85648eeae6ad832fa5682e8454897e9d0891"
+    },
+    {
+      "relative_path": "mygo/tomori_lyric_notebook.png",
+      "semantic_label": "高松灯歌词本",
+      "asset_group": "group_4",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "286e5f597394725a975bbe3db125338a7809aa285937858c8efca37f9d53f734"
+    },
+    {
+      "relative_path": "mygo/tomori_microphone.png",
+      "semantic_label": "高松灯麦克风",
+      "asset_group": "group_4",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "73539ef3be08b2c20d78bb50a99bc7817f60a17d07137d0f23066b22d9ed8803"
+    },
+    {
+      "relative_path": "mygo/tomori_warm_milk.png",
+      "semantic_label": "高松灯热牛奶",
+      "asset_group": "group_4",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "4db25441e14cb15f5a55b7ebb38971c8633c637ea9a73cca1d51d330332e5480"
+    },
+    {
+      "relative_path": "mygo/uika_in_ear.png",
+      "semantic_label": "三角初华入耳式监听",
+      "asset_group": "group_4",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "2c05417493465f48217e3710f28e9516f31e7584e425fede733b6ea0bbc9edcb"
+    },
+    {
+      "relative_path": "mygo/umiri_calm_command.png",
+      "semantic_label": "八幡海铃冷静指令",
+      "asset_group": "group_4",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "8d0b9df1f7b4599498f35b869777f4aa01b2765f9ba55316e3d9b47e483c04f8"
+    },
+    {
+      "relative_path": "mygo/umiri_metronome.png",
+      "semantic_label": "八幡海铃节拍器",
+      "asset_group": "group_4",
+      "validation_status": "passed",
+      "review_status": "approved",
+      "sha256": "670e2df4aa5989f75a73ecf85858225ebbfced34af770d1ab268f0acfe93d5f5"
+    }
+  ]
+}
