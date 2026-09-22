@@ -9,11 +9,9 @@
 #include "Entities/Player.h"
 #include "Entities/MonsterDB.h"
 #include "Game/Game.h"
-#include "UI/MapEditor.h"
 
 int main() {
     const auto roster = MonsterDB::all();
-    assert(MapEditor::kMaxEditableFloor == 50);
 
     // “重新开始”与主菜单“新游戏”必须共享当前的经典50层地图初始化。
     // 旧实现会读取已废弃的 :/map.txt，并在测试环境退回空白单层。
@@ -26,14 +24,25 @@ int main() {
     assert(restartedGame.tileAt(7, 12) != Tile_Empty);
 
     assert(roster.size() == 34);
-    assert(roster[0].GetName() == "要乐奈·绿色史莱姆");
-    assert(roster[14].GetName() == "宫永ののかSP·巨型章鱼");
-    assert(roster[15].GetName() == "凑友希那·吸血鬼");
-    assert(roster[16].GetName() == "户山香澄·大法师");
-    assert(roster[30].GetName() == "藤都子SP·魔法警卫");
-    assert(roster[33].GetName() == "长崎素世·本体");
+    const std::array<std::string, 34> expectedMonsterNames = {
+        "要乐奈", "若叶睦", "丰川祥子", "高松灯", "椎名立希", "祐天寺若麦",
+        "三角初华", "八幡海铃", "仲町あられ", "宫永ののか", "薇欧拉", "峰月律",
+        "藤都子", "千石ユノ", "宫永ののかSP", "凑友希那", "户山香澄", "要乐奈SP",
+        "高松灯SP", "Soyorin", "椎名立希SP", "丰川祥子SP", "薇欧拉SP", "若叶睦SP",
+        "幼年长崎素世SP", "仲町あられSP", "峰月律SP", "祐天寺若麦SP", "千石ユノSP",
+        "八幡海铃SP", "藤都子SP", "三角初华SP", "长崎素世SP", "长崎素世"
+    };
+    for (std::size_t i = 0; i < roster.size(); ++i) {
+        assert(roster[i].GetName() == expectedMonsterNames[i]);
+        assert(roster[i].GetName().find("·") == std::string::npos);
+    }
+    assert(MonsterDB::indexOf("要乐奈·绿色史莱姆") == 0);
+    assert(MonsterDB::get("长崎素世·本体").GetName() == "长崎素世");
     assert(roster[15].GetHP() == 444 && roster[15].GetATK() == 199 &&
            roster[15].GetDEF() == 66 && roster[15].GetGold() == 144);
+    // 原版大法师基准数值必须保持为 4500/560/310/1000。
+    assert(roster[16].GetHP() == 4500 && roster[16].GetATK() == 560 &&
+           roster[16].GetDEF() == 310 && roster[16].GetGold() == 1000);
     const auto countItem = [](const Game& game, const std::string& name) {
         int count = 0;
         for (int y = 2; y <= 12; ++y)
@@ -61,6 +70,23 @@ int main() {
     assert(shop46.hp == 400 && shop46.atk == 10 && shop46.def == 20 && shop46.price == 140);
     assert(classicShopOfferForFloor(46, 4).price == 220);
 
+    // Boss CG once-key follows the save/undo timeline: restoring a pre-mark snapshot replays it,
+    // while a normal save after marking keeps it consumed. Older saves simply lack the key.
+    const char* preBossStorySave = "boss_story_pre_mark_test.sav";
+    const char* postBossStorySave = "boss_story_post_mark_test.sav";
+    Game bossStoryTimeline;
+    assert(bossStoryTimeline.saveToFile(preBossStorySave));
+    bossStoryTimeline.markStoryShown("boss_prebattle_f20_yukina");
+    assert(bossStoryTimeline.saveToFile(postBossStorySave));
+    Game restoredPreBossStory;
+    assert(restoredPreBossStory.loadFromFile(preBossStorySave));
+    assert(!restoredPreBossStory.storyShown("boss_prebattle_f20_yukina"));
+    Game restoredPostBossStory;
+    assert(restoredPostBossStory.loadFromFile(postBossStorySave));
+    assert(restoredPostBossStory.storyShown("boss_prebattle_f20_yukina"));
+    std::remove(preBossStorySave);
+    std::remove(postBossStorySave);
+
     // 道具名称校验：中英文别名归一到游戏内显示名，未知名称必须被拒绝。
     assert(Game::isKnownItemName("Red Key"));
     assert(Game::canonicalItemName("Red Key") == "红色Live票");
@@ -81,6 +107,10 @@ int main() {
     auto monsterBook = Game::createItemByName("怪物手册", 0);
     assert(monsterBook && monsterBook->GetName() == "怪物手册");
     assert(monsterBook->IsPassiveEffect());
+    Player handbookOwner;
+    assert(!handbookOwner.HasMonsterBook());
+    handbookOwner.AddItem(std::move(monsterBook));
+    assert(handbookOwner.HasMonsterBook());
     auto tomoriWordBook = Game::createItemByName("高松灯的单词本", 0);
     assert(tomoriWordBook && tomoriWordBook->GetName() == "高松灯的单词本");
     assert(Game::isKnownItemName("楼层传送器"));
@@ -114,6 +144,50 @@ int main() {
     assert(divineShield && divineShield->GetName() == "Mujica终幕面具");
     assert(dynamic_cast<Armor*>(divineShield.get())->DefBonus() == 100);
 
+    // 撤销通过临时存档恢复状态：所有显示在固定道具栏中的本地化道具名
+    // 都必须能恢复为原来的具体类型，不能退化成会被道具栏隐藏的“未知道具”。
+    Game undoInventorySnapshot;
+    undoInventorySnapshot.player().AddItem(std::make_unique<Weapon>(10, "爱音拨片"));
+    undoInventorySnapshot.player().AddItem(std::make_unique<Weapon>(20, "立希鼓棒"));
+    undoInventorySnapshot.player().AddItem(std::make_unique<Weapon>(40, "乐奈猫爪"));
+    undoInventorySnapshot.player().AddItem(std::make_unique<Weapon>(50, "灯的麦克风"));
+    undoInventorySnapshot.player().AddItem(std::make_unique<Weapon>(100, "睦的贝斯"));
+    undoInventorySnapshot.player().AddItem(std::make_unique<Armor>(10, "素世谱架"));
+    undoInventorySnapshot.player().AddItem(std::make_unique<Armor>(20, "海铃节拍器"));
+    undoInventorySnapshot.player().AddItem(std::make_unique<Armor>(40, "初华舞台耳返"));
+    undoInventorySnapshot.player().AddItem(std::make_unique<HolyShield>(50, "祥子黑色乐谱"));
+    undoInventorySnapshot.player().AddItem(std::make_unique<DivineShield>(100, "Mujica终幕面具"));
+    undoInventorySnapshot.player().AddItem(std::make_unique<FlyingWand>());
+    undoInventorySnapshot.player().AddItem(std::make_unique<MagicKey>());
+    undoInventorySnapshot.player().AddItem(std::make_unique<MonsterBook>());
+    undoInventorySnapshot.player().AddItem(std::make_unique<NoteBook>());
+    undoInventorySnapshot.player().AddItem(std::make_unique<AnonGlasses>());
+    undoInventorySnapshot.player().AddItem(std::make_unique<Pickaxe>());
+    undoInventorySnapshot.player().AddItem(std::make_unique<Bomb>());
+    undoInventorySnapshot.player().AddItem(std::make_unique<FreezeMagic>());
+    undoInventorySnapshot.player().AddItem(std::make_unique<Cross>());
+    undoInventorySnapshot.player().AddItem(std::make_unique<DragonSlayer>());
+    undoInventorySnapshot.player().AddItem(std::make_unique<HolyWater>());
+    undoInventorySnapshot.player().AddItem(std::make_unique<LuckyCoin>());
+    undoInventorySnapshot.player().AddItem(std::make_unique<StairUpper>());
+    undoInventorySnapshot.player().AddItem(std::make_unique<StairLower>());
+    undoInventorySnapshot.player().AddItem(std::make_unique<SymmetryFlyer>());
+    std::vector<std::string> undoInventoryNames;
+    for (const auto& item : undoInventorySnapshot.player().Inventory())
+        undoInventoryNames.push_back(item->GetName());
+    const std::string undoInventorySave = "mota_undo_inventory_test.save";
+    assert(undoInventorySnapshot.saveToFile(undoInventorySave));
+    Game restoredUndoInventory;
+    assert(restoredUndoInventory.loadFromFile(undoInventorySave));
+    assert(restoredUndoInventory.player().InventoryCount() == static_cast<int>(undoInventoryNames.size()));
+    for (int i = 0; i < restoredUndoInventory.player().InventoryCount(); ++i) {
+        assert(restoredUndoInventory.player().GetItem(i)->GetName() == undoInventoryNames[i]);
+        assert(dynamic_cast<const UnknownItem*>(restoredUndoInventory.player().GetItem(i)) == nullptr);
+    }
+    assert(dynamic_cast<const HolyWater*>(restoredUndoInventory.player().GetItem(20)) != nullptr);
+    assert(dynamic_cast<const LuckyCoin*>(restoredUndoInventory.player().GetItem(21)) != nullptr);
+    std::remove(undoInventorySave.c_str());
+
     Player player;
     player.hp = 100;
     player.atk = 10;
@@ -143,6 +217,39 @@ int main() {
     assert(backstagePass.GetName() == "大黄门钥匙");
     HolyWater kettle;
     assert(kettle.GetName() == "立希水壶");
+
+    // NPC 赠送的圣水是可使用道具，必须进入背包而不是在对话时丢失或自动使用。
+    Player npcRewardPlayer;
+    const int rewardHpBefore = npcRewardPlayer.hp;
+    NPC holyWaterGiver("凛凛子", {"收下这个。"}, std::make_unique<HolyWater>());
+    assert(holyWaterGiver.HasPendingReward());
+    holyWaterGiver.Interact(npcRewardPlayer);
+    assert(holyWaterGiver.HasGivenReward());
+    assert(!holyWaterGiver.HasPendingReward());
+    assert(npcRewardPlayer.InventoryCount() == 1);
+    assert(npcRewardPlayer.GetItem(0)->GetName() == "立希水壶");
+    assert(npcRewardPlayer.hp == rewardHpBefore);
+
+    // 大法师实际战斗也按原版固定伤害公式结算：玩家先攻，49次反击。
+    Game greatMageBattle;
+    greatMageBattle.player().hp = 30000;
+    greatMageBattle.player().atk = 400;
+    greatMageBattle.player().def = 100;
+    greatMageBattle.spawnMonster(3, 2, roster[16]);
+    std::vector<std::string> greatMageLog;
+    assert(greatMageBattle.fightAt(3, 2, greatMageLog) == Game::Fight_PlayerWin);
+    assert(greatMageBattle.player().hp == 7460);
+    assert(greatMageBattle.player().gold == 1000);
+
+    Game shieldedGreatMageBattle;
+    shieldedGreatMageBattle.player().hp = 30000;
+    shieldedGreatMageBattle.player().atk = 400;
+    shieldedGreatMageBattle.player().def = 100;
+    shieldedGreatMageBattle.player().hasHolyShield = true;
+    shieldedGreatMageBattle.spawnMonster(3, 2, roster[16]);
+    std::vector<std::string> shieldedGreatMageLog;
+    assert(shieldedGreatMageBattle.fightAt(3, 2, shieldedGreatMageLog) == Game::Fight_PlayerWin);
+    assert(shieldedGreatMageBattle.player().hp == 7460);
 
     Cross cross;
     cross.Apply(player);
@@ -244,13 +351,14 @@ int main() {
     assert(dragonFight.fightAt(3, 3, log) == Game::Fight_PlayerWin);
 
     Game magicFight;
-    magicFight.player().hp = 100;
+    magicFight.player().hp = 200;
     magicFight.player().atk = 100;
     magicFight.player().def = 0;
     magicFight.player().hasHolyShield = true;
     magicFight.spawnMonster(3, 3, Monster("高级法师", 150, 100, 0, 0));
     log.clear();
     assert(magicFight.fightAt(3, 3, log) == Game::Fight_PlayerWin);
+    // 神圣盾只免疫巫师靠近伤害与魔法警卫夹击，不免疫正常战斗反击。
     assert(magicFight.player().hp == 100);
 
     Game lava;
@@ -367,6 +475,31 @@ int main() {
     assert(allYellowDoors.tileAt(4, 4) == Tile_Floor);
     assert(allYellowDoors.tileAt(5, 4) == Tile_Floor);
 
+    // 鼠标瞬移拾取必须与键盘拾取一致：先进入背包，不能自动开门。
+    Game teleportMagicKey;
+    teleportMagicKey.player().x = 2;
+    teleportMagicKey.player().y = 4;
+    teleportMagicKey.setTile(3, 4, Tile_Item);
+    teleportMagicKey.addItemAt(3, 4, std::make_unique<MagicKey>());
+    teleportMagicKey.setTile(4, 4, Tile_DoorGreen);
+    assert(teleportMagicKey.teleportPlayerTo(3, 4) == Game::Move_Pickup);
+    assert(teleportMagicKey.player().InventoryCount() == 1);
+    assert(teleportMagicKey.player().GetItem(0)->GetName() == "大黄门钥匙");
+    assert(teleportMagicKey.tileAt(4, 4) == Tile_DoorGreen);
+
+    // 攻击力不足时只是“打不过”，不能把玩家判死或扣除生命。
+    Game unbeatableEnemy;
+    unbeatableEnemy.player().hp = 500;
+    unbeatableEnemy.player().atk = 50;
+    unbeatableEnemy.player().def = 0;
+    unbeatableEnemy.spawnMonster(3, 2, Monster("高防测试怪", 100, 100, 60, 0));
+    std::vector<std::string> unbeatableLog;
+    assert(unbeatableEnemy.fightAt(3, 2, unbeatableLog) == Game::Fight_Stalemate);
+    assert(unbeatableEnemy.player().hp == 500);
+    assert(unbeatableEnemy.hasMonsterAt(3, 2));
+    assert(!unbeatableLog.empty());
+    assert(unbeatableLog.back().find("打不过") != std::string::npos);
+
     Game bombGame;
     bombGame.player().x = 5;
     bombGame.player().y = 5;
@@ -384,7 +517,7 @@ int main() {
     mechanismDoor.player().y = 3;
     mechanismDoor.player().atk = 100;
     mechanismDoor.setTile(4, 3, Tile_DoorIron);
-    const Monster intermediateGuard("椎名立希SP·中级卫兵", 1, 0, 0, 0);
+    const Monster intermediateGuard("椎名立希SP", 1, 0, 0, 0);
     mechanismDoor.spawnMonster(5, 3, intermediateGuard);
     mechanismDoor.spawnMonster(5, 4, intermediateGuard);
     assert(mechanismDoor.tryMovePlayer(4, 3) == Game::Move_DoorLocked);
@@ -454,7 +587,8 @@ int main() {
     floor49Seal.player().atk = 100000;
     floor49Seal.player().hp = 1000000000;
     floor49Seal.setTile(7, 4, Tile_Monster);
-    floor49Seal.spawnMonster(7, 4, MonsterDB::get("长崎素世·幻影"));
+    floor49Seal.spawnMonster(7, 4, MonsterDB::get("长崎素世SP"));
+    assert(floor49Seal.bossEncounterStateAt(7, 4) == Game::BossEncounterState::Blocked);
     const std::array<std::pair<int, int>, 4> sealGuards = {
         std::pair<int, int>{7, 3}, std::pair<int, int>{6, 4},
         std::pair<int, int>{8, 4}, std::pair<int, int>{7, 5}};
@@ -471,10 +605,11 @@ int main() {
     }
     assert(floor49Seal.tileAt(7, 4) == Tile_Monster);
     assert(floor49Seal.monsterAt(7, 4) != nullptr);
-    assert(floor49Seal.monsterAt(7, 4)->GetName() == "长崎素世·幻影");
+    assert(floor49Seal.monsterAt(7, 4)->GetName() == "长崎素世SP");
     assert(floor49Seal.monsterAt(7, 4)->GetHP() == 800);
     assert(floor49Seal.monsterAt(7, 4)->GetATK() == 500);
     assert(floor49Seal.monsterAt(7, 4)->GetDEF() == 100);
+    assert(floor49Seal.bossEncounterStateAt(7, 4) == Game::BossEncounterState::Ready);
     sealLog.clear();
     assert(floor49Seal.fightAt(7, 4, sealLog) == Game::Fight_PlayerWin);
 
@@ -501,6 +636,7 @@ int main() {
     floor10Ambush.setTile(9, 5, Tile_DoorMagic);
     floor10Ambush.setTile(7, 5, Tile_Monster);
     floor10Ambush.spawnMonster(7, 5, MonsterDB::getByIndex(7));
+    assert(floor10Ambush.bossEncounterStateAt(7, 5) == Game::BossEncounterState::Blocked);
     const Monster skeletonSoldier = MonsterDB::getByIndex(5);
     for (int i = 0; i < 4; ++i)
         floor10Ambush.spawnMonster(2 + i, 4, skeletonSoldier);
@@ -510,6 +646,7 @@ int main() {
     floor10Ambush.player().hp = 10000;
     assert(floor10Ambush.tryMovePlayer(7, 6) == Game::Move_Ok);
     assert(floor10Ambush.floor10AmbushTriggered());
+    assert(floor10Ambush.bossEncounterStateAt(7, 2) == Game::BossEncounterState::Ready);
     assert(floor10Ambush.tileAt(5, 5) == Tile_Floor);
     assert(floor10Ambush.tileAt(9, 5) == Tile_Floor);
     assert(floor10Ambush.tileAt(7, 5) == Tile_DoorMagic);
@@ -517,21 +654,21 @@ int main() {
     assert(floor10Ambush.takeFloor10AmbushMovementAnimations().empty());
     assert(floor10Ambush.hasMonsterAt(2, 4));
     assert(floor10Ambush.monsterAt(7, 2) != nullptr);
-    assert(floor10Ambush.monsterAt(7, 2)->GetName() == "八幡海铃·骷髅队长");
+    assert(floor10Ambush.monsterAt(7, 2)->GetName() == "八幡海铃");
     int surrounded = 0;
     for (int y = 4; y <= 5; ++y)
         for (int x = 2; x <= 12; ++x)
             if (floor10Ambush.hasMonsterAt(x, y) &&
-                (floor10Ambush.monsterAt(x, y)->GetName() == "椎名立希·骷髅人" ||
-                 floor10Ambush.monsterAt(x, y)->GetName() == "祐天寺若麦·骷髅士兵")) ++surrounded;
+                (floor10Ambush.monsterAt(x, y)->GetName() == "椎名立希" ||
+                 floor10Ambush.monsterAt(x, y)->GetName() == "祐天寺若麦")) ++surrounded;
     assert(surrounded == 8);
     while (true) {
         int guardX = -1, guardY = -1;
         for (int y = 4; y <= 5 && guardX < 0; ++y) {
             for (int x = 2; x <= 12; ++x) {
                 auto* guard = floor10Ambush.monsterAt(x, y);
-                if (guard && (guard->GetName() == "椎名立希·骷髅人" ||
-                              guard->GetName() == "祐天寺若麦·骷髅士兵")) {
+                if (guard && (guard->GetName() == "椎名立希" ||
+                              guard->GetName() == "祐天寺若麦")) {
                     guardX = x; guardY = y; break;
                 }
             }
@@ -644,7 +781,7 @@ int main() {
     assert(floor14Reward.itemAt(2, 4) == nullptr);
     for (const auto& point : std::vector<std::pair<int, int>>{{2, 2}, {4, 2}, {3, 3}, {8, 3}}) {
         floor14Reward.setTile(point.first, point.second, Tile_Monster);
-        floor14Reward.spawnMonster(point.first, point.second, MonsterDB::get("藤都子·兽人武士"));
+        floor14Reward.spawnMonster(point.first, point.second, MonsterDB::get("藤都子"));
     }
     std::vector<std::string> unrelatedRewardLog;
     assert(floor14Reward.fightAt(8, 3, unrelatedRewardLog) == Game::Fight_PlayerWin);
@@ -729,7 +866,7 @@ int main() {
     floor48FlowerDoor.player().atk = 100000;
     floor48FlowerDoor.player().hp = 1000000000;
     floor48FlowerDoor.setTile(2, 2, Tile_Monster);
-    floor48FlowerDoor.spawnMonster(2, 2, MonsterDB::get("藤都子SP·魔法警卫"));
+    floor48FlowerDoor.spawnMonster(2, 2, MonsterDB::get("藤都子SP"));
     floor48FlowerDoor.setTile(9, 9, Tile_DoorMagic);
     std::vector<std::string> floor48Log;
     assert(floor48FlowerDoor.fightAt(2, 2, floor48Log) == Game::Fight_PlayerWin);
@@ -759,12 +896,12 @@ int main() {
     assert(classicOpening.floor3TrapActive());
     assert(classicOpening.tileAt(6, 7) == Tile_Monster);
     assert(classicOpening.monsterAt(6, 7) != nullptr);
-    assert(classicOpening.monsterAt(6, 7)->GetName() == "长崎素世·幻影");
+    assert(classicOpening.monsterAt(6, 7)->GetName() == "长崎素世SP");
     for (const auto& position : std::array<std::pair<int, int>, 4>{
              std::pair<int, int>{5, 9}, std::pair<int, int>{7, 9},
              std::pair<int, int>{6, 8}, std::pair<int, int>{6, 10}}) {
         assert(classicOpening.monsterAt(position.first, position.second) != nullptr);
-        assert(classicOpening.monsterAt(position.first, position.second)->GetName() == "藤都子SP·魔法警卫");
+        assert(classicOpening.monsterAt(position.first, position.second)->GetName() == "藤都子SP");
     }
     classicOpening.resolveFloor3PrisonStory();
     assert(classicOpening.currentFloor() == 2);
@@ -813,6 +950,10 @@ int main() {
     std::vector<std::string> coinLog;
     assert(adminTeleport.fightAt(8, 7, coinLog) == Game::Fight_PlayerWin);
     assert(adminTeleport.player().gold == 50);
+    // 幸运金币只翻倍战斗金币，不应把地面宝物或 NPC 金币奖励也翻倍。
+    Treasure fixedTreasureGold(100);
+    fixedTreasureGold.Apply(adminTeleport.player());
+    assert(adminTeleport.player().gold == 150);
     adminTeleport.goUpFloor(7, 7, false);
     assert(adminTeleport.currentFloor() == 1);
     adminTeleport.goDownFloor(7, 7, false);
@@ -899,7 +1040,7 @@ int main() {
     fakeKingReward.player().atk = 100000;
     fakeKingReward.player().def = 100000;
     fakeKingReward.setTile(7, 4, Tile_Monster);
-    fakeKingReward.spawnMonster(7, 4, Monster("长崎素世·幻影", 800, 500, 100, 500));
+    fakeKingReward.spawnMonster(7, 4, Monster("长崎素世SP", 800, 500, 100, 500));
     std::vector<std::string> fakeLog;
     assert(fakeKingReward.fightAt(7, 4, fakeLog) == Game::Fight_PlayerWin);
     assert(countItem(fakeKingReward, "红色Live票") == 1);
@@ -939,7 +1080,7 @@ int main() {
     classicMidTower.generateClassicTower();
     classicMidTower.debugTeleport(35, 7, 5);
     assert(classicMidTower.monsterAt(7, 5) != nullptr);
-    assert(classicMidTower.monsterAt(7, 5)->GetName() == "薇欧拉SP·魔龙");
+    assert(classicMidTower.monsterAt(7, 5)->GetName() == "薇欧拉SP");
     assert(classicMidTower.npcAt(7, 5) == nullptr);
     classicMidTower.returnMichelleToFloor2Cage();
     classicMidTower.debugTeleport(2, 12, 12);
@@ -981,6 +1122,7 @@ int main() {
     assert(knightStory.tryMovePlayer(7, 11) == Game::Move_Ok);
     assert(knightStory.floor32KnightStoryPending());
     assert(knightStory.monsterAt(7, 10) == nullptr);
+    assert(knightStory.bossEncounterStateAt(7, 10) == Game::BossEncounterState::Ready);
     const auto knightApproach = knightStory.takeFloor32KnightMovementAnimations();
     assert(!knightApproach.empty());
     assert(knightApproach.front().fromX == 12 && knightApproach.front().fromY == 2);
@@ -1044,15 +1186,22 @@ int main() {
             assert(classicMidTower.tileAt(x, y) != Tile_DarkWall);
     assert(classicMidTower.npcAt(7, 6) == nullptr);
 
-    Game floor36HiddenRoutes;
-    floor36HiddenRoutes.generateClassicTower();
-    floor36HiddenRoutes.debugTeleport(36, 7, 7);
+    Game floor36OriginalLayout;
+    floor36OriginalLayout.generateClassicTower();
+    floor36OriginalLayout.debugTeleport(36, 7, 7);
+    // 原版36层有四条穿过四个墙块中央的折线暗道，共20格。
     const std::vector<std::pair<int, int>> floor36DarkWalls{
-        {3, 5}, {4, 5}, {5, 5}, {6, 5}, {8, 5}, {9, 5}, {10, 5}, {11, 5},
-        {3, 9}, {4, 9}, {5, 9}, {6, 9}, {8, 9}, {9, 9}, {10, 9}, {11, 9}
+        {5, 3}, {9, 3}, {5, 4}, {9, 4},
+        {3, 5}, {4, 5}, {5, 5}, {9, 5}, {10, 5}, {11, 5},
+        {3, 9}, {4, 9}, {5, 9}, {9, 9}, {10, 9}, {11, 9},
+        {5, 10}, {9, 10}, {5, 11}, {9, 11}
     };
     for (const auto& point : floor36DarkWalls)
-        assert(floor36HiddenRoutes.tileAt(point.first, point.second) == Tile_DarkWall);
+        assert(floor36OriginalLayout.tileAt(point.first, point.second) == Tile_DarkWall);
+    assert(floor36OriginalLayout.tileAt(6, 5) != Tile_DarkWall);
+    assert(floor36OriginalLayout.tileAt(8, 5) != Tile_DarkWall);
+    assert(floor36OriginalLayout.tileAt(6, 9) != Tile_DarkWall);
+    assert(floor36OriginalLayout.tileAt(8, 9) != Tile_DarkWall);
     classicMidTower.debugTeleport(50, 7, 5);
     assert(classicMidTower.npcAt(7, 5) != nullptr);
     assert(classicMidTower.npcAt(7, 5)->GetName() == "米歇尔");
@@ -1060,7 +1209,7 @@ int main() {
     classicMidTower.revealFloor50MichelleIdentity();
     assert(classicMidTower.npcAt(7, 5) == nullptr);
     assert(classicMidTower.monsterAt(7, 6) != nullptr);
-    assert(classicMidTower.monsterAt(7, 6)->GetName() == "长崎素世·本体");
+    assert(classicMidTower.monsterAt(7, 6)->GetName() == "长崎素世");
     classicMidTower.sendMichelleToFloor29();
     classicMidTower.debugTeleport(29, 7, 3);
     assert(classicMidTower.npcAt(7, 3) != nullptr);
@@ -1128,19 +1277,19 @@ int main() {
     mageContact.debugTeleport(1, 5, 5);
     mageContact.player().hp = 1000;
     mageContact.setTile(6, 4, Tile_Monster);
-    mageContact.spawnMonster(6, 4, MonsterDB::get("高松灯·初级法师"));
+    mageContact.spawnMonster(6, 4, MonsterDB::get("高松灯"));
     assert(mageContact.tryMovePlayer(5, 4) == Game::Move_Ok);
     assert(mageContact.player().hp == 1000);
     mageContact.setTile(6, 4, Tile_Floor);
     mageContact.currentFloorData().monsters.erase(mageContact.posKey(6, 4));
     mageContact.player().hp = 1000;
     mageContact.setTile(6, 4, Tile_Monster);
-    mageContact.spawnMonster(6, 4, MonsterDB::get("薇欧拉·高级法师"));
+    mageContact.spawnMonster(6, 4, MonsterDB::get("薇欧拉"));
     assert(mageContact.tryMovePlayer(5, 4) == Game::Move_Ok);
     assert(mageContact.player().hp == 1000);
     mageContact.currentFloorData().monsters.erase(mageContact.posKey(6, 4));
     mageContact.setTile(6, 4, Tile_Monster);
-    mageContact.spawnMonster(6, 4, MonsterDB::get("仲町あられSP·初级巫师"));
+    mageContact.spawnMonster(6, 4, MonsterDB::get("仲町あられSP"));
     mageContact.player().hp = 1000;
     assert(mageContact.previewApproachHazardDamageAt(5, 4) == 100);
     assert(mageContact.tryMovePlayer(5, 4) == Game::Move_Ok);
@@ -1149,7 +1298,7 @@ int main() {
     assert(mageContact.takePendingMagicGuardFlankEvents() == 0);
     mageContact.currentFloorData().monsters.erase(mageContact.posKey(6, 4));
     mageContact.setTile(6, 4, Tile_Monster);
-    mageContact.spawnMonster(6, 4, MonsterDB::get("峰月律SP·高级巫师"));
+    mageContact.spawnMonster(6, 4, MonsterDB::get("峰月律SP"));
     mageContact.player().hp = 1000;
     assert(mageContact.previewApproachHazardDamageAt(5, 4) == 200);
     assert(mageContact.tryMovePlayer(5, 4) == Game::Move_Ok);
@@ -1167,9 +1316,9 @@ int main() {
     guardAmbush.debugTeleport(1, 5, 6);
     guardAmbush.player().hp = 1000;
     guardAmbush.setTile(4, 5, Tile_Monster);
-    guardAmbush.spawnMonster(4, 5, MonsterDB::get("藤都子SP·魔法警卫"));
+    guardAmbush.spawnMonster(4, 5, MonsterDB::get("藤都子SP"));
     guardAmbush.setTile(6, 5, Tile_Monster);
-    guardAmbush.spawnMonster(6, 5, MonsterDB::get("藤都子SP·魔法警卫"));
+    guardAmbush.spawnMonster(6, 5, MonsterDB::get("藤都子SP"));
     assert(guardAmbush.tryMovePlayer(5, 5) == Game::Move_Ok);
     assert(guardAmbush.player().hp == 500);
     assert(guardAmbush.takePendingMagicGuardFlankEvents() == 1);
@@ -1191,7 +1340,7 @@ int main() {
     pathHazard.debugTeleport(1, 2, 2);
     pathHazard.player().hp = 1000;
     pathHazard.setTile(4, 3, Tile_Monster);
-    pathHazard.spawnMonster(4, 3, MonsterDB::get("仲町あられSP·初级巫师"));
+    pathHazard.spawnMonster(4, 3, MonsterDB::get("仲町あられSP"));
     assert(pathHazard.teleportPlayerTo(5, 2) == Game::Move_Ok);
     assert(pathHazard.player().x == 5 && pathHazard.player().y == 2);
     assert(pathHazard.player().hp == 900);
@@ -1213,9 +1362,9 @@ int main() {
     guardPath.debugTeleport(1, 2, 3);
     guardPath.player().hp = 1000;
     guardPath.setTile(4, 2, Tile_Monster);
-    guardPath.spawnMonster(4, 2, MonsterDB::get("藤都子SP·魔法警卫"));
+    guardPath.spawnMonster(4, 2, MonsterDB::get("藤都子SP"));
     guardPath.setTile(4, 4, Tile_Monster);
-    guardPath.spawnMonster(4, 4, MonsterDB::get("藤都子SP·魔法警卫"));
+    guardPath.spawnMonster(4, 4, MonsterDB::get("藤都子SP"));
     assert(guardPath.teleportPlayerTo(6, 3) == Game::Move_Ok);
     assert(guardPath.player().hp == 500);
     assert(guardPath.takePendingMagicGuardFlankEvents() == 1);
@@ -1224,9 +1373,9 @@ int main() {
     Game handbookRoster;
     handbookRoster.initFloor(1);
     handbookRoster.currentFloorData().monsters.clear();
-    handbookRoster.spawnMonster(2, 2, MonsterDB::get("藤都子SP·魔法警卫"));
-    handbookRoster.spawnMonster(3, 2, MonsterDB::get("藤都子SP·魔法警卫"));
-    handbookRoster.spawnMonster(4, 2, MonsterDB::get("峰月律SP·高级巫师"));
+    handbookRoster.spawnMonster(2, 2, MonsterDB::get("藤都子SP"));
+    handbookRoster.spawnMonster(3, 2, MonsterDB::get("藤都子SP"));
+    handbookRoster.spawnMonster(4, 2, MonsterDB::get("峰月律SP"));
     const auto uniqueRoster = handbookRoster.uniqueMonsterTypesOnCurrentFloor();
     assert(uniqueRoster.size() == 2);
     assert(uniqueRoster[0].GetName() != uniqueRoster[1].GetName());

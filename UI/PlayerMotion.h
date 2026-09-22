@@ -48,9 +48,20 @@ public:
 
     bool advance(float elapsedMs) {
         if (!isMoving()) return false;
-        const float stepMs = std::max(0.0f, elapsedMs);
-        m_walkElapsedMs += stepMs;
-        m_elapsedMs = std::min(m_durationMs, m_elapsedMs + stepMs);
+        advanceWithOverflow(elapsedMs);
+        return true;
+    }
+
+    // Advance one segment and return the part of this render tick that was
+    // not consumed.  The caller can immediately feed it to the next grid
+    // segment, keeping held movement continuous across tile boundaries.
+    float advanceWithOverflow(float elapsedMs) {
+        const float availableMs = std::max(0.0f, elapsedMs);
+        if (!isMoving()) return availableMs;
+        const float remainingMs = std::max(0.0f, m_durationMs - m_elapsedMs);
+        const float consumedMs = std::min(availableMs, remainingMs);
+        m_walkElapsedMs += consumedMs;
+        m_elapsedMs = std::min(m_durationMs, m_elapsedMs + consumedMs);
         // 跨格使用恒速插值。每格边界会立即衔接下一格，避免 smoothstep
         // 在终点减速到零后造成明显停顿；逻辑坐标仍由 Game 独立维护。
         const float t = progress();
@@ -60,7 +71,7 @@ public:
             m_x = m_targetX;
             m_y = m_targetY;
         }
-        return true;
+        return availableMs - consumedMs;
     }
 
     bool isMoving() const { return m_elapsedMs < m_durationMs; }
@@ -74,7 +85,7 @@ public:
         // Keep a steady animation cadence across tile boundaries. Tying the
         // frame to per-tile progress restarts the cycle every step and makes
         // held movement look like it pauses on each grid line.
-        constexpr float frameDurationMs = 50.0f;
+        constexpr float frameDurationMs = 75.0f;
         return static_cast<int>(m_walkElapsedMs / frameDurationMs) % frameCount;
     }
     float x() const { return m_x; }

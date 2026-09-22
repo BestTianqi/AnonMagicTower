@@ -18,7 +18,6 @@ public:
     QLabel*      soyoPortrait = nullptr;
     QPushButton* newGameBtn   = nullptr;
     QPushButton* loadGameBtn  = nullptr;
-    QPushButton* mapEditorBtn = nullptr;
     QPushButton* settingsBtn  = nullptr;
 
     void setupUi(QWidget* parent) {
@@ -115,35 +114,6 @@ public:
         vbox->addLayout(c2);
 
         vbox->addSpacing(16);
-
-        // 地图编辑器
-        mapEditorBtn = new QPushButton(parent);
-        mapEditorBtn->setText(QString::fromUtf8("🛠  地 图 编 辑 器"));
-        mapEditorBtn->setMinimumHeight(60);
-        mapEditorBtn->setMaximumWidth(400);
-        mapEditorBtn->setCursor(Qt::PointingHandCursor);
-        QString editorBtnStyle =
-            "QPushButton {"
-            "  background: rgba(60, 50, 30, 200);"
-            "  color: #d0d0d0;"
-            "  border: 2px solid #8a7a5a;"
-            "  border-radius: 8px;"
-            "  padding: 16px 0px;"
-            "  font-size: 22px;"
-            "  min-width: 320px;"
-            "}"
-            "QPushButton:hover {"
-            "  background: rgba(100, 70, 40, 220);"
-            "  border-color: #ccaa88;"
-            "  color: #ffffff;"
-            "}"
-            "QPushButton:pressed {"
-            "  background: rgba(120, 90, 50, 220);"
-            "}";
-        mapEditorBtn->setStyleSheet(editorBtnStyle);
-        auto* cEditor = new QHBoxLayout();
-        cEditor->addStretch(); cEditor->addWidget(mapEditorBtn); cEditor->addStretch();
-        vbox->addLayout(cEditor);
 
         vbox->addSpacing(16);
 

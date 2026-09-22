@@ -5,10 +5,12 @@
 #include <unordered_set>
 #include <string>
 #include <memory>
+#include <utility>
 #include "Entities/Player.h"
 #include "Entities/Items.h"
 #include "Entities/Monster.h"
 #include "Entities/NPC.h"
+#include "Game/BossEncounter.h"
 
 enum TileType {
     Tile_Empty = 0,
@@ -139,6 +141,8 @@ public:
     void resolveFloor42KnightStory();
 
     enum FightResult { Fight_PlayerWin, Fight_PlayerDead, Fight_GameWin, Fight_Stalemate };
+    enum class BossEncounterState { NotBoss, Blocked, Ready };
+    BossEncounterState bossEncounterStateAt(int x, int y);
     FightResult fightAt(int x, int y, std::vector<std::string>& outLog);
 
     void spawnMonster(int x, int y, const Monster& m);
@@ -152,7 +156,6 @@ public:
     void addNPCAt(int x, int y, NPC npc);
     NPC* npcAt(int x, int y);
 
-    void addShopAt(int x, int y, const ShopData& s);
     const ShopData* shopAt(int x, int y) const;
     ShopData* shopAt(int x, int y);
 
@@ -179,7 +182,6 @@ public:
     static bool isKnownItemName(const std::string& iname);
 
     FloorData& currentFloorData() { return *m_currentFloor; }
-    const FloorData& currentFloorData() const { return *m_currentFloor; }
 
     // UI 消费本次移动中实际触发的危险次数；瞬移经过多个危险格时逐次播放 CG。
     int takePendingMageFieldEvents();
@@ -204,6 +206,8 @@ private:
     void resolveFloor39SymmetryFlyer();
     std::vector<std::pair<int, int>> findTeleportPath(int targetX, int targetY) const;
     bool isTeleportStoryPoint(int x, int y) const;
+    std::pair<int, bool> approachHazardsAt(int x, int y) const;
+    void placePlayerAfterFloorChange(int srcX, int srcY, bool findStairs, int arrivalStair);
     // 经典魔塔的魔法领域/夹击伤害，在玩家每经过一个格子时结算。
     int applyApproachHazardsAt(int x, int y);
     // 10 层中央 Boss 区的骷髅士兵包围事件。

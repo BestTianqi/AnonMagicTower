@@ -121,9 +121,8 @@ Treasure::Treasure(int gold)
 
 void Treasure::Apply(Player& player) const
 {
-    int amount = m_gold;
-    if (player.hasLuckyCoin) amount *= 2;
-    player.gold += amount;
+    // 原版幸运金币只翻倍战斗所得金币，地面宝物和 NPC 奖励保持原值。
+    player.gold += m_gold;
 }
 
 // Key
@@ -131,12 +130,6 @@ Key::Key(KeyType type)
     : Item(nameForType(type), valueForType(type)), m_type(type)
 {
 }
-
-KeyType Key::GetType() const { return m_type; }
-
-Key Key::CreateRed() const { return Key(KeyType::Red); }
-Key Key::CreateBlue() const { return Key(KeyType::Blue); }
-Key Key::CreateGreen() const { return Key(KeyType::Green); }
 
 void Key::Apply(Player& player) const
 {

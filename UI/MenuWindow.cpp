@@ -1,6 +1,5 @@
 #include "MenuWindow.h"
 #include "MainWindow.h"
-#include "MapEditor.h"
 #include "Game/Game.h"
 
 #include <QApplication>
@@ -35,17 +34,15 @@ MenuWindow::MenuWindow(QWidget* parent)
     const QString buttonArt =
         "QPushButton { color: #fff7d0; border-image: url(:/images/runtime/ui/button_texture.png) 18 24 18 24 stretch stretch; padding: 10px 18px; font-size: 20px; font-weight: 700; }"
         "QPushButton:hover { color: white; }";
-    for (QPushButton* button : {ui.newGameBtn, ui.loadGameBtn, ui.mapEditorBtn, ui.settingsBtn})
+    for (QPushButton* button : {ui.newGameBtn, ui.loadGameBtn, ui.settingsBtn})
         button->setStyleSheet(buttonArt);
     ui.newGameBtn->setIcon(QIcon(":/images/runtime/items/weapon.png"));
     ui.loadGameBtn->setIcon(QIcon(":/images/runtime/items/treasure.png"));
-    ui.mapEditorBtn->setIcon(QIcon(":/images/runtime/items/artifact.png"));
     ui.settingsBtn->setIcon(QIcon(":/images/runtime/items/stairs_down.png"));
-    for (QPushButton* button : {ui.newGameBtn, ui.loadGameBtn, ui.mapEditorBtn, ui.settingsBtn})
+    for (QPushButton* button : {ui.newGameBtn, ui.loadGameBtn, ui.settingsBtn})
         button->setIconSize(QSize(38, 38));
     ui.newGameBtn->setText(QString::fromUtf8("新 游 戏"));
     ui.loadGameBtn->setText(QString::fromUtf8("读 取 存 档"));
-    ui.mapEditorBtn->setText(QString::fromUtf8("地 图 编 辑 器"));
     ui.settingsBtn->setText(QString::fromUtf8("设 置"));
     ui.titleLabel->setStyleSheet(
         "color: #fff2bd; background: transparent; padding: 8px 0;");
@@ -53,7 +50,6 @@ MenuWindow::MenuWindow(QWidget* parent)
 
     connect(ui.newGameBtn,   &QPushButton::clicked, this, &MenuWindow::onNewGame);
     connect(ui.loadGameBtn,  &QPushButton::clicked, this, &MenuWindow::onLoadGame);
-    connect(ui.mapEditorBtn, &QPushButton::clicked, this, &MenuWindow::onMapEditor);
     connect(ui.settingsBtn,  &QPushButton::clicked, this, &MenuWindow::onSettings);
 }
 
@@ -107,7 +103,6 @@ void MenuWindow::setMenuControlsVisible(bool visible)
     for (QWidget* control : {static_cast<QWidget*>(ui.titleLabel),
                              static_cast<QWidget*>(ui.newGameBtn),
                              static_cast<QWidget*>(ui.loadGameBtn),
-                             static_cast<QWidget*>(ui.mapEditorBtn),
                              static_cast<QWidget*>(ui.settingsBtn),
                              static_cast<QWidget*>(ui.anonPortrait),
                              static_cast<QWidget*>(ui.soyoPortrait)}) {
@@ -140,13 +135,6 @@ void MenuWindow::onLoadGame()
     enterGame(game, false);
 }
 
-void MenuWindow::onMapEditor()
-{
-    auto* editor = new MapEditor();
-    editor->setAttribute(Qt::WA_DeleteOnClose);
-    editor->show();
-}
-
 void MenuWindow::onSettings()
 {
     QSettings settings(QStringLiteral("MyGO-Mota"), QStringLiteral("MyGO-Mota"));
@@ -162,8 +150,8 @@ void MenuWindow::onSettings()
     layout->addWidget(battle);
     layout->addWidget(new QLabel(QString::fromUtf8(
         "方向键：移动\n"
-        "地图编辑器：Shift+点击放置玩家，右键擦除\n"
-        "背包中的消耗品按原版规则使用。"), &dlg));
+        "固定道具栏：点击图标查看或使用\n"
+        "消耗品按原版规则使用。"), &dlg));
     auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg);
     buttons->button(QDialogButtonBox::Ok)->setText(QString::fromUtf8("应用"));
     buttons->button(QDialogButtonBox::Cancel)->setText(QString::fromUtf8("取消"));
@@ -214,8 +202,4 @@ void MenuWindow::enterGame(Game* game, bool isNewGame)
         activateWindow();
         setFocus();
     });
-    // 兼容旧版窗口生命周期设置；父窗口本身保持可见。
-    m_gameWindow->setAttribute(Qt::WA_DeleteOnClose);
-    connect(m_gameWindow, &QObject::destroyed, this, &QWidget::show);
-
 }

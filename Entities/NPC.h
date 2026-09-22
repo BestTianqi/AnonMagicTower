@@ -19,21 +19,19 @@ public:
     const std::string& GetName() const { return m_name; }
     const std::vector<std::string>& Dialog() const { return m_dialog; }
     int ClassicId() const { return m_classicId; }
-    void SetClassicId(int id) { m_classicId = id; }
 
     // 与玩家交互
     std::string Interact(Player& player);
 
     // 奖励
     bool HasGivenReward() const { return m_given; }
+    bool HasPendingReward() const { return m_reward != nullptr && !m_given; }
     void SetGiven(bool v) { m_given = v; }
     const Item* GetReward() const { return m_reward.get(); }
 
     // 交易
     bool IsTrader() const { return m_isTrader; }
-    void SetTrader(bool v) { m_isTrader = v; }
     int  GetTradeGoldCost() const { return m_tradeGoldCost; }
-    void SetTradeGoldCost(int v) { m_tradeGoldCost = v; }
     const Item* GetTradeReward() const { return m_tradeReward.get(); }
     bool IsTradeDone() const { return m_tradeDone; }
     void SetTradeDone(bool v) { m_tradeDone = v; }

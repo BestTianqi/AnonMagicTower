@@ -18,6 +18,16 @@ inline bool shouldShowFirstFloorOpening(bool isNewGame, int floor, bool alreadyS
     return isNewGame && floor == 1 && !alreadyShown;
 }
 
+class StoryCompletionPolicy {
+public:
+    explicit StoryCompletionPolicy(bool mandatory) : m_mandatory(mandatory) {}
+
+    bool canReject(bool finished) const { return !m_mandatory || finished; }
+
+private:
+    bool m_mandatory = false;
+};
+
 class StoryPager {
 public:
     explicit StoryPager(int pageCount)

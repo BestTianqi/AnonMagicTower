@@ -32,7 +32,6 @@ public:
     // 注册并切换主角服装；每套可为 4×4 旧表或 8×8 精细表。
     void loadPlayerOutfitSpriteSheet(const QString& outfitId, const QString& path);
     bool setPlayerOutfit(const QString& outfitId);
-    QString playerOutfit() const;
     void setPlayerDirection(int dx, int dy);
     // 播放鼠标点击的逐格路径；游戏状态仍由 Game 保持最终格坐标。
     void playPlayerPath(const std::vector<std::pair<int, int>>& path);

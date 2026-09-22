@@ -1,0 +1,47 @@
+{
+  "status": "complete_candidate_set_not_applied",
+  "generated_at": "2026-09-22",
+  "rule": "non-SP uses casual outfit; SP uses stage outfit; preserve identity and base clothing; add original monster motifs as removable visual layers",
+  "pairs": [
+    {"character":"要乐奈","casual":"绿色史莱姆","stage":"鬼战士"},
+    {"character":"若叶睦","casual":"红色史莱姆","stage":"骑士"},
+    {"character":"丰川祥子","casual":"小蝙蝠","stage":"双手剑士"},
+    {"character":"高松灯","casual":"初级法师","stage":"战士"},
+    {"character":"椎名立希","casual":"骷髅人","stage":"中级卫兵"},
+    {"character":"祐天寺若麦","casual":"骷髅士兵","stage":"史莱姆王"},
+    {"character":"三角初华","casual":"初级卫兵","stage":"高级卫兵"},
+    {"character":"八幡海铃","casual":"骷髅队长","stage":"黑骑士"},
+    {"character":"仲町あられ","casual":"大史莱姆","stage":"初级巫师"},
+    {"character":"宫永ののか","casual":"大蝙蝠","stage":"巨型章鱼"},
+    {"character":"薇欧拉","casual":"高级法师","stage":"魔龙"},
+    {"character":"峰月律","casual":"兽人","stage":"高级巫师"},
+    {"character":"藤都子","casual":"兽人武士","stage":"魔法警卫"},
+    {"character":"千石ユノ","casual":"石头人","stage":"吸血蝙蝠"},
+    {"character":"长崎素世","casual":"幽灵","stage":"魔王幻影"},
+    {"character":"凑友希那","casual":"吸血鬼","stage":"吸血鬼SP强化形态"},
+    {"character":"户山香澄","casual":"大法师","stage":"大法师SP强化形态"}
+  ],
+  "outputs": {
+    "boards":"boards/*_board.png",
+    "green_boards":"green_boards/*_board.png (only the 15 boards that required online background correction)",
+    "transparent_boards":"transparent_boards/*_board.png",
+    "portraits":"portraits/*_portrait.png",
+    "models_60":"models_60/*_model_60.png",
+    "models_60_clean":"models_60_clean/*_model_60_clean.png (preferred game-ready candidates)",
+    "models_240":"models_240/*_model_240.png",
+    "models_240_clean":"models_240_clean/*_model_240_clean.png (preferred high-resolution candidates)",
+    "portrait_comparison":"comparison_portraits.png",
+    "model_comparison":"comparison_models_60.png",
+    "clean_model_comparison":"comparison_models_60_clean.png",
+    "clean_hd_model_comparison":"comparison_models_240_clean.png"
+  },
+  "counts": {
+    "forms":34,
+    "transparent_boards":34,
+    "portraits":34,
+    "models_60":34,
+    "models_60_clean":34,
+    "models_240":34,
+    "models_240_clean":34
+  }
+}

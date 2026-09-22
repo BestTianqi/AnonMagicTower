@@ -46,6 +46,15 @@ int Player::InventoryCount() const
     return (int)m_items.size();
 }
 
+bool Player::HasMonsterBook() const
+{
+    for (const auto& item : m_items) {
+        if (dynamic_cast<const MonsterBook*>(item.get()) != nullptr)
+            return true;
+    }
+    return false;
+}
+
 bool Player::UseItem(int index)
 {
     if (index < 0 || index >= (int)m_items.size())

@@ -1,7 +1,6 @@
 <RCC>
     <qresource prefix="/">
         <!-- 默认地图 -->
-        <file>map.txt</file>
         <file>data/classic50_map.txt</file>
         <!-- 地砖 -->
         <file>images/wall.png</file>
@@ -42,7 +41,7 @@
         <file>images/monster_16.png</file>
         <file>images/monster_17.png</file>
         <file>images/monster_18.png</file>
-        <!-- 34种 Bang Dream 角色怪物 60x60 精灵 -->
+        <!-- 34种 Bang Dream 角色怪物高清精灵（运行时缩放到60x60格） -->
         <file>images/characters/monsters/monster_01.png</file>
         <file>images/characters/monsters/monster_02.png</file>
         <file>images/characters/monsters/monster_03.png</file>
@@ -168,6 +167,13 @@
         <file>images/runtime/cg/floor01_arrival.png</file>
         <file>images/runtime/cg/floor03_ambush.png</file>
         <file>images/runtime/cg/floor10_ambush.png</file>
+        <file>images/runtime/cg/boss15_octopus_prebattle.png</file>
+        <file>images/runtime/cg/boss20_yukina_vampire_prebattle.png</file>
+        <file>images/runtime/cg/boss25_kasumi_archmage_prebattle.png</file>
+        <file>images/runtime/cg/boss35_viola_dragon_prebattle.png</file>
+        <file>images/runtime/cg/boss40_knight_prebattle.png</file>
+        <file>images/runtime/cg/boss49_soyo_phantom_prebattle.png</file>
+        <file>images/runtime/cg/boss50_soyo_final_prebattle.png</file>
         <file>images/runtime/cg/floor32_child_soyo_charge.png</file>
         <file>images/runtime/cg/floor33_trap.png</file>
         <file>images/runtime/cg/floor42_child_soyo_capture.png</file>
@@ -179,6 +185,7 @@
         <!-- 主题背景与地图图块图集 -->
         <file>images/backgrounds/tower_hub.png</file>
         <file>images/backgrounds/bangdream_gbp_cover.jpg</file>
+        <file>images/runtime/ui/bangdream_app_icon.jpg</file>
         <file>images/backgrounds/mygo_stage.png</file>
         <file>images/backgrounds/mujica_theater.png</file>
         <file>images/backgrounds/yumemita_dream.png</file>
@@ -366,8 +373,7 @@
         <file>images/characters/portraits/variants/kasumi_new_stage_wink.png</file>
         <file>images/characters/portraits/variants/kasumi_new_school_surprised.png</file>
         <file>images/characters/portraits/variants/kasumi_new_stage_guitar.png</file>
-        <file>images/characters/pilot/anon_casual.png</file>
-        <file>images/characters/pilot/anon_stage.png</file>
         <file>images/characters/player_outfits/anon_reference_walk_8x8.png</file>
+        <file>images/characters/player_outfits/anon_reference_walk_8x8_hq.png</file>
     </qresource>
 </RCC>

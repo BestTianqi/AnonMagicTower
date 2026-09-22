@@ -60,46 +60,10 @@ private:
     std::string m_sourceName;
 };
 
-// 新增道具种类
-enum class ItemType {
-    Potion,
-    Weapon,
-    Armor,
-    Treasure,
-    RubyGem,
-    SapphireGem,
-    SmallPotion,
-    LargePotion,
-    Key,
-    PenguinDoll,
-    MatchaParfait,
-    TempShield,
-    StairUpper,
-    StairLower,
-    WallBreaker,
-    MagicKey,
-    AnonGlasses,
-    LuckyCoin,
-    Pickaxe,
-    Bomb,
-    EarthquakeScroll,
-    Cross,
-    DragonSlayer,
-    FreezeMagic,
-    FlyingWand,
-    FloorTeleporter,
-    SymmetryFlyer,
-    MonsterBook,
-    NoteBook,
-    HolyShield,
-    DivineShield
-};
-
 class Potion : public Item {
 public:
     Potion(int healAmount, const std::string& displayName = "Potion");
     void Apply(Player& player) const override;
-    int HealAmount() const { return m_heal; }
 private:
     int m_heal;
 };
@@ -159,7 +123,6 @@ class Treasure : public Item {
 public:
     Treasure(int gold);
     void Apply(Player& player) const override;
-    int Gold() const { return m_gold; }
 private:
     int m_gold;
 };
@@ -173,12 +136,6 @@ enum class KeyType {
 class Key : public Item {
 public:
     explicit Key(KeyType type);
-
-    KeyType GetType() const;
-
-    Key CreateRed() const;
-    Key CreateBlue() const;
-    Key CreateGreen() const;
 
     void Apply(Player& player) const override; // 使用时给予玩家钥匙
 

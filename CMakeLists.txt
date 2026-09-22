@@ -2,9 +2,12 @@ cmake_minimum_required(VERSION 3.16)
 project(mota LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 
-# Enable Qt automoc/autouic/autorcc
+if(WIN32)
+    enable_language(RC)
+endif()
+
+# Enable Qt automoc/autorcc
 set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTOUIC OFF)
 set(CMAKE_AUTORCC ON)
 
 find_package(Qt6 COMPONENTS Widgets REQUIRED)
@@ -18,7 +21,6 @@ set(SRC
     Entities/Monster.cpp
     Entities/NPC.cpp
     UI/MapWidget.cpp
-    UI/MapEditor.cpp
     UI/MenuWindow.cpp
     UI/MainWindow.cpp
     resources.qrc
@@ -26,8 +28,11 @@ set(SRC
 
 add_executable(mota ${SRC})
 
-# Ensure build directory is in include path so generated ui_*.h are found
-target_include_directories(mota PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
+if(WIN32)
+    target_sources(mota PRIVATE app_icon.rc)
+endif()
+
+target_include_directories(mota PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 target_link_libraries(mota PRIVATE Qt6::Widgets)
 
@@ -39,7 +44,7 @@ add_executable(mota_classic_tests
     Entities/Monster.cpp
     Entities/NPC.cpp
 )
-target_include_directories(mota_classic_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
+target_include_directories(mota_classic_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(mota_classic_tests PRIVATE Qt6::Widgets)
 
 add_executable(mota_motion_tests
@@ -49,5 +54,20 @@ target_include_directories(mota_motion_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
 
 add_executable(mota_battle_feedback_tests
     tests/test_battle_feedback.cpp
+    Entities/Monster.cpp
 )
 target_include_directories(mota_battle_feedback_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+add_executable(mota_mainwindow_input_tests
+    tests/test_mainwindow_input.cpp
+    Game/Game.cpp
+    Entities/Player.cpp
+    Entities/Items.cpp
+    Entities/Monster.cpp
+    Entities/NPC.cpp
+    UI/MapWidget.cpp
+    UI/MainWindow.cpp
+    resources.qrc
+)
+target_include_directories(mota_mainwindow_input_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(mota_mainwindow_input_tests PRIVATE Qt6::Widgets)

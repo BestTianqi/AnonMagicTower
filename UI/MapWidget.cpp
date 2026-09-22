@@ -1,7 +1,6 @@
 #include "MapWidget.h"
 #include "Entities/MonsterDB.h"
 #include <QPainter>
-#include <QPainterPath>
 #include <QFont>
 #include <QImage>
 #include <QColor>
@@ -9,7 +8,7 @@
 #include <algorithm>
 
 namespace {
-constexpr float kPlayerWalkSpeed = 260.0f;
+constexpr float kPlayerWalkSpeed = 360.0f;
 // 逻辑格仍保持 60×60；贴图向相邻格轻微溢出，覆盖素材透明边缘造成的缝隙。
 constexpr int kTileRenderBleed = 6;
 constexpr int kTileRenderSize = TILE_SIZE + kTileRenderBleed * 2;
@@ -58,19 +57,12 @@ struct MonsterCombatHint {
 MonsterCombatHint monsterCombatHint(const Player& player, const Monster& monster)
 {
     const std::string& name = monster.GetName();
-    const bool vampireOrOrc = name.find("吸血") != std::string::npos ||
-                              name.find("兽人") != std::string::npos;
-    const bool dragon = name.find("魔龙") != std::string::npos ||
-                        name.find("龙") != std::string::npos;
-    const bool magicAttacker = name.find("法师") != std::string::npos ||
-                               name.find("巫师") != std::string::npos ||
-                               name.find("大法师") != std::string::npos ||
-                               name.find("魔法") != std::string::npos;
+    const bool vampireOrOrc = MonsterDB::isVampireOrOrc(name);
+    const bool dragon = MonsterDB::isDragon(name);
     const int attackMultiplier = (player.hasCross && vampireOrOrc) ||
                                  (player.hasDragonSlayer && dragon) ? 2 : 1;
     int incoming = std::max(0, monster.GetATK() - player.def -
                             (player.tempShieldCharges > 0 ? 50 : 0));
-    if (player.hasHolyShield && magicAttacker) incoming = 0;
     if (player.hasPenguinDoll &&
         (name.find("高松灯") != std::string::npos || name.find("企鹅") != std::string::npos))
         incoming /= 2;
@@ -305,7 +297,10 @@ void MapWidget::loadMonsterImage(const std::string& name, const QString& path)
 {
     QPixmap px(path);
     if (!px.isNull()) {
-        m_monsterPix[name] = px.scaled(TILE_SIZE, TILE_SIZE, Qt::IgnoreAspectRatio, Qt::FastTransformation);
+        // Keep the high-resolution source.  Scaling it down here with nearest
+        // neighbour permanently discarded facial and costume detail before
+        // the map was painted.
+        m_monsterPix[name] = px;
         m_hasMonsterImage.insert(name);
     }
 }
@@ -389,11 +384,6 @@ bool MapWidget::setPlayerOutfit(const QString& outfitId)
         return false;
     m_activePlayerOutfit = it->first;
     return true;
-}
-
-QString MapWidget::playerOutfit() const
-{
-    return QString::fromStdString(m_activePlayerOutfit);
 }
 
 void MapWidget::setPlayerDirection(int dx, int dy)
@@ -482,16 +472,18 @@ void MapWidget::advancePlayerMotion()
 {
     const qint64 elapsedMs = std::clamp<qint64>(m_motionClock.restart(), 1, 50);
     if (!m_scriptedPlayerPath.empty()) {
-        if (!m_playerMotion.isMoving() && m_scriptedPlayerPathIndex < m_scriptedPlayerPath.size()) {
-            const auto [fromX, fromY] = m_scriptedPlayerPath[m_scriptedPlayerPathIndex - 1];
-            const auto [toX, toY] = m_scriptedPlayerPath[m_scriptedPlayerPathIndex];
-            setPlayerDirection(toX - fromX, toY - fromY);
-            m_playerMotion.beginGridStep(fromX, fromY, toX, toY, kPlayerWalkSpeed);
-            ++m_scriptedPlayerPathIndex;
-        }
-        if (m_playerMotion.isMoving()) {
-            m_playerMotion.advance(static_cast<float>(elapsedMs));
-            m_playerFrame = m_playerMotion.walkingFrame(m_playerSheetColumns == 8 ? 8 : 4);
+        float remainingMs = static_cast<float>(elapsedMs);
+        while (remainingMs > 0.0f) {
+            if (!m_playerMotion.isMoving() &&
+                m_scriptedPlayerPathIndex < m_scriptedPlayerPath.size()) {
+                const auto [fromX, fromY] = m_scriptedPlayerPath[m_scriptedPlayerPathIndex - 1];
+                const auto [toX, toY] = m_scriptedPlayerPath[m_scriptedPlayerPathIndex];
+                setPlayerDirection(toX - fromX, toY - fromY);
+                m_playerMotion.beginGridStep(fromX, fromY, toX, toY, kPlayerWalkSpeed);
+                ++m_scriptedPlayerPathIndex;
+            }
+            if (!m_playerMotion.isMoving()) break;
+            remainingMs = m_playerMotion.advanceWithOverflow(remainingMs);
             if (!m_playerMotion.isMoving() &&
                 m_scriptedPlayerPathIndex >= m_scriptedPlayerPath.size()) {
                 const auto [lastX, lastY] = m_scriptedPlayerPath.back();
@@ -501,26 +493,33 @@ void MapWidget::advancePlayerMotion()
                 m_scriptedPlayerPathIndex = 0;
                 m_playerFrame = 1;
                 emit playerMotionFinished();
+                break;
             }
-            update();
         }
+        if (m_playerMotion.isMoving())
+            m_playerFrame = m_playerMotion.walkingFrame(m_playerSheetColumns == 8 ? 8 : 4);
+        update();
         return;
     }
     syncPlayerMotionTarget();
     advanceMonsterMotion();
     if (!m_motionInitialized) return;
-    const bool wasMoving = m_playerMotion.isMoving();
-    if (wasMoving) {
-        m_playerMotion.advance(static_cast<float>(elapsedMs));
-        m_playerFrame = m_playerMotion.walkingFrame(m_playerSheetColumns == 8 ? 8 : 4);
-        const bool finished = !m_playerMotion.isMoving();
-        if (finished) {
-            m_playerFrame = 1;
+    if (m_playerMotion.isMoving()) {
+        float remainingMs = static_cast<float>(elapsedMs);
+        while (remainingMs > 0.0f && m_playerMotion.isMoving()) {
+            remainingMs = m_playerMotion.advanceWithOverflow(remainingMs);
+            if (m_playerMotion.isMoving()) break;
             emit playerMotionFinished();
-            // playerMotionFinished 的同步槽会提交下一格逻辑位置；同一帧
-            // 立即重同步，避免等待下一次16ms定时器才开始下一段插值。
+            // 同步槽可能已提交下一格逻辑位置。立即衔接并消费本帧剩余
+            // 时间，避免每到格子边界固定停一帧。
             syncPlayerMotionTarget();
+            if (!m_playerMotion.isMoving()) {
+                m_playerFrame = 1;
+                break;
+            }
         }
+        if (m_playerMotion.isMoving())
+            m_playerFrame = m_playerMotion.walkingFrame(m_playerSheetColumns == 8 ? 8 : 4);
         update();
     }
 }
@@ -595,519 +594,6 @@ void MapWidget::loadBackgroundImage(const QString& path)
 QSize MapWidget::sizeHint() const
 {
     return QSize(900, 900);
-}
-
-// 判断是否为钥匙类道具
-static bool isKeyItem(const std::string& name)
-{
-    return name == "Red Key" || name == "红钥匙" ||
-           name == "Blue Key" || name == "蓝钥匙" ||
-           name == "Green Key" || name == "绿钥匙" ||
-           name == "Yellow Key" || name == "黄钥匙" ||
-           name == "万能钥匙";
-}
-
-// 绘制钥匙形状（竖直：上方圆形把手，下方杆+齿）
-static void drawKeyShape(QPainter& p, const QRect& r, const QColor& color)
-{
-    p.save();
-    p.setRenderHint(QPainter::Antialiasing);
-
-    const int cx = r.center().x();
-    const int top = r.top() + 4;
-    const int bowCy = top + 12;      // 把手圆心 Y
-    const int shaftTop = bowCy + 1;   // 杆顶部
-    const int shaftBottom = r.bottom() - 6;
-
-    // 钥匙外轮廓
-    QPainterPath keyPath;
-    // 圆形把手
-    keyPath.addEllipse(QPointF(cx, bowCy), 11, 11);
-    // 杆
-    keyPath.addRect(QRectF(cx - 4, shaftTop, 8, shaftBottom - shaftTop));
-    // 齿（向右伸出）
-    keyPath.addRect(QRectF(cx + 3, shaftTop + 6, 8, 5));
-    keyPath.addRect(QRectF(cx + 3, shaftBottom - 20, 6, 4));
-
-    // 把手内孔
-    QPainterPath hole;
-    hole.addEllipse(QPointF(cx, bowCy), 5, 5);
-    keyPath = keyPath.subtracted(hole);
-
-    // 填充和描边
-    p.setBrush(color.lighter(120));
-    p.setPen(QPen(color.darker(130), 2));
-    p.drawPath(keyPath);
-
-    p.restore();
-}
-
-// 绘制金币（带内圆的硬币）
-static void drawCoinShape(QPainter& p, const QRect& r, const QColor& color)
-{
-    p.save();
-    p.setRenderHint(QPainter::Antialiasing);
-    int cx = r.center().x(), cy = r.center().y();
-    int outerR = 18;
-    p.setBrush(color.lighter(130));
-    p.setPen(QPen(color.darker(140), 2));
-    p.drawEllipse(QPoint(cx, cy), outerR, outerR);
-    // 内圈
-    p.setBrush(Qt::NoBrush);
-    p.setPen(QPen(color.darker(120), 2));
-    p.drawEllipse(QPoint(cx, cy), outerR - 5, outerR - 5);
-    // 中心 "G" 符号
-    QFont f;
-    f.setPixelSize(14);
-    f.setBold(true);
-    p.setFont(f);
-    p.setPen(color.darker(180));
-    p.drawText(QRect(cx - outerR, cy - outerR, outerR * 2, outerR * 2),
-        Qt::AlignCenter, "G");
-    p.restore();
-}
-
-// 绘制武器（竖直剑：剑身+护手+剑柄+剑首）
-static void drawSwordShape(QPainter& p, const QRect& r, const QColor& color)
-{
-    p.save();
-    p.setRenderHint(QPainter::Antialiasing);
-    int cx = r.center().x(), cy = r.center().y();
-    QPainterPath sword;
-    // 剑身（上宽下窄的菱形/三角形）
-    sword.moveTo(cx, cy - 20);           // 剑尖
-    sword.lineTo(cx + 5, cy - 4);        // 右下
-    sword.lineTo(cx + 3, cy - 4);        // 护手右
-    sword.lineTo(cx + 12, cy);           // 护手右端
-    sword.lineTo(cx + 3, cy + 2);        // 护手右下
-    sword.lineTo(cx + 3, cy + 14);       // 剑柄右
-    sword.lineTo(cx + 5, cy + 19);       // 剑首右
-    sword.lineTo(cx - 5, cy + 19);       // 剑首左
-    sword.lineTo(cx - 3, cy + 14);       // 剑柄左
-    sword.lineTo(cx - 3, cy + 2);        // 护手左下
-    sword.lineTo(cx - 12, cy);           // 护手左端
-    sword.lineTo(cx - 3, cy - 4);        // 护手左上
-    sword.lineTo(cx - 5, cy - 4);        // 左下
-    sword.closeSubpath();
-    p.setBrush(color.lighter(120));
-    p.setPen(QPen(color.darker(140), 2));
-    p.drawPath(sword);
-    p.restore();
-}
-
-// 绘制防具（盾牌轮廓）
-static void drawShieldShape(QPainter& p, const QRect& r, const QColor& color)
-{
-    p.save();
-    p.setRenderHint(QPainter::Antialiasing);
-    int cx = r.center().x(), cy = r.center().y();
-    QPainterPath shield;
-    // 盾牌：上平下尖
-    shield.moveTo(cx - 14, cy - 18);     // 左上
-    shield.lineTo(cx + 14, cy - 18);     // 右上
-    shield.lineTo(cx + 14, cy + 2);      // 右侧
-    shield.quadTo(cx + 10, cy + 12, cx, cy + 20);  // 右下弧到尖端
-    shield.quadTo(cx - 10, cy + 12, cx - 14, cy + 2); // 尖端到左下弧
-    shield.closeSubpath();
-    p.setBrush(color.lighter(120));
-    p.setPen(QPen(color.darker(140), 2));
-    p.drawPath(shield);
-    // 盾面十字装饰
-    p.setPen(QPen(color.darker(110), 1.5));
-    p.drawLine(cx, cy - 14, cx, cy + 14);
-    p.drawLine(cx - 10, cy - 6, cx + 10, cy - 6);
-    p.restore();
-}
-
-// 判断是否为有特殊形状的道具
-// 绘制生命药（药水瓶：圆底+细颈+瓶口）
-static void drawPotionShape(QPainter& p, const QRect& r, const QColor& color)
-{
-    p.save();
-    p.setRenderHint(QPainter::Antialiasing);
-    int cx = r.center().x(), cy = r.center().y();
-    QPainterPath bottle;
-    // 瓶口
-    bottle.addRect(QRectF(cx - 5, cy - 18, 10, 6));
-    // 瓶颈
-    bottle.addRect(QRectF(cx - 2, cy - 12, 4, 6));
-    // 瓶身（圆角矩形）
-    bottle.addRoundedRect(QRectF(cx - 10, cy - 6, 20, 22), 6, 6);
-    p.setBrush(color.lighter(120));
-    p.setPen(QPen(color.darker(140), 2));
-    p.drawPath(bottle);
-    // 高光
-    p.setPen(QPen(color.lighter(180), 1.5));
-    p.drawLine(cx - 6, cy + 2, cx - 6, cy + 10);
-    p.restore();
-}
-
-// 绘制眼镜（两个圆+鼻梁）
-static void drawGlassesShape(QPainter& p, const QRect& r, const QColor& color)
-{
-    p.save();
-    p.setRenderHint(QPainter::Antialiasing);
-    int cx = r.center().x(), cy = r.center().y();
-    // 左镜片
-    p.setBrush(Qt::NoBrush);
-    p.setPen(QPen(color.darker(130), 3));
-    p.drawEllipse(QPoint(cx - 8, cy + 2), 9, 8);
-    // 右镜片
-    p.drawEllipse(QPoint(cx + 8, cy + 2), 9, 8);
-    // 鼻梁
-    p.drawLine(cx - 1, cy + 2, cx + 1, cy + 2);
-    // 镜腿
-    p.drawLine(cx - 17, cy, cx - 8, cy + 2);
-    p.drawLine(cx + 17, cy, cx + 8, cy + 2);
-    p.restore();
-}
-
-// 绘制破墙锤（锤头+手柄）
-static void drawHammerShape(QPainter& p, const QRect& r, const QColor& color)
-{
-    p.save();
-    p.setRenderHint(QPainter::Antialiasing);
-    int cx = r.center().x(), cy = r.center().y();
-    // 手柄
-    p.setBrush(QColor(120, 90, 60));
-    p.setPen(QPen(QColor(90, 60, 30), 2));
-    p.drawRoundedRect(QRectF(cx - 3, cy + 2, 6, 22), 2, 2);
-    // 锤头
-    p.setBrush(color.lighter(110));
-    p.setPen(QPen(color.darker(140), 2));
-    p.drawRoundedRect(QRectF(cx - 14, cy - 16, 28, 18), 4, 4);
-    p.restore();
-}
-
-// 绘制上楼器（圆形+上箭头）
-static void drawUpArrowShape(QPainter& p, const QRect& r, const QColor& color)
-{
-    p.save();
-    p.setRenderHint(QPainter::Antialiasing);
-    int cx = r.center().x(), cy = r.center().y();
-    // 圆底
-    p.setBrush(color.lighter(120));
-    p.setPen(QPen(color.darker(140), 2));
-    p.drawEllipse(QPoint(cx, cy), 16, 16);
-    // 上箭头
-    QPainterPath arrow;
-    arrow.moveTo(cx, cy - 10);
-    arrow.lineTo(cx + 7, cy + 2);
-    arrow.lineTo(cx + 2, cy + 2);
-    arrow.lineTo(cx + 2, cy + 8);
-    arrow.lineTo(cx - 2, cy + 8);
-    arrow.lineTo(cx - 2, cy + 2);
-    arrow.lineTo(cx - 7, cy + 2);
-    arrow.closeSubpath();
-    p.setBrush(color.darker(150));
-    p.setPen(Qt::NoPen);
-    p.drawPath(arrow);
-    p.restore();
-}
-
-// 绘制下楼器（圆形+下箭头）
-static void drawDownArrowShape(QPainter& p, const QRect& r, const QColor& color)
-{
-    p.save();
-    p.setRenderHint(QPainter::Antialiasing);
-    int cx = r.center().x(), cy = r.center().y();
-    p.setBrush(color.lighter(120));
-    p.setPen(QPen(color.darker(140), 2));
-    p.drawEllipse(QPoint(cx, cy), 16, 16);
-    QPainterPath arrow;
-    arrow.moveTo(cx, cy + 10);
-    arrow.lineTo(cx + 7, cy - 2);
-    arrow.lineTo(cx + 2, cy - 2);
-    arrow.lineTo(cx + 2, cy - 8);
-    arrow.lineTo(cx - 2, cy - 8);
-    arrow.lineTo(cx - 2, cy - 2);
-    arrow.lineTo(cx - 7, cy - 2);
-    arrow.closeSubpath();
-    p.setBrush(color.darker(150));
-    p.setPen(Qt::NoPen);
-    p.drawPath(arrow);
-    p.restore();
-}
-
-// 绘制临时护盾（盾形+T字）
-static void drawTempShieldShape(QPainter& p, const QRect& r, const QColor& color)
-{
-    p.save();
-    p.setRenderHint(QPainter::Antialiasing);
-    int cx = r.center().x(), cy = r.center().y();
-    QPainterPath shield;
-    shield.moveTo(cx, cy - 18);
-    shield.quadTo(cx + 16, cy - 10, cx + 14, cy + 2);
-    shield.quadTo(cx, cy + 6, cx, cy + 18);
-    shield.quadTo(cx, cy + 6, cx - 14, cy + 2);
-    shield.quadTo(cx - 16, cy - 10, cx, cy - 18);
-    shield.closeSubpath();
-    p.setBrush(color.lighter(120));
-    p.setPen(QPen(color.darker(140), 2));
-    p.drawPath(shield);
-    // T 字
-    p.setPen(QPen(color.darker(160), 2.5));
-    p.drawLine(cx, cy - 8, cx, cy + 10);
-    p.drawLine(cx - 8, cy - 6, cx + 8, cy - 6);
-    p.restore();
-}
-
-// 绘制企鹅玩偶（简笔企鹅）
-static void drawPenguinShape(QPainter& p, const QRect& r, const QColor& color)
-{
-    p.save();
-    p.setRenderHint(QPainter::Antialiasing);
-    int cx = r.center().x(), cy = r.center().y();
-    // 身体（椭圆）
-    p.setBrush(QColor(40, 40, 55));
-    p.setPen(QPen(QColor(20, 20, 35), 2));
-    p.drawEllipse(QPoint(cx, cy + 4), 12, 16);
-    // 白肚皮
-    p.setBrush(QColor(230, 230, 240));
-    p.setPen(Qt::NoPen);
-    p.drawEllipse(QPoint(cx, cy + 6), 7, 10);
-    // 头
-    p.setBrush(QColor(40, 40, 55));
-    p.setPen(QPen(QColor(20, 20, 35), 2));
-    p.drawEllipse(QPoint(cx, cy - 10), 9, 9);
-    // 眼睛
-    p.setBrush(Qt::white);
-    p.setPen(Qt::NoPen);
-    p.drawEllipse(QPointF(cx - 3., cy - 10.), 2.5, 3.);
-    p.drawEllipse(QPointF(cx + 3., cy - 10.), 2.5, 3.);
-    p.setBrush(QColor(20, 20, 20));
-    p.drawEllipse(QPointF(cx - 3., cy - 10.), 1., 1.5);
-    p.drawEllipse(QPointF(cx + 3., cy - 10.), 1., 1.5);
-    // 喙
-    p.setBrush(QColor(240, 150, 30));
-    p.setPen(Qt::NoPen);
-    QPainterPath beak;
-    beak.moveTo(cx - 3, cy - 7);
-    beak.lineTo(cx, cy - 4);
-    beak.lineTo(cx + 3, cy - 7);
-    beak.closeSubpath();
-    p.drawPath(beak);
-    p.restore();
-}
-
-// 绘制抹茶芭菲（高脚杯+分层）
-static void drawParfaitShape(QPainter& p, const QRect& r, const QColor& color)
-{
-    p.save();
-    p.setRenderHint(QPainter::Antialiasing);
-    int cx = r.center().x(), cy = r.center().y();
-    // 杯身（倒三角）
-    QPainterPath glass;
-    glass.moveTo(cx - 12, cy - 14);
-    glass.lineTo(cx + 12, cy - 14);
-    glass.lineTo(cx + 4, cy + 4);
-    glass.lineTo(cx - 4, cy + 4);
-    glass.closeSubpath();
-    p.setBrush(color.lighter(150));
-    p.setPen(QPen(color.darker(120), 2));
-    p.drawPath(glass);
-    // 杯脚
-    p.drawRect(QRectF(cx - 1, cy + 4, 2, 8));
-    // 底座
-    p.drawRoundedRect(QRectF(cx - 8, cy + 12, 16, 4), 2, 2);
-    // 分层线
-    p.setPen(QPen(color.darker(100), 1));
-    p.drawLine(cx - 10, cy - 6, cx + 10, cy - 6);
-    p.drawLine(cx - 7, cy + 0, cx + 7, cy + 0);
-    // 顶部奶油/樱桃
-    p.setBrush(QColor(255, 220, 220));
-    p.setPen(QPen(QColor(200, 100, 100), 1));
-    p.drawEllipse(QPoint(cx, cy - 14), 5, 4);
-    p.restore();
-}
-
-// 绘制幸运金币（带四叶草的金币）
-static void drawLuckyCoinShape(QPainter& p, const QRect& r, const QColor& color)
-{
-    p.save();
-    p.setRenderHint(QPainter::Antialiasing);
-    int cx = r.center().x(), cy = r.center().y();
-    int outerR = 18;
-    // 外圈
-    p.setBrush(color.lighter(130));
-    p.setPen(QPen(color.darker(140), 2));
-    p.drawEllipse(QPoint(cx, cy), outerR, outerR);
-    // 内圈
-    p.setBrush(Qt::NoBrush);
-    p.setPen(QPen(color.lighter(160), 1.5));
-    p.drawEllipse(QPoint(cx, cy), outerR - 4, outerR - 4);
-    // 四叶草符号
-    p.setPen(Qt::NoPen);
-    p.setBrush(color.darker(150));
-    int d = 5;
-    for (int i = 0; i < 4; ++i) {
-        double angle = i * 3.14159 / 2;
-        int ox = cx + (int)(d * cos(angle));
-        int oy = cy - (int)(d * sin(angle));
-        p.drawEllipse(QPoint(ox, oy), 3, 3);
-    }
-    p.restore();
-}
-
-static bool hasCustomShape(const std::string& name)
-{
-    return isKeyItem(name) ||
-           name == "Treasure" || name == "金币" ||
-           name == "Weapon" || name == "武器" ||
-           name == "Armor" || name == "防具" ||
-           name == "Potion" || name == "生命药" ||
-           name == "小血瓶" || name == "大血瓶" ||
-           name == "红宝石" || name == "蓝宝石" ||
-           name == "铁剑" || name == "银剑" || name == "骑士剑" || name == "圣剑" || name == "神圣剑" ||
-           name == "铁盾" || name == "银盾" || name == "骑士盾" || name == "圣盾" || name == "神圣盾" ||
-           name == "圣水" || name == "镐" || name == "炸弹" || name == "地震卷轴" ||
-           name == "十字架" || name == "屠龙匕" || name == "冰冻魔法" || name == "冰冻徽章" || name == "飞行魔杖" ||
-           name == "对称飞行器" || name == "记事本" || name == "怪物手册" || name == "高松灯的单词本" ||
-           name == "MyGO应援红章" || name == "Mujica应援蓝章" ||
-           name == "爱音拨片" || name == "立希鼓棒" || name == "乐奈猫爪" || name == "灯的麦克风" || name == "睦的贝斯" ||
-           name == "素世谱架" || name == "海铃节拍器" || name == "初华舞台耳返" || name == "祥子黑色乐谱" || name == "Mujica终幕面具" ||
-           name == "立希水壶" || name == "灯的热牛奶" || name == "爱音能量饮" || name == "红色Live票" || name == "蓝色Live票" || name == "黄色Live票" ||
-           name == "爱音自拍眼镜" || name == "睦的镐子" || name == "Mujica烟雾弹" || name == "Mujica舞台震响卷" || name == "MyGO和解徽章" || name == "MyGO团结徽章" ||
-           name == "祥子指挥棒" || name == "海铃冷静指令" || name == "冰冻徽章" || name == "爱音手机" || name == "楼层传送器" || name == "Mujica镜面舞台票" || name == "灯的歌词本" || name == "怪物手册" || name == "高松灯的单词本" ||
-            name == "后台万能通行证" || name == "大黄门钥匙" || name == "舞台升降卡" || name == "撤场通行卡" || name == "乐队护盾贴" || name == "立希企鹅挂件" ||
-           name == "乐奈抹茶芭菲" || name == "乐奈幸运硬币" ||
-           name == "匿名眼镜" ||
-           name == "破墙锤" ||
-           name == "上楼器" ||
-           name == "下楼器" ||
-           name == "临时护盾" ||
-           name == "企鹅玩偶" ||
-           name == "抹茶芭菲" ||
-           name == "幸运金币";
-}
-
-// 根据道具名称返回对应颜色、标签和数值描述
-static void itemAppearance(const std::string& name, int value, QColor& fill, QColor& border,
-                           QString& label, QString& desc, QColor& textColor)
-{
-    QString qname = QString::fromStdString(name);
-
-    // 钥匙类
-    if (qname == QString::fromUtf8("Red Key") || qname == QString::fromUtf8("红钥匙") || qname == QString::fromUtf8("红色Live票"))
-        { fill = QColor(200, 45, 45); border = QColor(160, 20, 20);
-          label = QString::fromUtf8("红钥"); textColor = QColor(255, 220, 100); return; }
-    if (qname == QString::fromUtf8("Blue Key") || qname == QString::fromUtf8("蓝钥匙") || qname == QString::fromUtf8("蓝色Live票"))
-        { fill = QColor(45, 60, 200); border = QColor(20, 30, 160);
-          label = QString::fromUtf8("蓝钥"); textColor = QColor(255, 220, 100); return; }
-    if (qname == QString::fromUtf8("Green Key") || qname == QString::fromUtf8("绿钥匙") ||
-        qname == QString::fromUtf8("Yellow Key") || qname == QString::fromUtf8("黄钥匙") || qname == QString::fromUtf8("黄色Live票"))
-        { fill = QColor(225, 185, 40); border = QColor(155, 110, 20);
-          label = QString::fromUtf8("黄钥"); textColor = QColor(70, 35, 0); return; }
-    if (qname == QString::fromUtf8("万能钥匙") || qname == QString::fromUtf8("后台万能通行证") || qname == QString::fromUtf8("大黄门钥匙"))
-        { fill = QColor(130, 60, 200); border = QColor(90, 30, 160);
-          label = QString::fromUtf8("万能钥"); textColor = QColor(255, 220, 100); return; }
-
-    // 属性类
-    if (qname == QString::fromUtf8("Potion") || qname == QString::fromUtf8("生命药") ||
-        qname == QString::fromUtf8("小血瓶") || qname == QString::fromUtf8("大血瓶") ||
-        qname == QString::fromUtf8("现场补给") || qname == QString::fromUtf8("灯的热牛奶") || qname == QString::fromUtf8("爱音能量饮"))
-        { fill = QColor(200, 60, 60); border = QColor(150, 30, 30);
-          label = (qname == QString::fromUtf8("现场补给")) ? QString::fromUtf8("补给") : qname; textColor = Qt::white;
-          desc = QString("+%1HP").arg(value); return; }
-    if (qname == QString::fromUtf8("红宝石") || qname == QString::fromUtf8("Ruby Gem") || qname == QString::fromUtf8("MyGO应援红章"))
-        { fill = QColor(220, 40, 55); border = QColor(125, 15, 25);
-          label = (qname == QString::fromUtf8("MyGO应援红章")) ? QString::fromUtf8("红章") : QString::fromUtf8("红宝石"); textColor = Qt::white;
-          desc = QString("ATK+%1").arg(value); return; }
-    if (qname == QString::fromUtf8("蓝宝石") || qname == QString::fromUtf8("Sapphire Gem") || qname == QString::fromUtf8("Mujica应援蓝章"))
-        { fill = QColor(50, 100, 220); border = QColor(20, 50, 145);
-          label = (qname == QString::fromUtf8("Mujica应援蓝章")) ? QString::fromUtf8("蓝章") : QString::fromUtf8("蓝宝石"); textColor = Qt::white;
-          desc = QString("DEF+%1").arg(value); return; }
-    if (qname == QString::fromUtf8("Weapon") || qname == QString::fromUtf8("武器"))
-        { fill = QColor(210, 140, 40); border = QColor(160, 100, 20);
-          label = QString::fromUtf8("武器"); textColor = Qt::white;
-          desc = QString("ATK+%1").arg(value); return; }
-    if (qname == QString::fromUtf8("Armor") || qname == QString::fromUtf8("防具"))
-        { fill = QColor(60, 120, 200); border = QColor(30, 80, 160);
-          label = QString::fromUtf8("防具"); textColor = Qt::white;
-          desc = QString("DEF+%1").arg(value); return; }
-    if (qname == QString::fromUtf8("Treasure") || qname == QString::fromUtf8("金币"))
-        { fill = QColor(220, 180, 40); border = QColor(170, 130, 20);
-          label = QString::fromUtf8("金币"); textColor = QColor(100, 60, 0);
-          desc = QString("%1G").arg(value); return; }
-    if (qname == QString::fromUtf8("爱音拨片") || qname == QString::fromUtf8("立希鼓棒") ||
-        qname == QString::fromUtf8("乐奈猫爪") || qname == QString::fromUtf8("灯的麦克风") || qname == QString::fromUtf8("睦的贝斯") ||
-        qname == QString::fromUtf8("铁剑") || qname == QString::fromUtf8("银剑") ||
-        qname == QString::fromUtf8("骑士剑") || qname == QString::fromUtf8("圣剑") ||
-        qname == QString::fromUtf8("神圣剑"))
-        { fill = QColor(210, 140, 40); border = QColor(160, 100, 20);
-          label = qname; textColor = Qt::white; desc = QString("ATK+%1").arg(value); return; }
-    if (qname == QString::fromUtf8("素世谱架") || qname == QString::fromUtf8("海铃节拍器") || qname == QString::fromUtf8("初华舞台耳返") ||
-        qname == QString::fromUtf8("祥子黑色乐谱") || qname == QString::fromUtf8("Mujica终幕面具") ||
-        qname == QString::fromUtf8("铁盾") || qname == QString::fromUtf8("银盾") ||
-        qname == QString::fromUtf8("骑士盾") || qname == QString::fromUtf8("圣盾") ||
-        qname == QString::fromUtf8("神圣盾"))
-        { fill = QColor(60, 120, 200); border = QColor(30, 80, 160);
-          label = qname; textColor = Qt::white; desc = QString("DEF+%1").arg(value); return; }
-    if (qname == QString::fromUtf8("立希水壶") || qname == QString::fromUtf8("圣水"))
-        { fill = QColor(80, 180, 240); border = QColor(30, 120, 190);
-          label = qname; textColor = Qt::white; return; }
-    if (qname == QString::fromUtf8("睦的镐子") || qname == QString::fromUtf8("Mujica烟雾弹") || qname == QString::fromUtf8("Mujica舞台震响卷") ||
-        qname == QString::fromUtf8("镐") || qname == QString::fromUtf8("炸弹") ||
-        qname == QString::fromUtf8("地震卷轴"))
-        { fill = QColor(140, 100, 70); border = QColor(100, 70, 40);
-          label = qname; textColor = Qt::white; return; }
-    if (qname == QString::fromUtf8("MyGO和解徽章") || qname == QString::fromUtf8("MyGO团结徽章") || qname == QString::fromUtf8("祥子指挥棒") ||
-        qname == QString::fromUtf8("海铃冷静指令") || qname == QString::fromUtf8("爱音手机") || qname == QString::fromUtf8("楼层传送器") ||
-        qname == QString::fromUtf8("Mujica镜面舞台票") || qname == QString::fromUtf8("灯的歌词本") || qname == QString::fromUtf8("怪物手册") || qname == QString::fromUtf8("高松灯的单词本") ||
-        qname == QString::fromUtf8("十字架") || qname == QString::fromUtf8("屠龙匕") ||
-        qname == QString::fromUtf8("冰冻魔法") || qname == QString::fromUtf8("冰冻徽章") || qname == QString::fromUtf8("飞行魔杖") ||
-        qname == QString::fromUtf8("对称飞行器") || qname == QString::fromUtf8("记事本"))
-        { fill = QColor(150, 90, 190); border = QColor(100, 50, 140);
-          label = qname; textColor = Qt::white; return; }
-
-    // 特殊道具
-    if (qname == QString::fromUtf8("匿名眼镜") || qname == QString::fromUtf8("爱音自拍眼镜"))
-        { fill = QColor(40, 180, 180); border = QColor(20, 130, 130);
-          label = QString::fromUtf8("眼镜"); textColor = Qt::white; return; }
-    if (qname == QString::fromUtf8("破墙锤"))
-        { fill = QColor(140, 100, 70); border = QColor(100, 70, 40);
-          label = QString::fromUtf8("破墙锤"); textColor = Qt::white; return; }
-    if (qname == QString::fromUtf8("上楼器") || qname == QString::fromUtf8("舞台升降卡"))
-        { fill = QColor(180, 170, 60); border = QColor(140, 130, 30);
-          label = QString::fromUtf8("上楼器"); textColor = Qt::black; return; }
-    if (qname == QString::fromUtf8("下楼器") || qname == QString::fromUtf8("撤场通行卡"))
-        { fill = QColor(160, 110, 180); border = QColor(120, 80, 140);
-          label = QString::fromUtf8("下楼器"); textColor = Qt::white; return; }
-    if (qname == QString::fromUtf8("临时护盾") || qname == QString::fromUtf8("乐队护盾贴"))
-        { fill = QColor(80, 160, 220); border = QColor(50, 120, 180);
-          label = QString::fromUtf8("护盾"); textColor = Qt::white; return; }
-    if (qname == QString::fromUtf8("企鹅玩偶") || qname == QString::fromUtf8("立希企鹅挂件"))
-        { fill = QColor(220, 130, 170); border = QColor(170, 80, 120);
-          label = QString::fromUtf8("企鹅"); textColor = Qt::white; return; }
-    if (qname == QString::fromUtf8("抹茶芭菲") || qname == QString::fromUtf8("乐奈抹茶芭菲"))
-        { fill = QColor(140, 200, 100); border = QColor(90, 150, 50);
-          label = QString::fromUtf8("芭菲"); textColor = Qt::white; return; }
-    if (qname == QString::fromUtf8("幸运金币") || qname == QString::fromUtf8("乐奈幸运硬币"))
-        { fill = QColor(240, 200, 20); border = QColor(200, 150, 10);
-          label = QString::fromUtf8("幸运币"); textColor = QColor(80, 40, 0); return; }
-
-    // fallback
-    fill = QColor(60, 170, 60); border = QColor(40, 130, 40);
-    label = QString::fromUtf8("宝"); textColor = QColor(255, 255, 100);
-}
-
-// 返回图块类型的文字标签
-static QString tileLabel(int tileType)
-{
-    switch (tileType) {
-    case Tile_StairsUp:   return QString::fromUtf8("↑"); // ↑
-    case Tile_StairsDown: return QString::fromUtf8("↓"); // ↓
-    case Tile_DoorRed:    return QString::fromUtf8("红门");
-    case Tile_DoorBlue:   return QString::fromUtf8("蓝门");
-    case Tile_DoorGreen:  return QString::fromUtf8("黄门");
-    case Tile_DoorMagic:  return QString::fromUtf8("魔法门");
-    case Tile_DoorIron:   return QString::fromUtf8("铁门");
-    case Tile_Lava:       return QString::fromUtf8("岩浆");
-    case Tile_StarRiver:  return QString::fromUtf8("星河");
-    case Tile_NPC:        return QString::fromUtf8("NPC");
-    case Tile_Shop:       return QString::fromUtf8("商店");
-    default:              return {};
-    }
 }
 
 // 在指定矩形上绘制文字（带半透明底条提升可读性）
@@ -1270,6 +756,7 @@ void MapWidget::paintEvent(QPaintEvent*)
     // 静态怪物、战斗提示和移动怪物全部位于玩家之上，且不施加透明度。
     painter.save();
     painter.setOpacity(1.0);
+    painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
     for (int y = 0; y < h; ++y) {
         for (int x = 0; x < w; ++x) {
             if (m_game->map()[y * w + x] != Tile_Monster) continue;
@@ -1287,7 +774,7 @@ void MapWidget::paintEvent(QPaintEvent*)
             }
             const QRect rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
             painter.drawPixmap(rect, *pix);
-            if (monster)
+            if (monster && m_game->player().HasMonsterBook())
                 drawMonsterCombatHint(painter, rect, m_game->player(), *monster);
         }
     }
@@ -1299,7 +786,8 @@ void MapWidget::paintEvent(QPaintEvent*)
         const qreal y = motion.from.y() + (motion.to.y() - motion.from.y()) * eased;
         const auto it = m_monsterPix.find(motion.name);
         const QPixmap* pix = it != m_monsterPix.end() ? &it->second : &m_defaultMonsterPix;
-        painter.drawPixmap(QPointF(x * TILE_SIZE, y * TILE_SIZE), *pix);
+        painter.drawPixmap(QRectF(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE), *pix,
+                           QRectF(0, 0, pix->width(), pix->height()));
     }
     painter.restore();
 }

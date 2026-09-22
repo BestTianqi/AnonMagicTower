@@ -2,6 +2,7 @@
 
 #include <QWidget>
 #include "Game/Game.h"
+#include "HeldMoveState.h"
 #include "ui_MainWindow.h"
 #include <QTimer>
 #include <QString>
@@ -19,6 +20,7 @@ public:
 
 protected:
     void keyPressEvent(QKeyEvent* event) override;
+    void keyReleaseEvent(QKeyEvent* event) override;
 
 private:
     struct VisualNovelPage {
@@ -31,7 +33,6 @@ private:
 
     void updateHUD();
     void updateMonsterPanel();
-    void showInventory(int focusIndex = -1);
     void activateItem(int index);
     void updateItemPanel();
     void showOpeningFloorStory(int fromFloor, int toFloor);
@@ -44,7 +45,8 @@ private:
     void showPendingApproachHazardCgs();
     void showPrisonTrapPrompt();
     void showFloor3PrisonVisualNovel();
-    void showVisualNovelDialogue(const std::vector<VisualNovelPage>& pages);
+    bool showVisualNovelDialogue(const std::vector<VisualNovelPage>& pages, bool mandatory = false);
+    bool runBossBattleAt(int x, int y, bool floor32FirstStrike = false);
     void showFirstFloorOpeningStory();
     bool showVisualNovelChoice(const QString& speaker, const QString& text,
                                const QString& portrait, const QString& yesText = QString::fromUtf8("确定"),
@@ -61,6 +63,7 @@ private:
     void undoLastAction();
     void quickSave();
     void quickLoad();
+    void restartGame();
     void gameOver();
     void gameWin();
     QString getItemDescription(const Item* item) const;
@@ -76,6 +79,7 @@ private:
     Game* m_game;
     QTimer m_battleFeedbackTimer;
     QTimer m_movementQueueTimer;
+    HeldMoveState m_heldMoveState;
     int m_pendingMoveDx = 0;
     int m_pendingMoveDy = 0;
     bool m_hasPendingMove = false;

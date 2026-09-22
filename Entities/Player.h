@@ -29,7 +29,7 @@ public:
     bool stairDownUsed = false;    // 下楼器已激活
     bool hasCross = false;          // 十字架：对吸血鬼/兽人攻击翻倍
     bool hasDragonSlayer = false;   // 屠龙匕：对魔龙攻击翻倍
-    bool hasHolyShield = false;     // 圣盾/神圣盾：免疫魔法攻击
+    bool hasHolyShield = false;     // 神圣盾：免疫巫师靠近伤害与魔法警卫夹击
     bool freezeMagicUsed = false;   // 冰冻魔法：下一次进入岩浆时冻结
     int flyWandUses = 0;            // 飞行魔杖使用次数
     int symmetryFlyerUses = 0;      // 对称飞行器剩余次数
@@ -44,6 +44,7 @@ public:
     void AddItem(std::unique_ptr<Item> item);
     const std::vector<std::unique_ptr<Item>>& Inventory() const;
     int  InventoryCount() const;
+    bool HasMonsterBook() const;
 
     // 使用道具：按索引使用背包中的道具，成功返回 true
     bool UseItem(int index);

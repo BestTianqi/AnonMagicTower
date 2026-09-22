@@ -1,0 +1,58 @@
+{
+  "candidate_set": "official_redesign_20260922_mygo_umiri",
+  "status": "candidate_only_not_applied",
+  "generated_at": "2026-09-22",
+  "purpose": "MyGO!!!!! full-team and Yahata Umiri casual/stage comparison set",
+  "official_sources": {
+    "mygo_character_page": "https://anime.bang-dream.com/mygo/character/",
+    "mygo_artist_page": "https://bang-dream.com/artist/mygo/",
+    "umiri_character_page": "https://anime.bang-dream.com/avemujica/character/umiri/"
+  },
+  "reference_policy": "Official character images define face, hair, eye color, and everyday clothing. Existing project stage boards are secondary costume references for MyGO!!!!! stage variants. The official Ave Mujica Umiri images define both Umiri variants.",
+  "characters": [
+    {
+      "id": "mygo_anon",
+      "name": "千早爱音",
+      "casual": "school uniform: pale gray blazer, green striped tie, green plaid skirt",
+      "stage": "MyGO!!!!! coordinated blue-gray stage costume"
+    },
+    {
+      "id": "mygo_tomori",
+      "name": "高松灯",
+      "casual": "school uniform, explicitly allowed by user",
+      "stage": "MyGO!!!!! coordinated blue-gray stage costume"
+    },
+    {
+      "id": "mygo_rana",
+      "name": "要乐奈",
+      "casual": "distressed black top over white sleeves, white shorts, combat boots",
+      "stage": "MyGO!!!!! coordinated blue-gray stage costume"
+    },
+    {
+      "id": "mygo_soyo",
+      "name": "长崎素世",
+      "casual": "navy sailor school uniform with pale bow",
+      "stage": "MyGO!!!!! coordinated blue-gray stage costume"
+    },
+    {
+      "id": "mygo_taki",
+      "name": "椎名立希",
+      "casual": "beige-brown sailor school uniform with red bow",
+      "stage": "MyGO!!!!! coordinated blue-gray stage costume"
+    },
+    {
+      "id": "mujica_umiri",
+      "name": "八幡海铃",
+      "casual": "black leather jacket, wine-red crop top, gray skirt, platform boots",
+      "stage": "Timoris black-gold-cream costume with dark red shoulder cape"
+    }
+  ],
+  "outputs": {
+    "boards": "boards/*_board.png",
+    "transparent_boards": "transparent_boards/*_board.png",
+    "portraits": "portraits/*_portrait.png",
+    "models_60": "models_60/*_model_60.png",
+    "portrait_comparison": "comparison_portraits.png",
+    "model_comparison": "comparison_models_60.png"
+  }
+}
