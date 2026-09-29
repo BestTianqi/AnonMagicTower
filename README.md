@@ -15,6 +15,7 @@
 - 10 个普通存档槽、即时存档、即时读档和多步撤销。
 - 爱音手机楼层传送、上楼器、下楼器、对称飞行器等经典特殊道具。
 - 游戏内修改器与管理员坐标传送，便于调试楼层事件。
+- 主菜单内置 3×3 至 8×8 数字华容道，支持鼠标和方向键操作。
 
 旧地图编辑器已经移除。经典塔数据统一由 `data/classic50_map.txt` 提供。
 
@@ -48,15 +49,18 @@ cmake --build build --parallel 4
 
 ## 测试
 
-项目包含经典机制、移动表现和战斗反馈三组测试：
+项目包含经典机制、移动表现、战斗反馈、主窗口输入、剧情脚本和华容道六组测试：
 
 ```powershell
 .\build\mota_classic_tests.exe
 .\build\mota_motion_tests.exe
 .\build\mota_battle_feedback_tests.exe
+.\build\mota_mainwindow_input_tests.exe
+.\build\mota_story_script_tests.exe
+.\build\mota_puzzle_tests.exe
 ```
 
-三项程序均以退出码 0 表示通过。
+六项程序均以退出码 0 表示通过。
 
 ## 操作
 
@@ -115,7 +119,7 @@ mota/
 │   ├── ui_MainWindow.h
 │   └── ui_MenuWindow.h
 ├── images/                     # 角色、怪物、道具、图块、背景和 CG
-├── tests/                      # 三组回归测试
+├── tests/                      # 六组回归测试
 ├── tools/                      # 素材验证及规范化脚本
 └── docs/                       # 数值映射、素材规范和设计记录
 ```

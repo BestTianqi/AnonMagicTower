@@ -3,6 +3,7 @@
 #include <QWidget>
 #include <QMouseEvent>
 #include <QPixmap>
+#include <QColor>
 #include <QTimer>
 #include <QElapsedTimer>
 #include <array>
@@ -12,6 +13,13 @@
 #include "PlayerMotion.h"
 
 constexpr int TILE_SIZE = 60;
+
+struct ItemGainBadge {
+    QString text;
+    QColor color;
+};
+
+ItemGainBadge itemGainBadge(const Item& item);
 
 class MapWidget : public QWidget {
     Q_OBJECT

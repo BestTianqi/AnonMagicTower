@@ -7,12 +7,34 @@
 #include <array>
 #include <algorithm>
 #include <fstream>
+#include <iomanip>
 #include <queue>
 #include <sstream>
 #include <unordered_map>
 #include <unordered_set>
 
 namespace {
+
+constexpr std::array<std::pair<int, int>, 19> kFloor35SealedPassages{{
+    {7, 4}, {5, 10}, {4, 10}, {4, 11}, {4, 12}, {3, 12},
+    {2, 12}, {2, 11}, {2, 10}, {2, 9}, {2, 8}, {2, 7},
+    {2, 6}, {2, 5}, {2, 4}, {2, 3}, {3, 3}, {4, 3}, {5, 3}
+}};
+
+bool isFloor35SealedPassage(int x, int y)
+{
+    return std::find(kFloor35SealedPassages.begin(), kFloor35SealedPassages.end(),
+                     std::pair<int, int>{x, y}) != kFloor35SealedPassages.end();
+}
+
+void sealFloor35Passages(FloorData& floor)
+{
+    for (const auto& point : kFloor35SealedPassages) {
+        const int key = point.second * MAP_SIZE + point.first;
+        if (floor.map[key] == Tile_DarkWall || point == std::pair<int, int>{7, 4})
+            floor.map[key] = Tile_Wall;
+    }
+}
 
 constexpr std::array<std::pair<int, int>, 20> kFloor36HiddenPassages{{
     {5, 3}, {9, 3}, {5, 4}, {9, 4},
@@ -198,6 +220,7 @@ void Game::generateClassicTower()
     m_floor38FlowerTriggered = false;
     m_floor43MiyakoRetreated = false;
     m_storyOnceKeys.clear();
+    m_notebookEntries.clear();
     m_floor10AmbushTriggered = false;
     m_floor10AmbushMonsterKeys.clear();
     m_floor10AmbushDoorKeys.clear();
@@ -266,7 +289,7 @@ void Game::generateClassicTower()
         const int octopusKey = posKey(7, 6);
         floor15.monsters[octopusKey] = MonsterDB::getByIndex(14);
         floor15.map[octopusKey] = Tile_Monster;
-        m_floors[35].map[posKey(7, 4)] = Tile_DarkWall;
+        sealFloor35Passages(m_floors[35]);
         auto& floor35 = m_floors[35];
         // 35层薇欧拉SP·魔龙固定站在(7,5)；清理旧版资源可能遗留的(7,7)事件格。
         const int dragonKey = posKey(7, 5);
@@ -445,21 +468,23 @@ void Game::generateClassicTower()
                     fd.map[posKey(3, 8)] = Tile_DarkWall;
                 }
                 const char* name = (id == 22) ? "公主" : ((id == 12 || id == 13 || id == 14 || id == 25 || id == 30 || id == 31 || id == 46) ? "小偷" : "老头");
-                std::vector<std::string> dialog{"这是第 " + std::to_string(level) + " 层。继续探索吧。"};
+                std::vector<std::string> dialog{"浅色暗墙可能藏着道路或道具，遇到死路时记得仔细检查。"};
                 switch (id) {
                 case 2: dialog = {"欢迎来到魔塔，先收集钥匙和装备吧。"}; break;
                 case 3: dialog = {"这本怪物手册交给你。", "它能查看本层怪物的能力。"}; break;
-                case 4: dialog = {"购买物品后再与商人对话，他会告诉你重要信息。"}; break;
+                case 4: dialog = {"固定兑换商人每处只交易一次；完成交易后还会告诉你一条塔内线索。"}; break;
                 case 5: dialog = {"魔塔里隐藏着许多秘密通道。"}; break;
                 case 12: case 13: dialog = {"喂！别挡路，我要先走一步。"}; break;
                 case 14: case 25: case 31: dialog = {"我挖了一条暗道，已经替你打开了。"}; break;
                 case 17: dialog = {"听说塔内有两把隐藏的红钥匙。"}; break;
+                case 18: dialog = {"立希水壶（圣水）使用时会根据当前攻防属性补充生命。"}; break;
                 case 19: dialog = {"注意那些颜色与众不同的墙。"}; break;
                 case 20: dialog = {"大法师在25层，他是魔塔的主人。"}; break;
                 case 21: dialog = {"25层以后会遇到更强的敌人，准备好再前进。"}; break;
                 case 23: dialog = {"27层的道路被封锁了，寻找隐藏的道路吧。"}; break;
                 case 26: dialog = {"魔塔有50层，但你不能直接到达顶层。"}; break;
                 case 29: dialog = {"有些墙壁只是伪装，靠近它们试试看。"}; break;
+                case 32: dialog = {"取得宝物后留意楼层机关，奖励不会自动打开所有花门。"}; break;
                 case 30: dialog = {"救救我！这里的牢门似乎能被打开。"}; break;
                 case 34: dialog = {"前方的道路需要更高级的装备。"}; break;
                 case 35: dialog = {"秘宝被藏在更高的楼层。"}; break;
@@ -522,8 +547,8 @@ void Game::generateClassicTower()
     // 15层米歇尔左侧的原版暗墙。静态资源把这里标成普通墙，
     // 导致对话后的“打开左边墙”逻辑找不到目标格。
     m_floors[15].map[posKey(9, 2)] = Tile_DarkWall;
-    // 35层米歇尔剧情对应的是暗墙，不是花门；完成对话后才变为地板。
-    m_floors[35].map[posKey(7, 4)] = Tile_DarkWall;
+    // 35层暗道在米歇尔对话前保持实墙，对话后才显露为可撞开的暗墙。
+    sealFloor35Passages(m_floors[35]);
     // 35层魔龙附近的地面奖励在魔龙被击败前不可见；保留名称和值，击败后恢复原位。
     m_floor35HiddenItems.clear();
     for (auto it = m_floors[35].items.begin(); it != m_floors[35].items.end();) {
@@ -696,6 +721,35 @@ NPC* Game::npcAt(int x, int y)
     return &it->second;
 }
 
+bool Game::recordNotebookClue(const std::string& key, int floor,
+                              const std::string& source, const std::string& text)
+{
+    if (key.empty() || text.empty()) return false;
+    const auto existing = std::find_if(m_notebookEntries.begin(), m_notebookEntries.end(),
+        [&key](const NotebookEntry& entry) { return entry.key == key; });
+    if (existing != m_notebookEntries.end()) return false;
+    m_notebookEntries.push_back({key, floor, source, text});
+    return true;
+}
+
+bool Game::dismissNpcAt(int x, int y)
+{
+    const int key = posKey(x, y);
+    if (m_currentFloor->npcs.erase(key) == 0) return false;
+    if (tileAt(x, y) == Tile_NPC)
+        setTile(x, y, m_currentFloor->items.count(key) ? Tile_Item : Tile_Floor);
+    return true;
+}
+
+bool Game::dismissShopAt(int x, int y)
+{
+    const int key = posKey(x, y);
+    if (m_currentFloor->shops.erase(key) == 0) return false;
+    if (tileAt(x, y) == Tile_Shop)
+        setTile(x, y, m_currentFloor->items.count(key) ? Tile_Item : Tile_Floor);
+    return true;
+}
+
 const ShopData* Game::shopAt(int x, int y) const
 {
     int key = posKey(x, y);
@@ -729,7 +783,8 @@ std::vector<std::pair<int, int>> Game::findTeleportPath(int targetX, int targetY
         (targetTile == Tile_DoorMagic || targetTile == Tile_DoorIron) &&
         ((m_floor == 48 && m_player.wallBreakerUsed) ||
          (m_currentFloor && mechanismDoorReadyAt(m_floor, *m_currentFloor, targetX, targetY)));
-    if (!walkable(targetTile) && !targetInteractable && !targetDoorWithKey && !targetMechanismDoor)
+    if (!walkable(targetTile) && !targetInteractable && !targetDoorWithKey &&
+        !targetMechanismDoor && targetTile != Tile_DarkWall)
         return noPath;
     const int currentTile = tileAt(m_player.x, m_player.y);
     const bool currentInteractable =
@@ -898,7 +953,56 @@ std::pair<int, bool> Game::approachHazardsAt(int x, int y) const
     return {mageDamage, guardFlank};
 }
 
-int Game::applyApproachHazardsAt(int x, int y)
+bool Game::isFloor47RetreatWizardAt(int x, int y) const
+{
+    if (m_floor != 47 || !m_currentFloor) return false;
+    // 经典地图中的编号27才是高级巫师：左下(2,10)沿列后退，右上(9,3)
+    // 沿列后退；中间(6,5)是普通高级巫师，不能参与阻击。
+    const bool inRetreatLane = (x == 2 && y >= 10 && y <= 12) ||
+                               (x == 9 && y >= 2 && y <= 3);
+    if (!inRetreatLane) return false;
+    const auto it = m_currentFloor->monsters.find(posKey(x, y));
+    return it != m_currentFloor->monsters.end() &&
+           MonsterDB::hasIndex(it->second.GetName(), 26);
+}
+
+bool Game::canRetreatFloor47WizardAt(int wizardX, int wizardY,
+                                     int playerX, int playerY) const
+{
+    if (m_player.hasHolyShield || !isFloor47RetreatWizardAt(wizardX, wizardY))
+        return false;
+    const int dx = wizardX - playerX;
+    const int dy = wizardY - playerY;
+    if (std::abs(dx) + std::abs(dy) != 1) return false;
+    const int toX = wizardX + dx;
+    const int toY = wizardY + dy;
+    const int toKey = posKey(toX, toY);
+    return tileAt(toX, toY) == Tile_Floor &&
+           !m_currentFloor->monsters.count(toKey) &&
+           !m_currentFloor->items.count(toKey) &&
+           !m_currentFloor->npcs.count(toKey) &&
+           !m_currentFloor->shops.count(toKey);
+}
+
+bool Game::retreatFloor47WizardAt(int wizardX, int wizardY,
+                                  int playerX, int playerY)
+{
+    if (!canRetreatFloor47WizardAt(wizardX, wizardY, playerX, playerY))
+        return false;
+    const int toX = wizardX + (wizardX - playerX);
+    const int toY = wizardY + (wizardY - playerY);
+    const int fromKey = posKey(wizardX, wizardY);
+    const Monster wizard = m_currentFloor->monsters.at(fromKey);
+    m_currentFloor->monsters.erase(fromKey);
+    m_currentFloor->monsters.emplace(posKey(toX, toY), wizard);
+    setTile(wizardX, wizardY,
+            m_currentFloor->items.count(fromKey) ? Tile_Item : Tile_Floor);
+    setTile(toX, toY, Tile_Monster);
+    m_scriptedMonsterMovements.push_back({wizard, wizardX, wizardY, toX, toY});
+    return true;
+}
+
+int Game::applyApproachHazardsAt(int x, int y, bool allowWizardRetreat)
 {
     if (!m_currentFloor) return 0;
     // 33层(9,11)是伪装地板：玩家走到相邻格时才显现为墙。
@@ -916,6 +1020,11 @@ int Game::applyApproachHazardsAt(int x, int y)
     if (guardFlank) {
         ++m_pendingMagicGuardFlankEvents;
         m_player.hp /= 2;
+    }
+    if (allowWizardRetreat && m_player.hp > 0 && m_floor == 47) {
+        static constexpr int directions[][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+        for (const auto& direction : directions)
+            retreatFloor47WizardAt(x + direction[0], y + direction[1], x, y);
     }
     const int lost = (beforeDamage - m_player.hp);
     return lost;
@@ -995,7 +1104,18 @@ bool Game::beginTeleportPlayerTo(int targetX, int targetY)
         const bool stopsAtStoryPoint =
             (m_floor == 3 && !m_floor3PrisonTriggered && pathX == 6 && pathY == 9) ||
             (m_floor == 10 && !m_floor10AmbushTriggered && pathX == 7 && pathY == 6);
-        if (stopsAtStoryPoint) {
+        bool stopsAtRetreat = false;
+        if (m_floor == 47) {
+            static constexpr int directions[][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+            for (const auto& direction : directions) {
+                if (canRetreatFloor47WizardAt(pathX + direction[0],
+                                               pathY + direction[1], pathX, pathY)) {
+                    stopsAtRetreat = true;
+                    break;
+                }
+            }
+        }
+        if (stopsAtStoryPoint || stopsAtRetreat) {
             m_pendingTeleportPath.resize(i + 1);
             m_lastTeleportPath = m_pendingTeleportPath;
             m_pendingTeleportTargetX = pathX;
@@ -1052,6 +1172,8 @@ Game::MoveResult Game::completeTeleportPlayerTo()
     bool finalHazardApplied = false;
     for (size_t i = 1; i < m_lastTeleportPath.size(); ++i) {
         const auto [pathX, pathY] = m_lastTeleportPath[i];
+        if (i + 1 == m_lastTeleportPath.size() && tile == Tile_DarkWall)
+            break; // 暗墙由相邻格触发，不要先把玩家放进墙内。
         const bool finalMonster = i + 1 == m_lastTeleportPath.size() && tile == Tile_Monster;
         if (finalMonster) {
             // 43层藤都子SP的首次点击是剧情退场，不应直接进入战斗。
@@ -1094,6 +1216,24 @@ Game::MoveResult Game::completeTeleportPlayerTo()
     }
     if (m_lastTeleportPath.size() > 1 && isTeleportStoryPoint(targetX, targetY))
         m_lastTeleportNeedsAnimation = true;
+    // 点击怪物时，若剩余生命不足以获胜，停在怪物前一格。
+    if (tile == Tile_Monster && hasMonsterAt(targetX, targetY) &&
+        !canDefeatMonsterAt(targetX, targetY))
+        if (!canRetreatFloor47WizardAt(targetX, targetY, m_player.x, m_player.y))
+            return Move_Encounter;
+    if (tile == Tile_Monster &&
+        canRetreatFloor47WizardAt(targetX, targetY, m_player.x, m_player.y))
+        return tryMovePlayer(targetX, targetY);
+    if (tile == Tile_DarkWall) {
+        const auto result = tryMovePlayer(targetX, targetY);
+        if (result != Move_Block) return result;
+        // 普通暗墙第一次碰撞只显露通道；鼠标点击则接着进入，
+        // 与直接点击门的手感一致。未解锁的机关暗墙仍保持阻挡。
+        const int revealedTile = tileAt(targetX, targetY);
+        if (revealedTile == Tile_Floor || revealedTile == Tile_Item)
+            return tryMovePlayer(targetX, targetY);
+        return Move_Block;
+    }
     m_player.x = targetX;
     m_player.y = targetY;
     if (m_floor == 38 && targetX == 3 && targetY == 7 && !m_floor38FlowerTriggered) {
@@ -1195,6 +1335,8 @@ bool Game::breakWall(int x, int y)
 {
     if (x < 0 || y < 0 || x >= m_width || y >= m_height) return false;
     int idx = y * m_width + x;
+    if (m_floor == 35 && m_currentFloor->map[idx] == Tile_Wall &&
+        isFloor35SealedPassage(x, y)) return false;
     if (m_currentFloor->map[idx] == Tile_Wall || m_currentFloor->map[idx] == Tile_DarkWall) {
         m_currentFloor->map[idx] = m_currentFloor->items.count(idx) ? Tile_Item : Tile_Floor;
         return true;
@@ -1619,10 +1761,12 @@ void Game::completeFloor35MichelleStory()
             ++it;
         }
     }
-    // 米歇尔打开的是本层全部暗墙；花门和铁门仍保留各自的机关条件。
-    for (int& tile : floor35.map)
-        if (tile == Tile_DarkWall)
-            tile = Tile_Floor;
+    // 米歇尔揭示封住的暗道，玩家随后还需按暗墙规则撞开。
+    for (const auto& point : kFloor35SealedPassages) {
+        const int key = posKey(point.first, point.second);
+        if (floor35.map[key] == Tile_Wall)
+            floor35.map[key] = Tile_DarkWall;
+    }
 
     // 35层暗道打开后，米歇尔不回二楼，而是前往终幕的50层。
     // 清理二楼牢笼中的旧NPC，避免玩家误以为她仍在那里等待对话。
@@ -1652,8 +1796,27 @@ void Game::completeFloor35MichelleStory()
     m_michelleRescued = true;
 }
 
+void Game::prepareFloor50MichelleReveal()
+{
+    if (storyShown("floor50_michelle_revealed") || storyShown("anon_soyo_scene_28"))
+        return;
+    if (m_floors.find(50) == m_floors.end()) initFloor(50);
+    FloorData& floor50 = m_floors[50];
+    const int revealKey = posKey(7, 5);
+    if (floor50.npcs.find(revealKey) == floor50.npcs.end()) {
+        floor50.npcs.emplace(revealKey, NPC("米歇尔",
+            {"终于到达终幕了……是时候让你看见我的真面目。"}, nullptr,
+            false, 0, nullptr, 47));
+        floor50.map[revealKey] = Tile_NPC;
+    }
+    const int bossKey = posKey(7, 6);
+    floor50.monsters.erase(bossKey);
+    floor50.map[bossKey] = floor50.items.count(bossKey) ? Tile_Item : Tile_Floor;
+}
+
 void Game::revealFloor50MichelleIdentity()
 {
+    markStoryShown("floor50_michelle_revealed");
     if (m_floors.find(50) == m_floors.end()) initFloor(50);
     FloorData& floor50 = m_floors[50];
     const int revealKey = posKey(7, 5);
@@ -1829,7 +1992,6 @@ std::vector<Game::MonsterMovementAnimation> Game::takeFloor10AmbushMovementAnima
 {
     auto movements = std::move(m_floor10AmbushMovements);
     m_floor10AmbushMovements.clear();
-    m_scriptedMonsterMovements.clear();
     return movements;
 }
 
@@ -1886,7 +2048,8 @@ int Game::useEarthquakeScroll()
     for (int y = 2; y <= m_height - 3; ++y) {
         for (int x = 2; x <= m_width - 3; ++x) {
             const int tile = tileAt(x, y);
-            if (tile == Tile_Wall || tile == Tile_DarkWall) {
+            if ((tile == Tile_Wall || tile == Tile_DarkWall) &&
+                !(m_floor == 35 && tile == Tile_Wall && isFloor35SealedPassage(x, y))) {
                 setTile(x, y, m_currentFloor->items.count(posKey(x, y)) ? Tile_Item : Tile_Floor);
                 ++cleared;
             }
@@ -2078,10 +2241,6 @@ Game::MoveResult Game::tryMovePlayer(int nx, int ny)
         return finishMove(Move_Ok);
 
     case Tile_DarkWall:
-        if (m_floor == 35 && nx == 7 && ny == 4) {
-            // 魔龙房暗墙由35层米歇尔剧情开启，不能提前撞墙或用破墙锤绕过。
-            return Move_Block;
-        }
         // 41层左上高级巫师被击败后，撞击右上对称暗墙(11,3)会显现隐藏的
         // 第二名高级巫师；在此之前暗墙不可被普通撞击或破墙道具绕过。
         if (m_floor == 41 && nx == 11 && ny == 3) {
@@ -2152,6 +2311,14 @@ Game::MoveResult Game::tryMovePlayer(int nx, int ny)
         return finishMove(Move_Ok);
 
     case Tile_Monster:
+        if (retreatFloor47WizardAt(nx, ny, m_player.x, m_player.y)) {
+            m_player.x = nx;
+            m_player.y = ny;
+            triggerFloor10AmbushIfNeeded();
+            // 这一格已经推动巫师一次，领域伤害仍结算，但不能在同一步再推一次。
+            applyApproachHazardsAt(nx, ny, false);
+            return m_player.hp <= 0 ? Move_PlayerDead : Move_Ok;
+        }
         if (m_floor == 43 && nx == 10 && ny == 2 && !m_floor43MiyakoRetreated) {
             // 藤都子SP第一次交互是退场事件，不进入战斗；战斗位置改到右侧，
             // 中间格同时被剧情墙封住，后续再次交互才会正常战斗。
@@ -2244,6 +2411,42 @@ Game::BossEncounterState Game::bossEncounterStateAt(int x, int y)
     return BossEncounterState::Ready;
 }
 
+bool Game::canDefeatMonsterAt(int x, int y, int openingDamage) const
+{
+    const Monster* monster = nullptr;
+    if (m_currentFloor) {
+        const auto it = m_currentFloor->monsters.find(posKey(x, y));
+        if (it != m_currentFloor->monsters.end()) monster = &it->second;
+    }
+    Monster pendingKnight;
+    if (!monster && m_floor == 32 && x == 7 && y == 10 && m_floor32KnightStoryPending) {
+        pendingKnight = MonsterDB::getByIndex(24);
+        monster = &pendingKnight;
+    }
+    if (!monster) return true;
+
+    const std::string& name = monster->GetName();
+    long long attackPower = m_player.atk;
+    if (m_player.hasCross && MonsterDB::isVampireOrOrc(name)) attackPower *= 2;
+    if (m_player.hasDragonSlayer && MonsterDB::isDragon(name)) attackPower *= 2;
+    const long long damageToMonster = std::max(0LL, attackPower - monster->GetDEF());
+    if (damageToMonster == 0) return false;
+
+    long long damageToPlayer = std::max(0LL, static_cast<long long>(monster->Attack()) -
+        m_player.def - (m_player.tempShieldCharges > 0 ? 50 : 0));
+    if (m_player.hasPenguinDoll &&
+        (MonsterDB::isTomori(name) || name.find("企鹅") != std::string::npos))
+        damageToPlayer /= 2;
+    if (m_player.hasMatchaParfait &&
+        (MonsterDB::isRana(name) || name.find("小猫") != std::string::npos))
+        damageToPlayer /= 2;
+    const long long rounds = (static_cast<long long>(monster->GetHP()) + damageToMonster - 1) /
+                             damageToMonster;
+    const long long totalDamage = std::max(0LL, rounds - 1) * damageToPlayer +
+                                  std::max(0, openingDamage);
+    return totalDamage < m_player.hp;
+}
+
 Game::FightResult Game::fightAt(int x, int y, std::vector<std::string>& outLog)
 {
     Monster* m = monsterAt(x, y);
@@ -2261,6 +2464,10 @@ Game::FightResult Game::fightAt(int x, int y, std::vector<std::string>& outLog)
     }
     if (m_floor == 10 && monsterIndex == 7 && !m_floor10AmbushTriggered) {
         outLog.push_back("八幡海铃挡在花门前，先触发包围事件才能挑战她。");
+        return Fight_Stalemate;
+    }
+    if (!canDefeatMonsterAt(x, y)) {
+        outLog.push_back("你无法击败对方（打不过）。请先提升属性或恢复生命。");
         return Fight_Stalemate;
     }
     bool hasShield = (m_player.tempShieldCharges > 0);
@@ -2427,7 +2634,7 @@ Game::FightResult Game::fightAt(int x, int y, std::vector<std::string>& outLog)
                     bossRewards.emplace_back(std::make_unique<Key>(KeyType::Green));
                     bossRewards.emplace_back(std::make_unique<LargePotion>(tier.largePotionHp));
                 }
-                rewardSummary = "MyGO应援红章×3、Mujica应援蓝章×3、黄色Live票×3、爱音能量饮×3";
+                rewardSummary = "红宝石×3、蓝宝石×3、黄色Live票×3、爱音能量饮×3";
             };
             if (m_floor == 10 && monsterIndex == 7) {
                 const auto tier = classicItemTierForFloor(m_floor);
@@ -2473,7 +2680,7 @@ Game::FightResult Game::fightAt(int x, int y, std::vector<std::string>& outLog)
                 }
                 bossRewards.emplace_back(std::make_unique<Key>(KeyType::Red));
                 bossRewards.emplace_back(std::make_unique<DragonSlayer>());
-                rewardSummary = "MyGO应援红章×3、Mujica应援蓝章×3、爱音能量饮×3、红色Live票×1、祥子指挥棒×1";
+                rewardSummary = "红宝石×3、蓝宝石×3、爱音能量饮×3、红色Live票×1、祥子指挥棒×1";
             }
             if (!bossRewards.empty()) {
                 const std::array<std::pair<int, int>, 9> offsets = {{
@@ -2682,6 +2889,11 @@ bool Game::saveToFile(const std::string& path) const
     for (const auto& key : m_storyOnceKeys) ofs << " " << key;
     ofs << "\n";
 
+    ofs << "NOTES " << m_notebookEntries.size() << "\n";
+    for (const auto& entry : m_notebookEntries)
+        ofs << std::quoted(entry.key) << " " << entry.floor << " "
+            << std::quoted(entry.source) << " " << std::quoted(entry.text) << "\n";
+
     // 背包物品
     ofs << m_player.InventoryCount() << "\n";
     for (int i = 0; i < m_player.InventoryCount(); ++i) {
@@ -2702,8 +2914,8 @@ std::string Game::canonicalItemName(const std::string& iname)
     if (iname == "Potion" || iname == "生命药" || iname == "药水" || iname == "现场补给") return "现场补给";
     if (iname == "Small Potion" || iname == "小血瓶" || iname == "灯的热牛奶") return "灯的热牛奶";
     if (iname == "Large Potion" || iname == "大血瓶" || iname == "爱音能量饮") return "爱音能量饮";
-    if (iname == "Ruby Gem" || iname == "红宝石" || iname == "MyGO应援红章") return "MyGO应援红章";
-    if (iname == "Sapphire Gem" || iname == "蓝宝石" || iname == "Mujica应援蓝章") return "Mujica应援蓝章";
+    if (iname == "Ruby Gem" || iname == "红宝石" || iname == "MyGO应援红章") return "红宝石";
+    if (iname == "Sapphire Gem" || iname == "蓝宝石" || iname == "Mujica应援蓝章") return "蓝宝石";
     if (iname == "Weapon" || iname == QString::fromUtf8("武器").toStdString()) return "Weapon";
     if (iname == "Armor" || iname == QString::fromUtf8("防具").toStdString()) return "Armor";
     if (iname == "Treasure" || iname == QString::fromUtf8("金币").toStdString()) return "Treasure";
@@ -2773,9 +2985,9 @@ std::unique_ptr<Item> Game::createItemByName(const std::string& iname, int ival)
     if (iname == "Large Potion" || iname == "大血瓶" || iname == "爱音能量饮")
         return std::make_unique<LargePotion>(ival, "爱音能量饮");
     if (iname == "Ruby Gem" || iname == "红宝石" || iname == "MyGO应援红章")
-        return std::make_unique<RubyGem>(ival, "MyGO应援红章");
+        return std::make_unique<RubyGem>(ival, "红宝石");
     if (iname == "Sapphire Gem" || iname == "蓝宝石" || iname == "Mujica应援蓝章")
-        return std::make_unique<SapphireGem>(ival, "Mujica应援蓝章");
+        return std::make_unique<SapphireGem>(ival, "蓝宝石");
     if (iname == "Weapon" || iname == QString::fromUtf8("武器").toStdString())
         return std::make_unique<Weapon>(ival);
     if (iname == "Armor" || iname == QString::fromUtf8("防具").toStdString())
@@ -3105,6 +3317,19 @@ bool Game::loadFromFile(const std::string& path)
             std::string key;
             ifs >> key;
             if (!key.empty()) m_storyOnceKeys.insert(key);
+        }
+        ifs >> invToken;
+    }
+    m_notebookEntries.clear();
+    if (invToken == "NOTES") {
+        size_t noteCount = 0;
+        ifs >> noteCount;
+        for (size_t i = 0; i < noteCount; ++i) {
+            NotebookEntry entry;
+            ifs >> std::quoted(entry.key) >> entry.floor
+                >> std::quoted(entry.source) >> std::quoted(entry.text);
+            if (!entry.key.empty() && !entry.text.empty())
+                m_notebookEntries.push_back(std::move(entry));
         }
         ifs >> invToken;
     }

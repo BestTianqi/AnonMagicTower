@@ -55,6 +55,13 @@ struct FloorData {
     std::unordered_map<int, ShopData> shops;
 };
 
+struct NotebookEntry {
+    std::string key;
+    int floor = 0;
+    std::string source;
+    std::string text;
+};
+
 class Game {
 public:
     struct MonsterMovementAnimation {
@@ -92,6 +99,11 @@ public:
     // 全局一次性剧情标记，随存档保存，避免换楼层或读档后重复播放。
     bool storyShown(const std::string& key) const { return m_storyOnceKeys.count(key) != 0; }
     void markStoryShown(const std::string& key) { m_storyOnceKeys.insert(key); }
+    const std::vector<NotebookEntry>& notebookEntries() const { return m_notebookEntries; }
+    bool recordNotebookClue(const std::string& key, int floor,
+                            const std::string& source, const std::string& text);
+    bool dismissNpcAt(int x, int y);
+    bool dismissShopAt(int x, int y);
     // 38层机关剧情与43层藤都子SP退场事件。
     bool floor38FlowerTriggered() const { return m_floor38FlowerTriggered; }
     bool floor43MiyakoRetreated() const { return m_floor43MiyakoRetreated; }
@@ -102,6 +114,8 @@ public:
     void sendMichelleToFloor29();
     void activateFloor35Michelle();
     void completeFloor35MichelleStory();
+    // 所有通往50层的路线都先安排米歇尔揭面，不能直接碰到最终Boss。
+    void prepareFloor50MichelleReveal();
     // 50层最终对话揭开米歇尔的伪装，显现长崎素世本体。
     void revealFloor50MichelleIdentity();
     void resolveFloor3PrisonStory();
@@ -141,6 +155,8 @@ public:
     void resolveFloor42KnightStory();
 
     enum FightResult { Fight_PlayerWin, Fight_PlayerDead, Fight_GameWin, Fight_Stalemate };
+    // 包括十字架、屠龙匕首、临时护盾与专属减伤；openingDamage 用于先攻剧情。
+    bool canDefeatMonsterAt(int x, int y, int openingDamage = 0) const;
     enum class BossEncounterState { NotBoss, Blocked, Ready };
     BossEncounterState bossEncounterStateAt(int x, int y);
     FightResult fightAt(int x, int y, std::vector<std::string>& outLog);
@@ -209,7 +225,12 @@ private:
     std::pair<int, bool> approachHazardsAt(int x, int y) const;
     void placePlayerAfterFloorChange(int srcX, int srcY, bool findStairs, int arrivalStair);
     // 经典魔塔的魔法领域/夹击伤害，在玩家每经过一个格子时结算。
-    int applyApproachHazardsAt(int x, int y);
+    int applyApproachHazardsAt(int x, int y, bool allowWizardRetreat = true);
+    bool isFloor47RetreatWizardAt(int x, int y) const;
+    bool canRetreatFloor47WizardAt(int wizardX, int wizardY,
+                                   int playerX, int playerY) const;
+    bool retreatFloor47WizardAt(int wizardX, int wizardY,
+                                int playerX, int playerY);
     // 10 层中央 Boss 区的骷髅士兵包围事件。
     void triggerFloor3PrisonStoryIfNeeded();
     void prepareFloor3PrisonCell();
@@ -245,6 +266,7 @@ private:
     bool m_floor38FlowerTriggered = false;
     bool m_floor43MiyakoRetreated = false;
     std::unordered_set<std::string> m_storyOnceKeys;
+    std::vector<NotebookEntry> m_notebookEntries;
     bool m_floor3PrisonTriggered = false;
     bool m_floor3PrisonStoryPending = false;
     bool m_floor3TrapActive = false;

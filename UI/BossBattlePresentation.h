@@ -24,7 +24,7 @@ inline const BossBattleDescriptor* bossBattleDescriptor(BossEncounterId id)
         {BossEncounterId::Floor32Knight, "floor32_knight_dialogue", ":/images/runtime/cg/floor32_child_soyo_charge.png", "幼年长崎素世", "终于追上你了。骑士队长将先攻！", ":/images/characters/portraits/variants/soyo_child_angry.png", "#b58cff"},
         {BossEncounterId::Floor35Viola, "boss_prebattle_f35_viola_dragon", ":/images/runtime/cg/boss35_viola_dragon_prebattle.png", "薇欧拉SP", "暗道与宝物都在我身后。先战胜魔龙的怒火吧。", ":/images/characters/portraits/viola_stage.png", "#cf9dff"},
         {BossEncounterId::Floor40Knight, "boss_prebattle_f40_knight", ":/images/runtime/cg/boss40_knight_prebattle.png", "幼年长崎素世", "这一次不会再让你过去。", ":/images/characters/portraits/variants/soyo_child_angry.png", "#b58cff"},
-        {BossEncounterId::Floor49Phantom, "boss_prebattle_f49_phantom", ":/images/runtime/cg/boss49_soyo_phantom_prebattle.png", "长崎素世SP", "封印已经松动，但你仍无法看穿真正的我。", ":/images/characters/portraits/variants/soyo_witch_battle.png", "#be83ff"},
+        {BossEncounterId::Floor49Phantom, "boss_prebattle_f49_phantom", ":/images/runtime/cg/boss49_soyo_phantom_prebattle.png", "长崎素世SP", "封印已经松动，但你仍无法看穿真正的我。", ":/images/characters/portraits/variants/soyo_witch_more_battle.png", "#be83ff"},
         {BossEncounterId::Floor50Soyo, "boss_prebattle_f50_soyo", ":/images/runtime/cg/boss50_soyo_final_prebattle.png", "长崎素世", "头套已经摘下。爱音，让这一切在这里结束吧。", ":/images/characters/portraits/variants/soyo_witch_more_battle.png", "#be83ff"}
     };
     for (const auto& descriptor : descriptors) {

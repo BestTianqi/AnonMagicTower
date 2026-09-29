@@ -9,16 +9,6 @@
 
 namespace {
 constexpr float kPlayerWalkSpeed = 360.0f;
-// 逻辑格仍保持 60×60；贴图向相邻格轻微溢出，覆盖素材透明边缘造成的缝隙。
-constexpr int kTileRenderBleed = 6;
-constexpr int kTileRenderSize = TILE_SIZE + kTileRenderBleed * 2;
-
-QRect tileRenderRect(int x, int y)
-{
-    return QRect(x * TILE_SIZE - kTileRenderBleed,
-                 y * TILE_SIZE - kTileRenderBleed,
-                 kTileRenderSize, kTileRenderSize);
-}
 
 QColor tileSeamColor(int tileType)
 {
@@ -251,44 +241,11 @@ void MapWidget::loadTileImage(int tileType, const QString& path)
 {
     QPixmap px(path);
     if (!px.isNull()) {
-        if (tileType == Tile_StairsUp || tileType == Tile_StairsDown) {
-            QImage image = px.toImage().convertToFormat(QImage::Format_ARGB32);
-            for (int y = 0; y < image.height(); ++y) {
-                for (int x = 0; x < image.width(); ++x) {
-                    const QColor color = QColor::fromRgba(image.pixel(x, y));
-                    image.setPixelColor(x, y, QColor(color.red() * 0.52,
-                                                     color.green() * 0.52,
-                                                     color.blue() * 0.52,
-                                                     color.alpha()));
-                }
-            }
-            // 楼梯素材本身带透明边缘，铺一层深色舞台底板并加高对比边框，
-            // 避免在深色地图背景中与普通地板混淆。
-            QImage plate(image.size(), QImage::Format_ARGB32_Premultiplied);
-            const bool up = tileType == Tile_StairsUp;
-            plate.fill(up ? QColor(48, 38, 8) : QColor(31, 19, 48));
-            QPainter platePainter(&plate);
-            platePainter.drawImage(0, 0, image);
-            platePainter.setPen(QPen(up ? QColor(220, 185, 58) : QColor(165, 105, 225), 2));
-            platePainter.drawRect(1, 1, plate.width() - 3, plate.height() - 3);
-            platePainter.end();
-            px = QPixmap::fromImage(plate);
-        } else if (tileType == Tile_DarkWall) {
-            QImage image = px.toImage().convertToFormat(QImage::Format_ARGB32);
-            for (int y = 0; y < image.height(); ++y) {
-                for (int x = 0; x < image.width(); ++x) {
-                    const QColor color = QColor::fromRgba(image.pixel(x, y));
-                    const QColor lighter = color.lighter(145);
-                    image.setPixelColor(x, y, QColor(lighter.red(), lighter.green(),
-                                                     lighter.blue(), color.alpha()));
-                }
-            }
-            px = QPixmap::fromImage(image);
-        }
-        // Pixel-art assets must remain crisp; nearest-neighbor scaling also avoids
-        // filtering work on every custom tile during startup.
-        m_tilePix[tileType] = px.scaled(kTileRenderSize, kTileRenderSize,
-                                        Qt::IgnoreAspectRatio, Qt::FastTransformation);
+        // 贴图严格占据逻辑格，避免放大后侵入邻格并使纹路偏离格子中心。
+        const auto filtering = (tileType == Tile_NPC || tileType == Tile_Shop)
+            ? Qt::SmoothTransformation : Qt::FastTransformation;
+        m_tilePix[tileType] = px.scaled(TILE_SIZE, TILE_SIZE,
+                                       Qt::IgnoreAspectRatio, filtering);
         m_hasTileImage.insert(tileType);
     }
 }
@@ -573,14 +530,14 @@ void MapWidget::loadNPCImage(const std::string& name, const QString& path)
     QPixmap px(path);
     if (!px.isNull())
         m_npcPix[name] = px.scaled(TILE_SIZE, TILE_SIZE, Qt::IgnoreAspectRatio,
-                                   Qt::FastTransformation);
+                                   Qt::SmoothTransformation);
 }
 
 void MapWidget::loadDarkWallRevealedImage(const QString& path)
 {
     QPixmap px(path);
     if (!px.isNull())
-        m_darkWallRevealed = px.scaled(kTileRenderSize, kTileRenderSize, Qt::IgnoreAspectRatio,
+        m_darkWallRevealed = px.scaled(TILE_SIZE, TILE_SIZE, Qt::IgnoreAspectRatio,
                                        Qt::FastTransformation);
 }
 
@@ -610,6 +567,39 @@ static void drawOverlayText(QPainter& painter, const QRect& r, const QString& te
     painter.setFont(f);
     painter.setPen(Qt::white);
     painter.drawText(textRect, Qt::AlignCenter, text);
+}
+
+ItemGainBadge itemGainBadge(const Item& item)
+{
+    const int value = item.GetValue();
+    if (value <= 0) return {};
+    if (dynamic_cast<const Weapon*>(&item))
+        return {QString::fromUtf8("攻+%1").arg(value), QColor("#ffd06d")};
+    if (dynamic_cast<const Armor*>(&item))
+        return {QString::fromUtf8("防+%1").arg(value), QColor("#9ad8ff")};
+    if (dynamic_cast<const RubyGem*>(&item))
+        return {QString::fromUtf8("攻+%1").arg(value), QColor("#ff9b9b")};
+    if (dynamic_cast<const SapphireGem*>(&item))
+        return {QString::fromUtf8("防+%1").arg(value), QColor("#9ad8ff")};
+    if (dynamic_cast<const SmallPotion*>(&item) || dynamic_cast<const LargePotion*>(&item))
+        return {QString::fromUtf8("血+%1").arg(value), QColor("#9ff2b2")};
+    return {};
+}
+
+static void drawItemGainLabel(QPainter& painter, const QRect& tile, const Item* item)
+{
+    if (!item) return;
+    const ItemGainBadge gain = itemGainBadge(*item);
+    if (gain.text.isEmpty()) return;
+
+    const QRect badge(tile.left() + 3, tile.top() + 3, tile.width() - 6, 16);
+    painter.fillRect(badge, QColor(12, 15, 29, 220));
+    QFont font = painter.font();
+    font.setPixelSize(11);
+    font.setBold(true);
+    painter.setFont(font);
+    painter.setPen(gain.color);
+    painter.drawText(badge, Qt::AlignCenter, gain.text);
 }
 
 void MapWidget::paintEvent(QPaintEvent*)
@@ -642,22 +632,20 @@ void MapWidget::paintEvent(QPaintEvent*)
         for (int x = 0; x < w; ++x) {
             int t = m_game->map()[y * w + x];
             QRect r(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-            const QRect tileRect = tileRenderRect(x, y);
 
             // 素材多为带透明边缘的舞台贴图；先铺连续底色，避免格子间透出背景。
             if (t != Tile_Empty)
                 painter.fillRect(r, tileSeamColor(t));
 
             // 所有可行走对象先使用素材地板打底，透明角色和道具不再漏出背景图。
-            if (t != Tile_Wall && t != Tile_DarkWall && t != Tile_Lava &&
+            if (t != Tile_Floor && t != Tile_Wall && t != Tile_DarkWall && t != Tile_Lava &&
                 t != Tile_StarRiver && t != Tile_Empty) {
                 auto floor = m_tilePix.find(Tile_Floor);
-                if (floor != m_tilePix.end()) painter.drawPixmap(tileRect, floor->second);
+                if (floor != m_tilePix.end()) painter.drawPixmap(r, floor->second);
             }
 
             QPixmap* pix = nullptr;
             std::string monsterName;
-            bool actorSprite = false;
 
             // -- 怪物 --
             if (t == Tile_Monster) {
@@ -667,7 +655,6 @@ void MapWidget::paintEvent(QPaintEvent*)
 
             // NPC 图块按角色名称选择素材；普通 NPC 仍回退到 Tile_NPC 默认图。
             if (t == Tile_NPC) {
-                actorSprite = true;
                 if (NPC* npc = m_game->npcAt(x, y)) {
                     auto npcImage = m_npcPix.find(npc->IsTrader() ? "麻里奈" : npc->GetName());
                     if (npcImage != m_npcPix.end())
@@ -676,7 +663,6 @@ void MapWidget::paintEvent(QPaintEvent*)
             }
 
             if (t == Tile_Shop) {
-                actorSprite = true;
                 if (ShopData* shop = m_game->shopAt(x, y)) {
                     const bool attributeShop = shop->classicShopFloor > 0 && shop->classicShopFloor != 28;
                     const auto shopImage = m_npcPix.find(attributeShop ? "弦卷心" : "麻里奈");
@@ -691,6 +677,7 @@ void MapWidget::paintEvent(QPaintEvent*)
                     auto icon = m_itemPix.find(item->GetName());
                     if (icon == m_itemPix.end()) icon = m_itemPix.find("ClassicArtifact");
                     if (icon != m_itemPix.end()) painter.drawPixmap(r, icon->second);
+                    drawItemGainLabel(painter, r, item);
                     continue;
                 }
             }
@@ -708,8 +695,7 @@ void MapWidget::paintEvent(QPaintEvent*)
             }
 
             // 绘制底图
-            if (pix && !pix->isNull())
-                painter.drawPixmap(actorSprite ? r : tileRect, *pix);
+            if (pix && !pix->isNull()) painter.drawPixmap(r, *pix);
 
             // 门、楼梯、商店等均由素材本身表达，不再叠加代码绘制的标签底条。
         }

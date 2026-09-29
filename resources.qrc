@@ -1,5 +1,6 @@
 <RCC>
     <qresource prefix="/">
+        <file>images/backgrounds/anon_soyo_puzzle.jpg</file>
         <!-- 默认地图 -->
         <file>data/classic50_map.txt</file>
         <!-- 地砖 -->
@@ -18,7 +19,7 @@
         <file>images/shop.png</file>
         <file>images/characters/portraits/marina.png</file>
         <file>images/characters/portraits/michelle.png</file>
-        <file>images/characters/portraits/ririko.png</file>
+        <file alias="images/characters/portraits/ririko.png">images/characters/npcs/ririko_pico_240.png</file>
         <file>images/characters/portraits/kokoro_shop.png</file>
         <!-- 玩家 -->
         <file>images/player.png</file>
@@ -84,7 +85,7 @@
         <file>images/characters/portraits/monster_variants/monster_05.png</file>
         <file>images/characters/portraits/monster_variants/monster_06.png</file>
         <file>images/characters/portraits/monster_variants/monster_07.png</file>
-        <file>images/characters/portraits/monster_variants/monster_08.png</file>
+        <file alias="images/characters/portraits/monster_variants/monster_08.png">images/candidates/monster_fusion_20260922/portraits/umiri_casual_skeleton_captain_portrait.png</file>
         <file>images/characters/portraits/monster_variants/monster_09.png</file>
         <file>images/characters/portraits/monster_variants/monster_10.png</file>
         <file>images/characters/portraits/monster_variants/monster_11.png</file>
@@ -163,6 +164,9 @@
         <file>images/characters/npcs/marina_icon.png</file>
         <file>images/characters/npcs/michelle_icon.png</file>
         <file>images/characters/npcs/ririko_icon.png</file>
+        <file>images/characters/npcs/marina_pico_240.png</file>
+        <file>images/characters/npcs/ririko_pico_240.png</file>
+        <file>images/characters/npcs/kokoro_pico_240.png</file>
         <file>images/runtime/cg/soyo_defeated_ending.png</file>
         <file>images/runtime/cg/floor01_arrival.png</file>
         <file>images/runtime/cg/floor03_ambush.png</file>
@@ -185,7 +189,7 @@
         <!-- 主题背景与地图图块图集 -->
         <file>images/backgrounds/tower_hub.png</file>
         <file>images/backgrounds/bangdream_gbp_cover.jpg</file>
-        <file>images/runtime/ui/bangdream_app_icon.jpg</file>
+        <file>images/runtime/ui/bangdream_ournotes_app_icon.jpg</file>
         <file>images/backgrounds/mygo_stage.png</file>
         <file>images/backgrounds/mujica_theater.png</file>
         <file>images/backgrounds/yumemita_dream.png</file>
@@ -233,8 +237,6 @@
         <file>images/runtime/items/holy_water.png</file>
         <file>images/runtime/items/artifact.png</file>
         <!-- MyGO / Ave Mujica 本地化道具图标（60×60 RGBA） -->
-        <file>images/runtime/items/mygo/mygo_support_badge_red.png</file>
-        <file>images/runtime/items/mygo/mujica_support_badge_blue.png</file>
         <file>images/runtime/items/mygo/live_ticket_red.png</file>
         <file>images/runtime/items/mygo/live_ticket_blue.png</file>
         <file>images/runtime/items/mygo/live_ticket_yellow.png</file>
@@ -274,41 +276,41 @@
         <file>images/runtime/ui/menu_backdrop.png</file>
         <!-- 游戏内角色头像（从 4x4 图集裁剪的首帧） -->
         <file>images/characters/portraits/anon.png</file>
-        <file>images/characters/portraits/anon_dialogue.png</file>
-        <file>images/characters/portraits/soyo.png</file>
-        <file>images/characters/portraits/tomori.png</file>
-        <file>images/characters/portraits/rana.png</file>
-        <file>images/characters/portraits/taki.png</file>
-        <file>images/characters/portraits/umiri.png</file>
-        <file>images/characters/portraits/nyamu.png</file>
-        <file>images/characters/portraits/mutsumi.png</file>
-        <file>images/characters/portraits/uika.png</file>
-        <file>images/characters/portraits/sakiko.png</file>
-        <file>images/characters/portraits/arale.png</file>
-        <file>images/characters/portraits/viola.png</file>
-        <file>images/characters/portraits/nonoka.png</file>
-        <file>images/characters/portraits/ritsu.png</file>
-        <file>images/characters/portraits/miyako.png</file>
-        <file>images/characters/portraits/yuno.png</file>
-        <file>images/characters/portraits/yukina.png</file>
-        <file>images/characters/portraits/kasumi.png</file>
-        <file>images/characters/portraits/nonoka_stage.png</file>
-        <file>images/characters/portraits/rana_stage.png</file>
-        <file>images/characters/portraits/tomori_stage.png</file>
+        <file alias="images/characters/portraits/anon_dialogue.png">images/characters/portraits/variants/anon_calm.png</file>
+        <file alias="images/characters/portraits/soyo.png">images/candidates/monster_fusion_20260922/portraits/soyo_casual_ghost_portrait.png</file>
+        <file alias="images/characters/portraits/tomori.png">images/candidates/monster_fusion_20260922/portraits/tomori_casual_junior_mage_portrait.png</file>
+        <file alias="images/characters/portraits/rana.png">images/candidates/monster_fusion_20260922/portraits/rana_casual_green_slime_portrait.png</file>
+        <file alias="images/characters/portraits/taki.png">images/candidates/monster_fusion_20260922/portraits/taki_casual_skeleton_portrait.png</file>
+        <file alias="images/characters/portraits/umiri.png">images/candidates/monster_fusion_20260922/portraits/umiri_casual_skeleton_captain_portrait.png</file>
+        <file alias="images/characters/portraits/nyamu.png">images/candidates/monster_fusion_20260922/portraits/nyamu_casual_skeleton_soldier_portrait.png</file>
+        <file alias="images/characters/portraits/mutsumi.png">images/candidates/monster_fusion_20260922/portraits/mutsumi_casual_red_slime_portrait.png</file>
+        <file alias="images/characters/portraits/uika.png">images/candidates/monster_fusion_20260922/portraits/uika_casual_junior_guard_portrait.png</file>
+        <file alias="images/characters/portraits/sakiko.png">images/candidates/monster_fusion_20260922/portraits/sakiko_casual_small_bat_portrait.png</file>
+        <file alias="images/characters/portraits/arale.png">images/candidates/monster_fusion_20260922/portraits/arale_casual_big_slime_portrait.png</file>
+        <file alias="images/characters/portraits/viola.png">images/candidates/monster_fusion_20260922/portraits/viola_casual_advanced_mage_portrait.png</file>
+        <file alias="images/characters/portraits/nonoka.png">images/candidates/monster_fusion_20260922/portraits/nonoka_casual_big_bat_portrait.png</file>
+        <file alias="images/characters/portraits/ritsu.png">images/candidates/monster_fusion_20260922/portraits/ritsu_casual_orc_portrait.png</file>
+        <file alias="images/characters/portraits/miyako.png">images/candidates/monster_fusion_20260922/portraits/miyako_casual_orc_warrior_portrait.png</file>
+        <file alias="images/characters/portraits/yuno.png">images/candidates/monster_fusion_20260922/portraits/yuno_casual_stone_golem_portrait.png</file>
+        <file alias="images/characters/portraits/yukina.png">images/candidates/monster_fusion_20260922/portraits/yukina_casual_vampire_portrait.png</file>
+        <file alias="images/characters/portraits/kasumi.png">images/candidates/monster_fusion_20260922/portraits/kasumi_casual_archmage_portrait.png</file>
+        <file alias="images/characters/portraits/nonoka_stage.png">images/candidates/monster_fusion_20260922/portraits/nonoka_stage_giant_octopus_sp_portrait.png</file>
+        <file alias="images/characters/portraits/rana_stage.png">images/candidates/monster_fusion_20260922/portraits/rana_stage_oni_warrior_sp_portrait.png</file>
+        <file alias="images/characters/portraits/tomori_stage.png">images/candidates/monster_fusion_20260922/portraits/tomori_stage_warrior_sp_portrait.png</file>
         <file>images/characters/portraits/soyo_stage.png</file>
-        <file>images/characters/portraits/taki_stage.png</file>
-        <file>images/characters/portraits/sakiko_stage.png</file>
-        <file>images/characters/portraits/viola_stage.png</file>
-        <file>images/characters/portraits/mutsumi_stage.png</file>
-        <file>images/characters/portraits/arale_stage.png</file>
-        <file>images/characters/portraits/ritsu_stage.png</file>
-        <file>images/characters/portraits/nyamu_stage.png</file>
-        <file>images/characters/portraits/yuno_stage.png</file>
-        <file>images/characters/portraits/umiri_stage.png</file>
-        <file>images/characters/portraits/miyako_stage.png</file>
-        <file>images/characters/portraits/uika_stage.png</file>
-        <file>images/characters/portraits/yukina_stage.png</file>
-        <file>images/characters/portraits/kasumi_stage.png</file>
+        <file alias="images/characters/portraits/taki_stage.png">images/candidates/monster_fusion_20260922/portraits/taki_stage_middle_guard_sp_portrait.png</file>
+        <file alias="images/characters/portraits/sakiko_stage.png">images/candidates/monster_fusion_20260922/portraits/sakiko_stage_dual_swords_sp_portrait.png</file>
+        <file alias="images/characters/portraits/viola_stage.png">images/candidates/monster_fusion_20260922/portraits/viola_stage_magic_dragon_sp_portrait.png</file>
+        <file alias="images/characters/portraits/mutsumi_stage.png">images/candidates/monster_fusion_20260922/portraits/mutsumi_stage_knight_sp_portrait.png</file>
+        <file alias="images/characters/portraits/arale_stage.png">images/candidates/monster_fusion_20260922/portraits/arale_stage_junior_wizard_sp_portrait.png</file>
+        <file alias="images/characters/portraits/ritsu_stage.png">images/candidates/monster_fusion_20260922/portraits/ritsu_stage_advanced_wizard_sp_portrait.png</file>
+        <file alias="images/characters/portraits/nyamu_stage.png">images/candidates/monster_fusion_20260922/portraits/nyamu_stage_slime_king_sp_portrait.png</file>
+        <file alias="images/characters/portraits/yuno_stage.png">images/candidates/monster_fusion_20260922/portraits/yuno_stage_vampire_bat_sp_portrait.png</file>
+        <file alias="images/characters/portraits/umiri_stage.png">images/candidates/monster_fusion_20260922/portraits/umiri_stage_black_knight_sp_portrait.png</file>
+        <file alias="images/characters/portraits/miyako_stage.png">images/candidates/monster_fusion_20260922/portraits/miyako_stage_magic_guard_sp_portrait.png</file>
+        <file alias="images/characters/portraits/uika_stage.png">images/candidates/monster_fusion_20260922/portraits/uika_stage_advanced_guard_sp_portrait.png</file>
+        <file alias="images/characters/portraits/yukina_stage.png">images/candidates/monster_fusion_20260922/portraits/yukina_stage_vampire_queen_sp_portrait.png</file>
+        <file alias="images/characters/portraits/kasumi_stage.png">images/candidates/monster_fusion_20260922/portraits/kasumi_stage_grand_archmage_sp_portrait.png</file>
         <file>images/characters/portraits/variants/anon_calm.png</file>
         <file>images/characters/portraits/variants/anon_angry.png</file>
         <file>images/characters/portraits/variants/anon_surprised.png</file>
@@ -320,7 +322,7 @@
         <file>images/characters/portraits/variants/anon_shy.png</file>
         <file>images/characters/portraits/variants/anon_sad.png</file>
         <file>images/characters/portraits/variants/anon_laughing.png</file>
-        <file>images/characters/portraits/variants/anon_worried.png</file>
+        <file alias="images/characters/portraits/variants/anon_worried.png">images/characters/portraits/variants/anon_extra_worried.png</file>
         <file>images/characters/portraits/variants/soyo_school_shy.png</file>
         <file>images/characters/portraits/variants/soyo_school_sad.png</file>
         <file>images/characters/portraits/variants/soyo_school_laughing.png</file>

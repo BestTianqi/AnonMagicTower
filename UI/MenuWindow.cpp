@@ -1,5 +1,6 @@
 #include "MenuWindow.h"
 #include "MainWindow.h"
+#include "SlidingPuzzlePage.h"
 #include "Game/Game.h"
 
 #include <QApplication>
@@ -34,7 +35,7 @@ MenuWindow::MenuWindow(QWidget* parent)
     const QString buttonArt =
         "QPushButton { color: #fff7d0; border-image: url(:/images/runtime/ui/button_texture.png) 18 24 18 24 stretch stretch; padding: 10px 18px; font-size: 20px; font-weight: 700; }"
         "QPushButton:hover { color: white; }";
-    for (QPushButton* button : {ui.newGameBtn, ui.loadGameBtn, ui.settingsBtn})
+    for (QPushButton* button : {ui.newGameBtn, ui.loadGameBtn, ui.settingsBtn, ui.puzzleBtn})
         button->setStyleSheet(buttonArt);
     ui.newGameBtn->setIcon(QIcon(":/images/runtime/items/weapon.png"));
     ui.loadGameBtn->setIcon(QIcon(":/images/runtime/items/treasure.png"));
@@ -51,6 +52,7 @@ MenuWindow::MenuWindow(QWidget* parent)
     connect(ui.newGameBtn,   &QPushButton::clicked, this, &MenuWindow::onNewGame);
     connect(ui.loadGameBtn,  &QPushButton::clicked, this, &MenuWindow::onLoadGame);
     connect(ui.settingsBtn,  &QPushButton::clicked, this, &MenuWindow::onSettings);
+    connect(ui.puzzleBtn, &QPushButton::clicked, this, &MenuWindow::onPuzzle);
 }
 
 void MenuWindow::paintEvent(QPaintEvent* /*event*/)
@@ -73,6 +75,8 @@ void MenuWindow::resizeEvent(QResizeEvent* event)
     // 游戏页与菜单共用同一个顶层窗口，始终覆盖整个客户区。
     if (m_gameWindow)
         m_gameWindow->setGeometry(rect());
+    if (m_puzzlePage)
+        m_puzzlePage->setGeometry(rect());
 }
 
 void MenuWindow::positionMenuPortraits()
@@ -104,6 +108,7 @@ void MenuWindow::setMenuControlsVisible(bool visible)
                              static_cast<QWidget*>(ui.newGameBtn),
                              static_cast<QWidget*>(ui.loadGameBtn),
                              static_cast<QWidget*>(ui.settingsBtn),
+                             static_cast<QWidget*>(ui.puzzleBtn),
                              static_cast<QWidget*>(ui.anonPortrait),
                              static_cast<QWidget*>(ui.soyoPortrait)}) {
         control->setVisible(visible);
@@ -115,6 +120,23 @@ void MenuWindow::onNewGame()
     auto* game = new Game();
     game->generateClassicTower();
     enterGame(game, true);
+}
+
+void MenuWindow::onPuzzle()
+{
+    if (m_puzzlePage) return;
+    m_puzzlePage = new SlidingPuzzlePage(this);
+    m_puzzlePage->setGeometry(rect());
+    setMenuControlsVisible(false);
+    m_puzzlePage->show();
+    m_puzzlePage->raise();
+    connect(m_puzzlePage, &SlidingPuzzlePage::returnToMenu, this, [this]() {
+        m_puzzlePage->hide();
+        m_puzzlePage->deleteLater();
+        m_puzzlePage = nullptr;
+        setMenuControlsVisible(true);
+        setFocus();
+    });
 }
 
 void MenuWindow::onLoadGame()

@@ -7,7 +7,6 @@
 #include <QTimer>
 #include <QString>
 #include <vector>
-#include <unordered_set>
 #include <memory>
 #include <QTemporaryFile>
 
@@ -36,6 +35,10 @@ private:
     void activateItem(int index);
     void updateItemPanel();
     void showOpeningFloorStory(int fromFloor, int toFloor);
+    std::vector<VisualNovelPage> storyPages(int scene) const;
+    void showScriptSceneOnce(int scene);
+    void showStoryMilestones();
+    void showStoryPickup(int floor, const QString& name);
     void showFloor20VampireStoryIfNeeded(int floorBefore);
     void showFloor10AmbushStoryIfNeeded();
     void showFloor33TrapStoryIfNeeded(int floorBefore);
@@ -55,6 +58,7 @@ private:
     void showStoryMessage(const QString& message);
     void showNPCDialog(int x, int y);
     void showShopDialog(int x, int y);
+    void showNotebookDialog();
     void showModifier();
     void showSettings();
     void showSaveLoadDialog(bool initialSave);
@@ -68,6 +72,7 @@ private:
     void gameWin();
     QString getItemDescription(const Item* item) const;
     void showBattleFeedback(const QString& message);
+    void showTransientFeedback(const QString& message);
     void startMonsterMovementAnimation();
     void handleTeleportResult(int x, int y, int floorBefore,
                               const QString& pickedName,
@@ -95,13 +100,10 @@ private:
     bool m_adminMode = false;
     bool m_battleFeedbackEnabled = true;
     std::vector<std::unique_ptr<QTemporaryFile>> m_undoHistory;
-    bool m_floor2OpeningShown = false;
-    bool m_floor3OpeningShown = false;
     bool m_prisonReturnStoryShown = false;
     bool m_floor33TrapStoryShown = false;
     int m_floor32KnightStoryFloor = -1;
     bool m_floor42CaptureStoryQueued = false;
     bool m_playFirstFloorOpening = false;
-    std::unordered_set<int> m_floorStoriesShown;
     Ui::MainWindow ui;
 };

@@ -1,5 +1,6 @@
 # Build directories
 build/
+build_updated/
 bin/
 lib/
 out/
@@ -26,6 +27,7 @@ dist/
 
 # Executables
 *.exe
+*.aps
 *.out
 *.app
 

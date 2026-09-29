@@ -9,6 +9,7 @@
 #include "Entities/Player.h"
 #include "Entities/MonsterDB.h"
 #include "Game/Game.h"
+#include "UI/ShopPresentation.h"
 
 int main() {
     const auto roster = MonsterDB::all();
@@ -69,6 +70,23 @@ int main() {
     const auto shop46 = classicShopOfferForFloor(46, 3);
     assert(shop46.hp == 400 && shop46.atk == 10 && shop46.def == 20 && shop46.price == 140);
     assert(classicShopOfferForFloor(46, 4).price == 220);
+
+    Player shopPlayer;
+    shopPlayer.hp = 1200;
+    shopPlayer.atk = 105;
+    shopPlayer.def = 98;
+    shopPlayer.gold = 19;
+    shopPlayer.shopUseCount = 0;
+    const auto poorShopView = makeClassicShopPresentation(shopPlayer, shop4);
+    assert(poorShopView.purchaseNumber == 1);
+    assert(poorShopView.price == 20);
+    assert(!poorShopView.affordable && poorShopView.missingGold == 1);
+    assert(poorShopView.cards[0].beforeValue == 1200 && poorShopView.cards[0].afterValue == 1300);
+    assert(poorShopView.cards[1].beforeValue == 105 && poorShopView.cards[1].afterValue == 107);
+    assert(poorShopView.cards[2].beforeValue == 98 && poorShopView.cards[2].afterValue == 102);
+    shopPlayer.gold = 20;
+    const auto exactShopView = makeClassicShopPresentation(shopPlayer, shop4);
+    assert(exactShopView.affordable && exactShopView.missingGold == 0);
 
     // Boss CG once-key follows the save/undo timeline: restoring a pre-mark snapshot replays it,
     // while a normal save after marking keeps it consumed. Older saves simply lack the key.
@@ -194,12 +212,19 @@ int main() {
     player.def = 10;
 
     RubyGem ruby;
+    assert(ruby.GetName() == "红宝石");
     ruby.Apply(player);
     assert(player.atk == 11);
 
     SapphireGem sapphire;
+    assert(sapphire.GetName() == "蓝宝石");
     sapphire.Apply(player);
     assert(player.def == 11);
+
+    assert(Game::canonicalItemName("MyGO应援红章") == "红宝石");
+    assert(Game::canonicalItemName("Mujica应援蓝章") == "蓝宝石");
+    assert(Game::createItemByName("MyGO应援红章", 3)->GetName() == "红宝石");
+    assert(Game::createItemByName("Mujica应援蓝章", 3)->GetName() == "蓝宝石");
 
     SmallPotion small;
     assert(small.GetName() == "灯的热牛奶");
@@ -459,6 +484,29 @@ int main() {
     assert(teleportDoor.tileAt(4, 3) == Tile_Floor);
     assert(teleportDoor.player().KeyCount(KeyType::Red) == 0);
 
+    // 点击连通的暗墙，应像点击黄门一样在到达后打开并进入目标格。
+    Game teleportDarkWall;
+    teleportDarkWall.player().x = 3;
+    teleportDarkWall.player().y = 3;
+    teleportDarkWall.setTile(4, 3, Tile_DarkWall);
+    assert(teleportDarkWall.beginTeleportPlayerTo(4, 3));
+    assert(teleportDarkWall.tileAt(4, 3) == Tile_DarkWall);
+    assert(teleportDarkWall.player().x == 3 && teleportDarkWall.player().y == 3);
+    assert(teleportDarkWall.completeTeleportPlayerTo() == Game::Move_Ok);
+    assert(teleportDarkWall.tileAt(4, 3) == Tile_Floor);
+    assert(teleportDarkWall.player().x == 4 && teleportDarkWall.player().y == 3);
+
+    // 普通实墙仍不可点开，41层机关暗墙也不能借鼠标跳过解锁条件。
+    teleportDarkWall.setTile(5, 3, Tile_Wall);
+    assert(!teleportDarkWall.isTeleportReachable(5, 3));
+    Game lockedDarkWall;
+    lockedDarkWall.generateClassicTower();
+    assert(lockedDarkWall.debugTeleport(41, 10, 3));
+    assert(lockedDarkWall.tileAt(11, 3) == Tile_DarkWall);
+    assert(lockedDarkWall.teleportPlayerTo(11, 3) == Game::Move_Block);
+    assert(lockedDarkWall.tileAt(11, 3) == Tile_DarkWall);
+    assert(lockedDarkWall.player().x == 10 && lockedDarkWall.player().y == 3);
+
     // 大黄门钥匙拾取后一次性打开当前楼层全部黄门。
     Game allYellowDoors;
     allYellowDoors.player().x = 2;
@@ -499,6 +547,26 @@ int main() {
     assert(unbeatableEnemy.hasMonsterAt(3, 2));
     assert(!unbeatableLog.empty());
     assert(unbeatableLog.back().find("打不过") != std::string::npos);
+
+    Game lethalBattle;
+    lethalBattle.player().hp = 10;
+    lethalBattle.player().atk = 10;
+    lethalBattle.player().def = 0;
+    lethalBattle.setTile(3, 2, Tile_Monster);
+    lethalBattle.spawnMonster(3, 2, Monster("致死测试怪", 20, 20, 0, 0));
+    assert(!lethalBattle.canDefeatMonsterAt(3, 2));
+    std::vector<std::string> lethalLog;
+    assert(lethalBattle.fightAt(3, 2, lethalLog) == Game::Fight_Stalemate);
+    assert(lethalBattle.player().hp == 10);
+    assert(lethalBattle.hasMonsterAt(3, 2));
+    assert(!lethalLog.empty() && lethalLog.back().find("无法击败") != std::string::npos);
+    lethalBattle.player().x = 2;
+    lethalBattle.player().y = 2;
+    lethalBattle.setTile(2, 2, Tile_Floor);
+    assert(lethalBattle.teleportPlayerTo(3, 2) == Game::Move_Encounter);
+    assert(lethalBattle.player().x == 2 && lethalBattle.player().y == 2);
+    lethalBattle.player().hp = 21;
+    assert(lethalBattle.canDefeatMonsterAt(3, 2));
 
     Game bombGame;
     bombGame.player().x = 5;
@@ -686,12 +754,12 @@ int main() {
     assert(floor10Ambush.tileAt(7, 12) == Tile_StairsUp);
     assert(floor10Ambush.tileAt(7, 2) == Tile_Item);
     assert(floor10Ambush.itemAt(7, 2) != nullptr);
-    assert(floor10Ambush.itemAt(7, 2)->GetName() == "MyGO应援红章");
-    assert(floor10Ambush.itemAt(8, 2)->GetName() == "Mujica应援蓝章");
+    assert(floor10Ambush.itemAt(7, 2)->GetName() == "红宝石");
+    assert(floor10Ambush.itemAt(8, 2)->GetName() == "蓝宝石");
     assert(floor10Ambush.itemAt(6, 2)->GetName() == "黄色Live票");
     assert(floor10Ambush.itemAt(7, 3)->GetName() == "爱音能量饮");
-    assert(countItem(floor10Ambush, "MyGO应援红章") == 3);
-    assert(countItem(floor10Ambush, "Mujica应援蓝章") == 3);
+    assert(countItem(floor10Ambush, "红宝石") == 3);
+    assert(countItem(floor10Ambush, "蓝宝石") == 3);
     assert(countItem(floor10Ambush, "黄色Live票") == 3);
     assert(countItem(floor10Ambush, "爱音能量饮") == 3);
     bool floor10RewardShown = false;
@@ -715,12 +783,12 @@ int main() {
     assert(floor20Boss.fightAt(7, 6, log) == Game::Fight_PlayerWin);
     assert(floor20Boss.tileAt(7, 6) == Tile_Item);
     assert(floor20Boss.itemAt(7, 6) != nullptr);
-    assert(floor20Boss.itemAt(7, 6)->GetName() == "MyGO应援红章");
-    assert(floor20Boss.itemAt(8, 6)->GetName() == "Mujica应援蓝章");
+    assert(floor20Boss.itemAt(7, 6)->GetName() == "红宝石");
+    assert(floor20Boss.itemAt(8, 6)->GetName() == "蓝宝石");
     assert(floor20Boss.itemAt(6, 6)->GetName() == "黄色Live票");
     assert(floor20Boss.itemAt(7, 7)->GetName() == "爱音能量饮");
-    assert(countItem(floor20Boss, "MyGO应援红章") == 3);
-    assert(countItem(floor20Boss, "Mujica应援蓝章") == 3);
+    assert(countItem(floor20Boss, "红宝石") == 3);
+    assert(countItem(floor20Boss, "蓝宝石") == 3);
     assert(countItem(floor20Boss, "黄色Live票") == 3);
     assert(countItem(floor20Boss, "爱音能量饮") == 3);
     assert(floor20Boss.tileAt(7, 2) == Tile_StairsUp);
@@ -740,12 +808,12 @@ int main() {
     assert(floor40Boss.fightAt(7, 6, log) == Game::Fight_PlayerWin);
     assert(floor40Boss.tileAt(7, 6) == Tile_Item);
     assert(floor40Boss.itemAt(7, 6) != nullptr);
-    assert(floor40Boss.itemAt(7, 6)->GetName() == "MyGO应援红章");
-    assert(floor40Boss.itemAt(8, 6)->GetName() == "Mujica应援蓝章");
+    assert(floor40Boss.itemAt(7, 6)->GetName() == "红宝石");
+    assert(floor40Boss.itemAt(8, 6)->GetName() == "蓝宝石");
     assert(floor40Boss.itemAt(6, 6)->GetName() == "黄色Live票");
     assert(floor40Boss.itemAt(7, 7)->GetName() == "爱音能量饮");
-    assert(countItem(floor40Boss, "MyGO应援红章") == 3);
-    assert(countItem(floor40Boss, "Mujica应援蓝章") == 3);
+    assert(countItem(floor40Boss, "红宝石") == 3);
+    assert(countItem(floor40Boss, "蓝宝石") == 3);
     assert(countItem(floor40Boss, "黄色Live票") == 3);
     assert(countItem(floor40Boss, "爱音能量饮") == 3);
     assert(floor40Boss.tileAt(7, 2) == Tile_StairsUp);
@@ -760,10 +828,10 @@ int main() {
     floor40Deferred.setTile(7, 8, Tile_Monster);
     floor40Deferred.spawnMonster(7, 8, MonsterDB::getByIndex(1));
     assert(floor40Deferred.fightAt(7, 6, log) == Game::Fight_PlayerWin);
-    assert(countItem(floor40Deferred, "MyGO应援红章") == 0);
+    assert(countItem(floor40Deferred, "红宝石") == 0);
     assert(floor40Deferred.tileAt(7, 2) != Tile_StairsUp);
     assert(floor40Deferred.fightAt(7, 8, log) == Game::Fight_PlayerWin);
-    assert(countItem(floor40Deferred, "MyGO应援红章") == 3);
+    assert(countItem(floor40Deferred, "红宝石") == 3);
     assert(floor40Deferred.tileAt(7, 2) == Tile_StairsUp);
 
     Game floor50Entry;
@@ -771,6 +839,20 @@ int main() {
     floor50Entry.goUpFloor(3, 3, false);
     assert(floor50Entry.currentFloor() == 50);
     assert(floor50Entry.player().x == 7 && floor50Entry.player().y == 8);
+
+    // 24层隐藏楼梯也可直达50层；即使没走过35层，也不能绕过米歇尔揭面。
+    Game floor50Shortcut;
+    floor50Shortcut.generateClassicTower();
+    assert(floor50Shortcut.debugTeleport(50, 7, 8));
+    floor50Shortcut.prepareFloor50MichelleReveal();
+    assert(floor50Shortcut.npcAt(7, 5));
+    assert(!floor50Shortcut.monsterAt(7, 6));
+    floor50Shortcut.revealFloor50MichelleIdentity();
+    assert(!floor50Shortcut.npcAt(7, 5));
+    assert(floor50Shortcut.monsterAt(7, 6));
+    floor50Shortcut.prepareFloor50MichelleReveal();
+    assert(!floor50Shortcut.npcAt(7, 5));
+    assert(floor50Shortcut.monsterAt(7, 6));
 
     Game floor14Reward;
     floor14Reward.generateClassicTower();
@@ -1045,8 +1127,8 @@ int main() {
     assert(fakeKingReward.fightAt(7, 4, fakeLog) == Game::Fight_PlayerWin);
     assert(countItem(fakeKingReward, "红色Live票") == 1);
     assert(countItem(fakeKingReward, "祥子指挥棒") == 1);
-    assert(countItem(fakeKingReward, "MyGO应援红章") == 3);
-    assert(countItem(fakeKingReward, "Mujica应援蓝章") == 3);
+    assert(countItem(fakeKingReward, "红宝石") == 3);
+    assert(countItem(fakeKingReward, "蓝宝石") == 3);
     assert(countItem(fakeKingReward, "爱音能量饮") == 3);
 
     // 42层首次上楼触发“骑士队长逃跑后被魔王与四名魔法警卫夹击”剧情，
@@ -1177,13 +1259,15 @@ int main() {
     classicMidTower.debugTeleport(35, 7, 6);
     assert(classicMidTower.npcAt(7, 6) != nullptr);
     assert(classicMidTower.npcAt(7, 6)->GetName() == "米歇尔");
-    assert(classicMidTower.tileAt(7, 4) == Tile_DarkWall);
+    assert(classicMidTower.tileAt(7, 4) == Tile_Wall);
+    assert(!classicMidTower.breakWall(7, 4));
+    classicMidTower.useEarthquakeScroll();
+    assert(classicMidTower.tileAt(7, 4) == Tile_Wall);
     assert(classicMidTower.tryMovePlayer(7, 4) == Game::Move_Block);
     classicMidTower.completeFloor35MichelleStory();
+    assert(classicMidTower.tileAt(7, 4) == Tile_DarkWall);
+    assert(classicMidTower.breakWall(7, 4));
     assert(classicMidTower.tileAt(7, 4) == Tile_Floor);
-    for (int y = 0; y < classicMidTower.height(); ++y)
-        for (int x = 0; x < classicMidTower.width(); ++x)
-            assert(classicMidTower.tileAt(x, y) != Tile_DarkWall);
     assert(classicMidTower.npcAt(7, 6) == nullptr);
 
     Game floor36OriginalLayout;
@@ -1310,6 +1394,91 @@ int main() {
     assert(mageContact.tryMovePlayer(5, 5) == Game::Move_Ok);
     assert(mageContact.player().hp == 1000);
 
+    // 正式地图中编号27才是高级巫师；左下(2,10)和右上(9,3)是阻击型，
+    // 中间(6,5)只维持领域伤害。编号26的初级巫师不能误判为阻击型。
+    Game retreatingWizard;
+    assert(retreatingWizard.debugTeleport(47, 2, 8));
+    retreatingWizard.player().hp = 1000;
+    retreatingWizard.spawnMonster(2, 10, MonsterDB::get("峰月律SP"));
+    retreatingWizard.setTile(2, 10, Tile_Monster);
+    assert(retreatingWizard.tryMovePlayer(2, 9) == Game::Move_Ok);
+    assert(retreatingWizard.player().hp == 800);
+    assert(retreatingWizard.tileAt(2, 10) == Tile_Floor);
+    assert(retreatingWizard.monsterAt(2, 11) != nullptr);
+    assert(retreatingWizard.takeFloor10AmbushMovementAnimations().empty());
+    const auto retreatMotion = retreatingWizard.takeScriptedMonsterMovementAnimations();
+    assert(retreatMotion.size() == 1);
+    assert(retreatMotion[0].fromX == 2 && retreatMotion[0].fromY == 10);
+    assert(retreatMotion[0].toX == 2 && retreatMotion[0].toY == 11);
+
+    Game clickedRetreatingWizard;
+    assert(clickedRetreatingWizard.debugTeleport(47, 2, 9));
+    clickedRetreatingWizard.player().hp = 1000;
+    clickedRetreatingWizard.spawnMonster(2, 10, MonsterDB::get("峰月律SP"));
+    clickedRetreatingWizard.setTile(2, 10, Tile_Monster);
+    assert(clickedRetreatingWizard.teleportPlayerTo(2, 10) == Game::Move_Ok);
+    assert(clickedRetreatingWizard.player().x == 2 && clickedRetreatingWizard.player().y == 10);
+    assert(clickedRetreatingWizard.player().hp == 800);
+    assert(clickedRetreatingWizard.monsterAt(2, 11) != nullptr);
+
+    Game retreatOnMousePath;
+    assert(retreatOnMousePath.debugTeleport(47, 2, 8));
+    retreatOnMousePath.player().hp = 1000;
+    for (int y = 8; y <= 12; ++y) retreatOnMousePath.setTile(2, y, Tile_Floor);
+    retreatOnMousePath.spawnMonster(2, 10, MonsterDB::get("峰月律SP"));
+    retreatOnMousePath.setTile(2, 10, Tile_Monster);
+    assert(retreatOnMousePath.teleportPlayerTo(2, 10) == Game::Move_Ok);
+    assert(retreatOnMousePath.player().x == 2 && retreatOnMousePath.player().y == 9);
+    assert(retreatOnMousePath.player().hp == 800);
+    assert(retreatOnMousePath.monsterAt(2, 11) != nullptr);
+    assert(retreatOnMousePath.lastTeleportNeedsAnimation());
+    assert(retreatOnMousePath.takeLastTeleportPath().back() == std::make_pair(2, 9));
+
+    Game blockedRetreatingWizard;
+    assert(blockedRetreatingWizard.debugTeleport(47, 2, 9));
+    blockedRetreatingWizard.player().hp = 1000;
+    blockedRetreatingWizard.spawnMonster(2, 10, MonsterDB::get("峰月律SP"));
+    blockedRetreatingWizard.setTile(2, 10, Tile_Monster);
+    blockedRetreatingWizard.setTile(2, 11, Tile_Wall);
+    assert(blockedRetreatingWizard.tryMovePlayer(2, 10) == Game::Move_Encounter);
+    assert(blockedRetreatingWizard.player().hp == 1000);
+    assert(blockedRetreatingWizard.monsterAt(2, 10) != nullptr);
+
+    Game shieldedRetreatingWizard;
+    assert(shieldedRetreatingWizard.debugTeleport(47, 2, 8));
+    shieldedRetreatingWizard.player().hp = 1000;
+    shieldedRetreatingWizard.player().hasHolyShield = true;
+    shieldedRetreatingWizard.spawnMonster(2, 10, MonsterDB::get("峰月律SP"));
+    shieldedRetreatingWizard.setTile(2, 10, Tile_Monster);
+    assert(shieldedRetreatingWizard.tryMovePlayer(2, 9) == Game::Move_Ok);
+    assert(shieldedRetreatingWizard.player().hp == 1000);
+    assert(shieldedRetreatingWizard.monsterAt(2, 10) != nullptr);
+
+    Game upperRetreatingWizard;
+    assert(upperRetreatingWizard.debugTeleport(47, 9, 5));
+    upperRetreatingWizard.player().hp = 1000;
+    upperRetreatingWizard.spawnMonster(9, 3, MonsterDB::get("峰月律SP"));
+    upperRetreatingWizard.setTile(9, 3, Tile_Monster);
+    assert(upperRetreatingWizard.tryMovePlayer(9, 4) == Game::Move_Ok);
+    assert(upperRetreatingWizard.player().hp == 800);
+    assert(upperRetreatingWizard.monsterAt(9, 2) != nullptr);
+
+    Game ordinaryFloor47Wizard;
+    assert(ordinaryFloor47Wizard.debugTeleport(47, 6, 7));
+    ordinaryFloor47Wizard.player().hp = 1000;
+    ordinaryFloor47Wizard.spawnMonster(6, 5, MonsterDB::get("峰月律SP"));
+    ordinaryFloor47Wizard.setTile(6, 5, Tile_Monster);
+    assert(ordinaryFloor47Wizard.tryMovePlayer(6, 6) == Game::Move_Ok);
+    assert(ordinaryFloor47Wizard.player().hp == 800);
+    assert(ordinaryFloor47Wizard.monsterAt(6, 5) != nullptr);
+
+    Game ordinaryFloor47JuniorWizard;
+    assert(ordinaryFloor47JuniorWizard.debugTeleport(47, 7, 12));
+    ordinaryFloor47JuniorWizard.spawnMonster(6, 12, MonsterDB::get("仲町あられSP"));
+    ordinaryFloor47JuniorWizard.setTile(6, 12, Tile_Monster);
+    assert(ordinaryFloor47JuniorWizard.tryMovePlayer(6, 12) == Game::Move_Encounter);
+    assert(ordinaryFloor47JuniorWizard.monsterAt(6, 12) != nullptr);
+
     // 魔法守卫夹击：进入两名相对魔法守卫的中间格时生命减半，神圣盾免疫。
     Game guardAmbush;
     guardAmbush.initFloor(1);
@@ -1407,5 +1576,37 @@ int main() {
     NPC npc("商人", {"测试"}, nullptr, true, 25,
             std::make_unique<RubyGem>(), 15);
     assert(npc.ClassicId() == 15);
+
+    // NPC 线索在取得记事本前也会积累；同一来源只记录一次，存取档和重开均正确。
+    Game notebookGame;
+    notebookGame.loadDefaultMap();
+    assert(notebookGame.recordNotebookClue("npc_1_3_3", 1, "凛凛子", "5层藏有武器。"));
+    assert(!notebookGame.recordNotebookClue("npc_1_3_3", 1, "凛凛子", "重复内容"));
+    assert(notebookGame.recordNotebookClue("npc_2_4_8", 2, "米歇尔", "铁剑在5层。\n铁盾在9层。"));
+    assert(notebookGame.notebookEntries().size() == 2);
+    assert(notebookGame.notebookEntries()[0].text == "5层藏有武器。");
+    const std::string notebookSave = "mota_notebook_test.save";
+    assert(notebookGame.saveToFile(notebookSave));
+    Game loadedNotebook;
+    assert(loadedNotebook.loadFromFile(notebookSave));
+    std::remove(notebookSave.c_str());
+    assert(loadedNotebook.notebookEntries().size() == 2);
+    assert(loadedNotebook.notebookEntries()[0].source == "凛凛子");
+    assert(loadedNotebook.notebookEntries()[1].text == "铁剑在5层。\n铁盾在9层。");
+    loadedNotebook.generateClassicTower();
+    assert(loadedNotebook.notebookEntries().empty());
+
+    Game departingNpc;
+    departingNpc.addNPCAt(3, 3, NPC("凛凛子", {"暗墙在附近。"}));
+    departingNpc.setTile(3, 3, Tile_NPC);
+    assert(departingNpc.dismissNpcAt(3, 3));
+    assert(!departingNpc.npcAt(3, 3));
+    assert(departingNpc.tileAt(3, 3) == Tile_Floor);
+    ShopData oneTimeShop;
+    departingNpc.currentFloorData().shops.emplace(departingNpc.posKey(4, 3), oneTimeShop);
+    departingNpc.setTile(4, 3, Tile_Shop);
+    assert(departingNpc.dismissShopAt(4, 3));
+    assert(!departingNpc.shopAt(4, 3));
+    assert(departingNpc.tileAt(4, 3) == Tile_Floor);
     return 0;
 }

@@ -19,6 +19,7 @@ private slots:
     void onNewGame();
     void onLoadGame();
     void onSettings();
+    void onPuzzle();
 
 private:
     void enterGame(class Game* game, bool isNewGame = false);
@@ -28,4 +29,5 @@ private:
     Ui::MenuWindow ui;
     QPixmap m_backgroundImage;
     MainWindow* m_gameWindow = nullptr;
+    class SlidingPuzzlePage* m_puzzlePage = nullptr;
 };

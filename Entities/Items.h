@@ -82,13 +82,13 @@ public:
 // 原版宝石拾取即生效：红宝石+3攻击，蓝宝石+3防御。
 class RubyGem : public Item {
 public:
-    explicit RubyGem(int attackBonus = 1, const std::string& displayName = "MyGO应援红章");
+    explicit RubyGem(int attackBonus = 1, const std::string& displayName = "红宝石");
     void Apply(Player& player) const override;
 };
 
 class SapphireGem : public Item {
 public:
-    explicit SapphireGem(int defenseBonus = 1, const std::string& displayName = "Mujica应援蓝章");
+    explicit SapphireGem(int defenseBonus = 1, const std::string& displayName = "蓝宝石");
     void Apply(Player& player) const override;
 };
 

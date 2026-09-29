@@ -22,6 +22,7 @@ set(SRC
     Entities/NPC.cpp
     UI/MapWidget.cpp
     UI/MenuWindow.cpp
+    UI/SlidingPuzzlePage.cpp
     UI/MainWindow.cpp
     resources.qrc
 )
@@ -71,3 +72,10 @@ add_executable(mota_mainwindow_input_tests
 )
 target_include_directories(mota_mainwindow_input_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(mota_mainwindow_input_tests PRIVATE Qt6::Widgets)
+
+add_executable(mota_story_script_tests tests/test_story_script.cpp)
+target_include_directories(mota_story_script_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+add_executable(mota_puzzle_tests tests/test_sliding_puzzle.cpp UI/SlidingPuzzlePage.cpp resources.qrc)
+target_include_directories(mota_puzzle_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(mota_puzzle_tests PRIVATE Qt6::Widgets)

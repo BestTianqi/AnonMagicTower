@@ -19,6 +19,7 @@ public:
     QPushButton* newGameBtn   = nullptr;
     QPushButton* loadGameBtn  = nullptr;
     QPushButton* settingsBtn  = nullptr;
+    QPushButton* puzzleBtn    = nullptr;
 
     void setupUi(QWidget* parent) {
         if (parent->objectName().isEmpty())
@@ -115,6 +116,15 @@ public:
 
         vbox->addSpacing(16);
 
+        puzzleBtn = new QPushButton(QString::fromUtf8("数 字 华 容 道"), parent);
+        puzzleBtn->setObjectName("openPuzzleButton");
+        puzzleBtn->setMinimumHeight(60);
+        puzzleBtn->setMaximumWidth(400);
+        puzzleBtn->setCursor(Qt::PointingHandCursor);
+        puzzleBtn->setStyleSheet(btnStyle);
+        auto* puzzleRow = new QHBoxLayout();
+        puzzleRow->addStretch(); puzzleRow->addWidget(puzzleBtn); puzzleRow->addStretch();
+        vbox->addLayout(puzzleRow);
         vbox->addSpacing(16);
 
         // 设置

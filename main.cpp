@@ -5,7 +5,7 @@
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
-    QApplication::setWindowIcon(QIcon(QStringLiteral(":/images/runtime/ui/bangdream_app_icon.jpg")));
+    QApplication::setWindowIcon(QIcon(QStringLiteral(":/images/runtime/ui/bangdream_ournotes_app_icon.jpg")));
 
     MenuWindow menu;
     menu.show();
