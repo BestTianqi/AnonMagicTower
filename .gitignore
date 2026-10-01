@@ -82,6 +82,8 @@ Thumbs.db
 *.rej
 
 # Temporary files
+__pycache__/
+*.pyc
 *.tmp
 *.temp
 *.log

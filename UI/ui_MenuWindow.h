@@ -20,6 +20,8 @@ public:
     QPushButton* loadGameBtn  = nullptr;
     QPushButton* settingsBtn  = nullptr;
     QPushButton* puzzleBtn    = nullptr;
+    QPushButton* mergeBtn     = nullptr;
+    QPushButton* rhythmBtn    = nullptr;
 
     void setupUi(QWidget* parent) {
         if (parent->objectName().isEmpty())
@@ -69,7 +71,7 @@ public:
         subtitle->setStyleSheet("color: #666688;");
         vbox->addWidget(subtitle);
 
-        vbox->addSpacing(60);
+        vbox->addSpacing(24);
 
         QString btnStyle =
             "QPushButton {"
@@ -105,6 +107,7 @@ public:
 
         // 读取存档
         loadGameBtn = new QPushButton(parent);
+        loadGameBtn->setObjectName("menuLoadButton");
         loadGameBtn->setText(QString::fromUtf8("📂  读 取 存 档"));
         loadGameBtn->setMinimumHeight(60);
         loadGameBtn->setMaximumWidth(400);
@@ -128,6 +131,28 @@ public:
         vbox->addSpacing(16);
 
         // 设置
+        mergeBtn = new QPushButton(QString::fromUtf8("角 色 合 奏 2048"), parent);
+        mergeBtn->setObjectName("open2048Button");
+        mergeBtn->setMinimumHeight(60);
+        mergeBtn->setMaximumWidth(400);
+        mergeBtn->setCursor(Qt::PointingHandCursor);
+        mergeBtn->setStyleSheet(btnStyle);
+        auto* mergeRow = new QHBoxLayout();
+        mergeRow->addStretch(); mergeRow->addWidget(mergeBtn); mergeRow->addStretch();
+        vbox->addLayout(mergeRow);
+        vbox->addSpacing(16);
+
+        rhythmBtn = new QPushButton(QString::fromUtf8("音 符 之 间 · 下 落 音 游"), parent);
+        rhythmBtn->setObjectName("openRhythmButton");
+        rhythmBtn->setMinimumHeight(52);
+        rhythmBtn->setMaximumWidth(400);
+        rhythmBtn->setCursor(Qt::PointingHandCursor);
+        rhythmBtn->setStyleSheet(btnStyle);
+        auto* rhythmRow = new QHBoxLayout();
+        rhythmRow->addStretch(); rhythmRow->addWidget(rhythmBtn); rhythmRow->addStretch();
+        vbox->addLayout(rhythmRow);
+        vbox->addSpacing(12);
+
         settingsBtn = new QPushButton(parent);
         settingsBtn->setText(QString::fromUtf8("⚙  设 置"));
         settingsBtn->setMinimumHeight(60);

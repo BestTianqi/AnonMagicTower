@@ -1,20 +1,25 @@
 #include "MenuWindow.h"
 #include "MainWindow.h"
 #include "SlidingPuzzlePage.h"
+#include "Game2048Page.h"
+#include "RhythmGamePage.h"
 #include "Game/Game.h"
+#include "Audio/GameAudio.h"
 
 #include <QApplication>
-#include <QFileDialog>
 #include <QMessageBox>
 #include <QIcon>
 #include <QPainter>
 #include <QDialog>
 #include <QVBoxLayout>
+#include <QHBoxLayout>
 #include <QCheckBox>
+#include <QComboBox>
+#include <QSlider>
 #include <QDialogButtonBox>
 #include <QLabel>
 #include <QSettings>
-#include <QStandardPaths>
+#include <memory>
 
 MenuWindow::MenuWindow(QWidget* parent)
     : QWidget(parent)
@@ -35,7 +40,7 @@ MenuWindow::MenuWindow(QWidget* parent)
     const QString buttonArt =
         "QPushButton { color: #fff7d0; border-image: url(:/images/runtime/ui/button_texture.png) 18 24 18 24 stretch stretch; padding: 10px 18px; font-size: 20px; font-weight: 700; }"
         "QPushButton:hover { color: white; }";
-    for (QPushButton* button : {ui.newGameBtn, ui.loadGameBtn, ui.settingsBtn, ui.puzzleBtn})
+    for (QPushButton* button : {ui.newGameBtn, ui.loadGameBtn, ui.settingsBtn, ui.puzzleBtn, ui.mergeBtn, ui.rhythmBtn})
         button->setStyleSheet(buttonArt);
     ui.newGameBtn->setIcon(QIcon(":/images/runtime/items/weapon.png"));
     ui.loadGameBtn->setIcon(QIcon(":/images/runtime/items/treasure.png"));
@@ -49,10 +54,19 @@ MenuWindow::MenuWindow(QWidget* parent)
         "color: #fff2bd; background: transparent; padding: 8px 0;");
     positionMenuPortraits();
 
+    GameAudio::prepare();
+    for (QPushButton* button : {ui.newGameBtn, ui.loadGameBtn, ui.settingsBtn,
+                                ui.puzzleBtn, ui.mergeBtn})
+        connect(button, &QPushButton::clicked, this, []() {
+            GameAudio::play(GameAudio::Cue::MenuSelect);
+        });
+
     connect(ui.newGameBtn,   &QPushButton::clicked, this, &MenuWindow::onNewGame);
     connect(ui.loadGameBtn,  &QPushButton::clicked, this, &MenuWindow::onLoadGame);
     connect(ui.settingsBtn,  &QPushButton::clicked, this, &MenuWindow::onSettings);
     connect(ui.puzzleBtn, &QPushButton::clicked, this, &MenuWindow::onPuzzle);
+    connect(ui.mergeBtn, &QPushButton::clicked, this, &MenuWindow::on2048);
+    connect(ui.rhythmBtn, &QPushButton::clicked, this, &MenuWindow::onRhythm);
 }
 
 void MenuWindow::paintEvent(QPaintEvent* /*event*/)
@@ -77,6 +91,10 @@ void MenuWindow::resizeEvent(QResizeEvent* event)
         m_gameWindow->setGeometry(rect());
     if (m_puzzlePage)
         m_puzzlePage->setGeometry(rect());
+    if (m_mergePage)
+        m_mergePage->setGeometry(rect());
+    if (m_rhythmPage)
+        m_rhythmPage->setGeometry(rect());
 }
 
 void MenuWindow::positionMenuPortraits()
@@ -109,6 +127,8 @@ void MenuWindow::setMenuControlsVisible(bool visible)
                              static_cast<QWidget*>(ui.loadGameBtn),
                              static_cast<QWidget*>(ui.settingsBtn),
                              static_cast<QWidget*>(ui.puzzleBtn),
+                             static_cast<QWidget*>(ui.mergeBtn),
+                             static_cast<QWidget*>(ui.rhythmBtn),
                              static_cast<QWidget*>(ui.anonPortrait),
                              static_cast<QWidget*>(ui.soyoPortrait)}) {
         control->setVisible(visible);
@@ -125,12 +145,14 @@ void MenuWindow::onNewGame()
 void MenuWindow::onPuzzle()
 {
     if (m_puzzlePage) return;
+    GameAudio::startMiniGameMusic();
     m_puzzlePage = new SlidingPuzzlePage(this);
     m_puzzlePage->setGeometry(rect());
     setMenuControlsVisible(false);
     m_puzzlePage->show();
     m_puzzlePage->raise();
     connect(m_puzzlePage, &SlidingPuzzlePage::returnToMenu, this, [this]() {
+        GameAudio::stopMiniGameMusic();
         m_puzzlePage->hide();
         m_puzzlePage->deleteLater();
         m_puzzlePage = nullptr;
@@ -139,22 +161,44 @@ void MenuWindow::onPuzzle()
     });
 }
 
+void MenuWindow::on2048()
+{
+    if (m_mergePage) return;
+    GameAudio::startMiniGameMusic();
+    m_mergePage = new Game2048Page(this);
+    m_mergePage->setGeometry(rect());
+    setMenuControlsVisible(false);
+    m_mergePage->show();
+    m_mergePage->raise();
+    m_mergePage->setFocus();
+    connect(m_mergePage, &Game2048Page::returnToMenu, this, [this]() {
+        GameAudio::stopMiniGameMusic();
+        m_mergePage->hide();
+        m_mergePage->deleteLater();
+        m_mergePage = nullptr;
+        setMenuControlsVisible(true);
+        setFocus();
+    });
+}
+
 void MenuWindow::onLoadGame()
 {
-    QString file = QFileDialog::getOpenFileName(this,
-        QString::fromUtf8("读取存档"),
-        QStandardPaths::writableLocation(QStandardPaths::AppDataLocation),
-        QString::fromUtf8("存档文件 (*.txt *.sav);;文本存档 (*.txt);;即时存档 (*.sav)"));
-    if (file.isEmpty()) return;
+    auto game = std::make_unique<Game>();
+    if (MainWindow::loadFromSlots(*game, this)) enterGame(game.release(), false);
+}
 
-    auto* game = new Game();
-    if (!game->loadFromFile(file.toStdString())) {
-        QMessageBox::warning(this, QString::fromUtf8("读取失败"),
-            QString::fromUtf8("无法读取存档文件。"));
-        delete game;
-        return;
-    }
-    enterGame(game, false);
+void MenuWindow::onRhythm()
+{
+    if (m_rhythmPage) return;
+    GameAudio::stopMiniGameMusic();
+    m_rhythmPage = new RhythmGamePage(this);
+    m_rhythmPage->setGeometry(rect());
+    setMenuControlsVisible(false);
+    m_rhythmPage->show(); m_rhythmPage->raise(); m_rhythmPage->setFocus();
+    connect(m_rhythmPage, &RhythmGamePage::returnToMenu, this, [this]() {
+        m_rhythmPage->hide(); m_rhythmPage->deleteLater(); m_rhythmPage=nullptr;
+        setMenuControlsVisible(true); setFocus();
+    });
 }
 
 void MenuWindow::onSettings()
@@ -162,7 +206,7 @@ void MenuWindow::onSettings()
     QSettings settings(QStringLiteral("MyGO-Mota"), QStringLiteral("MyGO-Mota"));
     QDialog dlg(this);
     dlg.setWindowTitle(QString::fromUtf8("设置"));
-    dlg.setFixedSize(420, 250);
+    dlg.setFixedSize(420, 410);
     auto* layout = new QVBoxLayout(&dlg);
     auto* animation = new QCheckBox(QString::fromUtf8("启用连续移动动画"), &dlg);
     animation->setChecked(settings.value(QStringLiteral("movementAnimation"), true).toBool());
@@ -170,6 +214,51 @@ void MenuWindow::onSettings()
     battle->setChecked(settings.value(QStringLiteral("battleFeedback"), true).toBool());
     layout->addWidget(animation);
     layout->addWidget(battle);
+    auto* sound = new QCheckBox(QString::fromUtf8("启用音效"), &dlg);
+    sound->setChecked(settings.value(QStringLiteral("soundEffectsEnabled"), true).toBool());
+    layout->addWidget(sound);
+    auto* volumeRow = new QHBoxLayout;
+    volumeRow->addWidget(new QLabel(QString::fromUtf8("音效音量"), &dlg));
+    auto* volume = new QSlider(Qt::Horizontal, &dlg);
+    volume->setRange(0, 100);
+    volume->setValue(settings.value(QStringLiteral("soundEffectsVolume"), 65).toInt());
+    volumeRow->addWidget(volume, 1);
+    auto* volumeValue = new QLabel(QString::number(volume->value()) + "%", &dlg);
+    volumeRow->addWidget(volumeValue);
+    connect(volume, &QSlider::valueChanged, volumeValue, [volumeValue](int value) {
+        volumeValue->setText(QString::number(value) + "%");
+    });
+    volume->setEnabled(sound->isChecked());
+    connect(sound, &QCheckBox::toggled, volume, &QWidget::setEnabled);
+    layout->addLayout(volumeRow);
+    auto* music = new QCheckBox(QString::fromUtf8("启用小游戏背景音乐"), &dlg);
+    music->setChecked(settings.value(QStringLiteral("backgroundMusicEnabled"), true).toBool());
+    layout->addWidget(music);
+    auto* musicVolumeRow = new QHBoxLayout;
+    musicVolumeRow->addWidget(new QLabel(QString::fromUtf8("音乐音量"), &dlg));
+    auto* musicVolume = new QSlider(Qt::Horizontal, &dlg);
+    musicVolume->setRange(0, 100);
+    musicVolume->setValue(settings.value(QStringLiteral("backgroundMusicVolume"), 38).toInt());
+    musicVolumeRow->addWidget(musicVolume, 1);
+    auto* musicValue = new QLabel(QString::number(musicVolume->value()) + "%", &dlg);
+    musicVolumeRow->addWidget(musicValue);
+    connect(musicVolume, &QSlider::valueChanged, musicValue, [musicValue](int value) {
+        musicValue->setText(QString::number(value) + "%");
+    });
+    musicVolume->setEnabled(music->isChecked());
+    connect(music, &QCheckBox::toggled, musicVolume, &QWidget::setEnabled);
+    layout->addLayout(musicVolumeRow);
+    auto* musicTrackRow = new QHBoxLayout;
+    musicTrackRow->addWidget(new QLabel(QString::fromUtf8("小游戏曲目"), &dlg));
+    auto* musicTrack = new QComboBox(&dlg);
+    musicTrack->setObjectName(QStringLiteral("settingsMusicTrack"));
+    musicTrack->addItems({QString::fromUtf8("春日影 · 8-bit"),
+                          QString::fromUtf8("KiLLKiSS · 8-bit")});
+    musicTrack->setCurrentIndex(GameAudio::miniGameMusicTrack());
+    musicTrack->setEnabled(music->isChecked());
+    connect(music, &QCheckBox::toggled, musicTrack, &QWidget::setEnabled);
+    musicTrackRow->addWidget(musicTrack, 1);
+    layout->addLayout(musicTrackRow);
     layout->addWidget(new QLabel(QString::fromUtf8(
         "方向键：移动\n"
         "固定道具栏：点击图标查看或使用\n"
@@ -185,6 +274,13 @@ void MenuWindow::onSettings()
     connect(buttons, &QDialogButtonBox::accepted, &dlg, [&]() {
         settings.setValue(QStringLiteral("movementAnimation"), animation->isChecked());
         settings.setValue(QStringLiteral("battleFeedback"), battle->isChecked());
+        settings.setValue(QStringLiteral("soundEffectsEnabled"), sound->isChecked());
+        settings.setValue(QStringLiteral("soundEffectsVolume"), volume->value());
+        settings.setValue(QStringLiteral("backgroundMusicEnabled"), music->isChecked());
+        settings.setValue(QStringLiteral("backgroundMusicVolume"), musicVolume->value());
+        settings.setValue(QStringLiteral("backgroundMusicTrack"), musicTrack->currentIndex());
+        GameAudio::refreshSettings();
+        GameAudio::play(GameAudio::Cue::MenuSelect);
         dlg.accept();
     });
     connect(buttons, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
@@ -205,7 +301,7 @@ void MenuWindow::enterGame(Game* game, bool isNewGame)
         return;
     }
     // MainWindow 作为菜单窗口的子页面显示，不再创建第二个顶层窗口。
-    m_gameWindow = new MainWindow(game, this, isNewGame);
+    m_gameWindow = new MainWindow(game, this, isNewGame, true);
     m_gameWindow->setWindowFlags(Qt::Widget);
     m_gameWindow->setAttribute(Qt::WA_DeleteOnClose);
     m_gameWindow->setGeometry(rect());

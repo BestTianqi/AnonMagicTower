@@ -8,14 +8,18 @@
 #include <QString>
 #include <vector>
 #include <memory>
+#include <string>
+#include <utility>
 #include <QTemporaryFile>
 
 class MainWindow : public QWidget {
     Q_OBJECT
 public:
     explicit MainWindow(Game* game, QWidget* parent = nullptr,
-                        bool playFirstFloorOpening = false);
+                        bool playFirstFloorOpening = false, bool ownsGame = false);
+    ~MainWindow() override;
     void loadAssets();
+    static bool loadFromSlots(Game& game, QWidget* parent);
 
 protected:
     void keyPressEvent(QKeyEvent* event) override;
@@ -77,11 +81,12 @@ private:
     void handleTeleportResult(int x, int y, int floorBefore,
                               const QString& pickedName,
                               const QString& pickedDescription,
-                              Game::MoveResult result);
+                              Game::MoveResult result, int targetTileBefore);
     void completePendingTeleport();
     void flushPendingMove();
 
     Game* m_game;
+    bool m_ownsGame;
     QTimer m_battleFeedbackTimer;
     QTimer m_movementQueueTimer;
     HeldMoveState m_heldMoveState;
@@ -93,6 +98,7 @@ private:
         int x = 0;
         int y = 0;
         int floorBefore = 0;
+        int targetTileBefore = 0;
         QString pickedName;
         QString pickedDescription;
     };
@@ -100,6 +106,11 @@ private:
     bool m_adminMode = false;
     bool m_battleFeedbackEnabled = true;
     std::vector<std::unique_ptr<QTemporaryFile>> m_undoHistory;
+    const Game* m_hudPanelGame = nullptr;
+    std::vector<std::string> m_hudInventoryNames;
+    std::vector<std::pair<std::string, int>> m_hudMonsterRoster;
+    int m_hudMonsterFloor = -1;
+    bool m_hudMonsterBookUnlocked = false;
     bool m_prisonReturnStoryShown = false;
     bool m_floor33TrapStoryShown = false;
     int m_floor32KnightStoryFloor = -1;

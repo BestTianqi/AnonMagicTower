@@ -1,0 +1,25 @@
+<RCC>
+    <qresource prefix="/">
+        <file>data/puzzle_gallery.json</file>
+        <file>images/puzzle_cards/card_0947_trained.png</file>
+        <file>images/puzzle_cards/card_2323_normal.png</file>
+        <file>images/puzzle_cards/card_2287_trained.png</file>
+        <file>images/puzzle_cards/card_2203_trained.png</file>
+        <file>images/puzzle_cards/card_2289_trained.png</file>
+        <file>images/puzzle_cards/card_2232_normal.png</file>
+        <file>images/puzzle_cards/card_2205_trained.png</file>
+        <file>images/puzzle_cards/card_2291_trained.png</file>
+        <file>images/puzzle_cards/card_2231_normal.png</file>
+        <file>images/puzzle_cards/card_2202_trained.png</file>
+        <file>images/puzzle_cards/card_2288_trained.png</file>
+        <file>images/puzzle_cards/card_2235_normal.png</file>
+        <file>images/puzzle_cards/card_2204_trained.png</file>
+        <file>images/puzzle_cards/card_2417_trained.png</file>
+        <file>images/puzzle_cards/card_2290_normal.png</file>
+        <file>images/puzzle_cards/card_2206_trained.png</file>
+        <file>images/puzzle_cards/card_2492_trained.png</file>
+        <file>images/puzzle_cards/card_2474_trained.png</file>
+        <file>images/puzzle_cards/card_2475_trained.png</file>
+        <file>images/puzzle_cards/card_2503_trained.png</file>
+    </qresource>
+</RCC>

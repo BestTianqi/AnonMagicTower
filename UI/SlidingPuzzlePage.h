@@ -4,10 +4,14 @@
 #include <QElapsedTimer>
 #include <QTimer>
 #include <QVariantAnimation>
+#include <QJsonObject>
 #include "Game/SlidingPuzzleState.h"
 
 class QLabel;
 class QPushButton;
+class QComboBox;
+class QCheckBox;
+class MiniGameSession;
 
 class SlidingPuzzleBoard : public QWidget {
     Q_OBJECT
@@ -18,6 +22,10 @@ public:
     void undo();
     void setPreview(bool on);
     void setNumbers(bool on);
+    void setPaused(bool paused);
+    void setPicture(const QPixmap& picture);
+    QJsonObject snapshot() const;
+    bool restoreSnapshot(const QJsonObject& data);
     bool moveByArrow(int key);
     const SlidingPuzzleState& state() const { return m_state; }
 signals:
@@ -43,12 +51,15 @@ private:
     int m_hover = -1;
     bool m_preview = false;
     bool m_numbers = true;
+    bool m_paused = false;
 };
 
 class SlidingPuzzlePage : public QWidget {
     Q_OBJECT
 public:
     explicit SlidingPuzzlePage(QWidget* parent = nullptr);
+    ~SlidingPuzzlePage() override;
+    bool importPicture(const QString& path);
 signals:
     void returnToMenu();
 protected:
@@ -57,14 +68,23 @@ protected:
 private:
     void refresh();
     void resetClock();
+    void choosePicture(int index);
+    QJsonObject snapshot() const;
+    bool restoreSnapshot(const QJsonObject& data);
     QPixmap m_picture;
     SlidingPuzzleBoard* m_board = nullptr;
+    QPixmap m_customPicture;
+    QByteArray m_customImageData;
     QLabel* m_moves = nullptr;
     QLabel* m_time = nullptr;
     QLabel* m_status = nullptr;
     QPushButton* m_undo = nullptr;
-    QElapsedTimer m_elapsed;
+    QComboBox* m_musicChoice = nullptr;
+    QComboBox* m_imageChoice = nullptr;
+    QLabel* m_caption = nullptr;
+    QCheckBox* m_numbers = nullptr;
+    MiniGameSession* m_session = nullptr;
+    QString m_pictureKey = QStringLiteral(":/images/backgrounds/anon_soyo_puzzle.jpg");
     QTimer m_clock;
-    bool m_started = false;
     bool m_finished = false;
 };

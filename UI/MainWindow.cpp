@@ -7,6 +7,7 @@
 #include "BossEncounterFlow.h"
 #include "MonsterVisual.h"
 #include "ShopPresentation.h"
+#include "Audio/GameAudio.h"
 #include "Entities/MonsterDB.h"
 #include <QPainter>
 #include <QApplication>
@@ -24,6 +25,7 @@
 #include <QFrame>
 #include <QSpinBox>
 #include <QCheckBox>
+#include <QSlider>
 #include <QInputDialog>
 #include <QGroupBox>
 #include <QComboBox>
@@ -34,6 +36,7 @@
 #include <QLocale>
 #include <QMap>
 #include <QSettings>
+#include <QComboBox>
 #include <QStandardPaths>
 #include <QFileInfo>
 #include <QTemporaryFile>
@@ -260,10 +263,10 @@ static QString resolvedMonsterVisualPath(const std::string& name)
 static void applyRuntimeArtSkin(QWidget& widget)
 {
     widget.setStyleSheet(
-        "QDialog, QMessageBox { background-image: url(:/images/runtime/ui/panel_texture.png); color: #f1e8d0; }"
+        "QDialog, QMessageBox { background-color: #171320; background-image: url(:/images/runtime/ui/panel_texture.png); color: #f1e8d0; }"
         "QGroupBox, QTabWidget::pane, QListWidget, QScrollArea { background: rgba(14,15,25,210); color: #f1e8d0; border: 2px solid #777080; }"
         "QLineEdit, QTextEdit, QSpinBox, QComboBox { background: rgba(14,15,25,220); color: white; border: 1px solid #9b93a3; padding: 4px; }"
-        "QLabel { color: #f1e8d0; }"
+        "QLabel, QCheckBox { color: #f1e8d0; }"
         "QPushButton { color: #fff7d0; border-image: url(:/images/runtime/ui/button_texture.png) 18 24 18 24 stretch stretch; padding: 7px 14px; font-weight: 700; min-height: 24px; }"
         "QPushButton:hover { color: white; }"
     );
@@ -323,9 +326,10 @@ static QString itemIconPath(const std::string& rawName)
     return QStringLiteral(":/images/runtime/items/artifact.png");
 }
 
-MainWindow::MainWindow(Game* game, QWidget* parent, bool playFirstFloorOpening)
-    : QWidget(parent), m_game(game), m_playFirstFloorOpening(playFirstFloorOpening)
+MainWindow::MainWindow(Game* game, QWidget* parent, bool playFirstFloorOpening, bool ownsGame)
+    : QWidget(parent), m_game(game), m_ownsGame(ownsGame), m_playFirstFloorOpening(playFirstFloorOpening)
 {
+    GameAudio::prepare();
     setFocusPolicy(Qt::StrongFocus);
     ui.setupUi(this);
     setWindowTitle(QString::fromUtf8("MYGO!!!!! × Ave Mujica：梦限大魔塔"));
@@ -398,6 +402,7 @@ MainWindow::MainWindow(Game* game, QWidget* parent, bool playFirstFloorOpening)
             return;
         }
         const int floorBefore = m_game->currentFloor();
+        const int targetTileBefore = m_game->tileAt(x, y);
         const Item* clickedItem = m_game->itemAt(x, y);
         const QString pickedName = clickedItem
             ? QString::fromStdString(Game::canonicalItemName(clickedItem->GetName()))
@@ -417,6 +422,7 @@ MainWindow::MainWindow(Game* game, QWidget* parent, bool playFirstFloorOpening)
             m_pendingTeleport.x = x;
             m_pendingTeleport.y = y;
             m_pendingTeleport.floorBefore = floorBefore;
+            m_pendingTeleport.targetTileBefore = targetTileBefore;
             m_pendingTeleport.pickedName = pickedName;
             m_pendingTeleport.pickedDescription = pickedDescription;
             ui.mapWidget->playPlayerPath(teleportPath);
@@ -426,7 +432,8 @@ MainWindow::MainWindow(Game* game, QWidget* parent, bool playFirstFloorOpening)
         const auto result = m_game->completeTeleportPlayerTo();
         ui.mapWidget->snapPlayerToGame();
         startMonsterMovementAnimation();
-        handleTeleportResult(x, y, floorBefore, pickedName, pickedDescription, result);
+        handleTeleportResult(x, y, floorBefore, pickedName, pickedDescription,
+                             result, targetTileBefore);
     });
     updateHUD();
     // Animation-off mode has no playerMotionFinished signal. Keep held input
@@ -476,12 +483,20 @@ MainWindow::MainWindow(Game* game, QWidget* parent, bool playFirstFloorOpening)
 void MainWindow::handleTeleportResult(int x, int y, int floorBefore,
                                       const QString& pickedName,
                                       const QString& pickedDescription,
-                                      Game::MoveResult result)
+                                      Game::MoveResult result, int targetTileBefore)
 {
     showPendingApproachHazardCgs();
     switch (result) {
         case Game::Move_Pickup:
         case Game::Move_Ok:
+            if (result == Game::Move_Pickup)
+                GameAudio::play(GameAudio::Cue::Pickup);
+            else if (targetTileBefore == Tile_DoorRed || targetTileBefore == Tile_DoorBlue ||
+                     targetTileBefore == Tile_DoorGreen || targetTileBefore == Tile_DoorMagic ||
+                     targetTileBefore == Tile_DoorIron || targetTileBefore == Tile_DarkWall)
+                GameAudio::play(GameAudio::Cue::Door);
+            else
+                GameAudio::play(GameAudio::Cue::Step);
             if (result == Game::Move_Pickup && !pickedName.isEmpty())
                 showBattleFeedback(QString::fromUtf8("获得 %1：%2").arg(pickedName).arg(
                     QString(pickedDescription).replace(QString::fromUtf8("（未生效）"), QString::fromUtf8("（已生效）"))));
@@ -500,23 +515,27 @@ void MainWindow::handleTeleportResult(int x, int y, int floorBefore,
             updateHUD();
             break;
         case Game::Move_NPC:
+            GameAudio::play(GameAudio::Cue::Dialogue);
             showNPCDialog(x, y);
             ui.mapWidget->update();
             updateHUD();
             break;
         case Game::Move_Shop:
+            GameAudio::play(GameAudio::Cue::Shop);
             showShopDialog(x, y);
             ui.mapWidget->update();
             updateHUD();
             break;
         case Game::Move_Encounter: {
             if (!m_game->canDefeatMonsterAt(x, y)) {
+                GameAudio::play(GameAudio::Cue::Blocked);
                 ui.mapWidget->snapPlayerToGame();
                 showBattleFeedback(QString::fromUtf8("你无法击败对方。请先提升属性或恢复生命。"));
                 updateHUD();
                 break;
             }
             if (runBossBattleAt(x, y)) break;
+            GameAudio::play(GameAudio::Cue::Battle);
             // 点击怪物格也走统一战斗入口；瞬移后玩家坐标已在目标格，
             // 因而战斗结束后可以继续从该格移动或拾取战利品。
             const bool knightFight = floorBefore == 32 && m_game->monsterAt(x, y) &&
@@ -526,6 +545,8 @@ void MainWindow::handleTeleportResult(int x, int y, int floorBefore,
             showBattleFeedback(QString::fromStdString(summarizeBattleLog(log)));
             if (knightFight && fightResult == Game::Fight_PlayerWin)
                 showScriptSceneOnce(20);
+            if (fightResult == Game::Fight_PlayerWin)
+                GameAudio::play(GameAudio::Cue::Victory);
             if (fightResult == Game::Fight_PlayerWin)
                 showStoryMilestones();
             // 战败对白结束后才开始撤退动画；普通战斗仍立即播放其他脚本移动。
@@ -540,18 +561,22 @@ void MainWindow::handleTeleportResult(int x, int y, int floorBefore,
             break;
         }
         case Game::Move_StairsUp:
+            GameAudio::play(GameAudio::Cue::Stairs);
             m_game->goUpFloor(x, y);
             showOpeningFloorStory(floorBefore, m_game->currentFloor());
             ui.mapWidget->update();
             updateHUD();
             break;
         case Game::Move_StairsDown:
+            GameAudio::play(GameAudio::Cue::Stairs);
             m_game->goDownFloor(x, y);
             showOpeningFloorStory(floorBefore, m_game->currentFloor());
             ui.mapWidget->update();
             updateHUD();
             break;
         default:
+            if (result == Game::Move_DoorLocked)
+                GameAudio::play(GameAudio::Cue::Blocked);
             break;
     }
 }
@@ -566,7 +591,8 @@ void MainWindow::completePendingTeleport()
         ui.mapWidget->snapPlayerToGame();
     startMonsterMovementAnimation();
     handleTeleportResult(pending.x, pending.y, pending.floorBefore,
-                         pending.pickedName, pending.pickedDescription, result);
+                         pending.pickedName, pending.pickedDescription, result,
+                         pending.targetTileBefore);
     ui.mapWidget->update();
 }
 
@@ -653,6 +679,7 @@ void MainWindow::undoLastAction()
         return;
     }
     m_undoHistory.pop_back();
+    GameAudio::play(GameAudio::Cue::Undo);
     ui.undoButton->setEnabled(!m_undoHistory.empty());
     m_hasPendingMove = false;
     m_pendingTeleport = {};
@@ -662,9 +689,15 @@ void MainWindow::undoLastAction()
     updateHUD();
 }
 
-void MainWindow::showSaveLoadDialog(bool initialSave)
+MainWindow::~MainWindow()
 {
-    QDialog dlg(this);
+    if (m_ownsGame) delete m_game;
+}
+
+static bool showSaveSlots(QWidget* parent, Game& game, bool initialSave, bool allowSave)
+{
+    QDialog dlg(parent);
+    dlg.setObjectName(QStringLiteral("saveSlotsDialog"));
     dlg.setWindowTitle(QString::fromUtf8("魔塔存档"));
     dlg.setFixedSize(520, 460);
     applyRuntimeArtSkin(dlg);
@@ -721,7 +754,12 @@ void MainWindow::showSaveLoadDialog(bool initialSave)
     auto* buttons = new QHBoxLayout();
     auto* save = new QPushButton(QString::fromUtf8("保存到选中槽位"), &dlg);
     auto* load = new QPushButton(QString::fromUtf8("读取选中槽位"), &dlg);
-    auto* close = new QPushButton(QString::fromUtf8("返回游戏"), &dlg);
+    auto* close = new QPushButton(allowSave ? QString::fromUtf8("返回游戏")
+                                          : QString::fromUtf8("返回主菜单"), &dlg);
+    save->setObjectName(QStringLiteral("saveSelectedSlot"));
+    load->setObjectName(QStringLiteral("loadSelectedSlot"));
+    close->setObjectName(QStringLiteral("closeSaveSlots"));
+    save->setVisible(allowSave);
     buttons->addWidget(save);
     buttons->addWidget(load);
     buttons->addWidget(close);
@@ -731,7 +769,7 @@ void MainWindow::showSaveLoadDialog(bool initialSave)
         auto* row = slotList->currentItem();
         if (!row) return;
         const int slot = row->data(Qt::UserRole).toInt();
-        if (m_game->saveToFile(selectedPath(slot).toStdString())) {
+        if (game.saveToFile(selectedPath(slot).toStdString())) {
             status->setText(slot == 0 ? QString::fromUtf8("即时存档已保存。")
                                       : QString::fromUtf8("已保存到存档 %1").arg(slot));
             refreshSlots();
@@ -750,21 +788,31 @@ void MainWindow::showSaveLoadDialog(bool initialSave)
                                       : QString::fromUtf8("存档 %1 为空。").arg(slot));
             return;
         }
-        if (!m_game->loadFromFile(path.toStdString())) {
+        if (!game.loadFromFile(path.toStdString())) {
             status->setText(QString::fromUtf8("读取失败，请重试。"));
             return;
         }
-        clearUndoHistory();
-        m_hasPendingMove = false;
-        m_pendingTeleport = {};
-        m_floor32KnightStoryFloor = -1;
-        ui.mapWidget->snapPlayerToGame();
-        ui.mapWidget->update();
-        updateHUD();
         dlg.accept();
     });
     QObject::connect(close, &QPushButton::clicked, &dlg, &QDialog::reject);
-    dlg.exec();
+    return dlg.exec() == QDialog::Accepted;
+}
+
+bool MainWindow::loadFromSlots(Game& game, QWidget* parent)
+{
+    return showSaveSlots(parent, game, false, false);
+}
+
+void MainWindow::showSaveLoadDialog(bool initialSave)
+{
+    if (!showSaveSlots(this, *m_game, initialSave, true)) return;
+    clearUndoHistory();
+    m_hasPendingMove = false;
+    m_pendingTeleport = {};
+    m_floor32KnightStoryFloor = -1;
+    ui.mapWidget->snapPlayerToGame();
+    ui.mapWidget->update();
+    updateHUD();
 }
 
 void MainWindow::quickSave()
@@ -805,10 +853,11 @@ void MainWindow::quickLoad()
 
 void MainWindow::showSettings()
 {
+    bool returnToMenu = false;
     QSettings settings(QStringLiteral("MyGO-Mota"), QStringLiteral("MyGO-Mota"));
     QDialog dlg(this);
     dlg.setWindowTitle(QString::fromUtf8("设置"));
-    dlg.setFixedSize(460, 270);
+    dlg.setFixedSize(480, 510);
     auto* layout = new QVBoxLayout(&dlg);
     auto* animation = new QCheckBox(QString::fromUtf8("启用连续移动动画"), &dlg);
     animation->setChecked(ui.mapWidget->movementAnimationEnabled());
@@ -816,28 +865,88 @@ void MainWindow::showSettings()
     battle->setChecked(m_battleFeedbackEnabled);
     layout->addWidget(animation);
     layout->addWidget(battle);
+    auto* sound = new QCheckBox(QString::fromUtf8("启用音效"), &dlg);
+    sound->setChecked(settings.value(QStringLiteral("soundEffectsEnabled"), true).toBool());
+    layout->addWidget(sound);
+    auto* volumeRow = new QHBoxLayout;
+    volumeRow->addWidget(new QLabel(QString::fromUtf8("音效音量"), &dlg));
+    auto* volume = new QSlider(Qt::Horizontal, &dlg);
+    volume->setRange(0, 100);
+    volume->setValue(settings.value(QStringLiteral("soundEffectsVolume"), 65).toInt());
+    volumeRow->addWidget(volume, 1);
+    auto* volumeValue = new QLabel(QString::number(volume->value()) + "%", &dlg);
+    volumeRow->addWidget(volumeValue);
+    connect(volume, &QSlider::valueChanged, volumeValue, [volumeValue](int value) {
+        volumeValue->setText(QString::number(value) + "%");
+    });
+    volume->setEnabled(sound->isChecked());
+    connect(sound, &QCheckBox::toggled, volume, &QWidget::setEnabled);
+    layout->addLayout(volumeRow);
+    auto* music = new QCheckBox(QString::fromUtf8("启用小游戏背景音乐"), &dlg);
+    music->setChecked(settings.value(QStringLiteral("backgroundMusicEnabled"), true).toBool());
+    layout->addWidget(music);
+    auto* musicVolumeRow = new QHBoxLayout;
+    musicVolumeRow->addWidget(new QLabel(QString::fromUtf8("音乐音量"), &dlg));
+    auto* musicVolume = new QSlider(Qt::Horizontal, &dlg);
+    musicVolume->setRange(0, 100);
+    musicVolume->setValue(settings.value(QStringLiteral("backgroundMusicVolume"), 38).toInt());
+    musicVolumeRow->addWidget(musicVolume, 1);
+    auto* musicValue = new QLabel(QString::number(musicVolume->value()) + "%", &dlg);
+    musicVolumeRow->addWidget(musicValue);
+    connect(musicVolume, &QSlider::valueChanged, musicValue, [musicValue](int value) {
+        musicValue->setText(QString::number(value) + "%");
+    });
+    musicVolume->setEnabled(music->isChecked());
+    connect(music, &QCheckBox::toggled, musicVolume, &QWidget::setEnabled);
+    layout->addLayout(musicVolumeRow);
+    auto* musicTrackRow = new QHBoxLayout;
+    musicTrackRow->addWidget(new QLabel(QString::fromUtf8("小游戏曲目"), &dlg));
+    auto* musicTrack = new QComboBox(&dlg);
+    musicTrack->setObjectName(QStringLiteral("settingsMusicTrack"));
+    musicTrack->addItems({QString::fromUtf8("春日影 · 8-bit"),
+                          QString::fromUtf8("KiLLKiSS · 8-bit")});
+    musicTrack->setCurrentIndex(GameAudio::miniGameMusicTrack());
+    musicTrack->setEnabled(music->isChecked());
+    connect(music, &QCheckBox::toggled, musicTrack, &QWidget::setEnabled);
+    musicTrackRow->addWidget(musicTrack, 1);
+    layout->addLayout(musicTrackRow);
     layout->addWidget(new QLabel(QString::fromUtf8(
         "方向键移动；可点击连通区域内的地板、怪物和门。\n"
         "点击怪物会战斗；点击门需持有对应钥匙。\n"
         "拿到怪物手册后，左侧才会显示怪物与预计损失。\n"
         "点击右侧道具图标使用或查看；单词本可重读线索。\n"
-        "F5 即时存档，F9 即时读档，Ctrl+Z 连续撤销。"), &dlg));
+        "F5 即时存档，F9 即时读档，Ctrl+Z 连续撤销。\n"
+        "返回主菜单前请先保存，未保存的进度不会保留。"), &dlg));
     auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg);
     buttons->button(QDialogButtonBox::Ok)->setText(QString::fromUtf8("应用"));
     buttons->button(QDialogButtonBox::Cancel)->setText(QString::fromUtf8("取消"));
     auto* exitButton = new QPushButton(QString::fromUtf8("退出游戏"), &dlg);
+    auto* menuButton = new QPushButton(QString::fromUtf8("返回主菜单"), &dlg);
+    menuButton->setObjectName(QStringLiteral("returnToMenuButton"));
     exitButton->setStyleSheet(QStringLiteral("QPushButton { color: #ff9a9a; }"));
     layout->addStretch();
     layout->addWidget(buttons);
+    layout->addWidget(menuButton);
     layout->addWidget(exitButton);
     connect(buttons, &QDialogButtonBox::accepted, &dlg, [&]() {
         ui.mapWidget->setMovementAnimationEnabled(animation->isChecked());
         m_battleFeedbackEnabled = battle->isChecked();
         settings.setValue(QStringLiteral("movementAnimation"), animation->isChecked());
         settings.setValue(QStringLiteral("battleFeedback"), battle->isChecked());
+        settings.setValue(QStringLiteral("soundEffectsEnabled"), sound->isChecked());
+        settings.setValue(QStringLiteral("soundEffectsVolume"), volume->value());
+        settings.setValue(QStringLiteral("backgroundMusicEnabled"), music->isChecked());
+        settings.setValue(QStringLiteral("backgroundMusicVolume"), musicVolume->value());
+        settings.setValue(QStringLiteral("backgroundMusicTrack"), musicTrack->currentIndex());
+        GameAudio::refreshSettings();
+        GameAudio::play(GameAudio::Cue::MenuSelect);
         dlg.accept();
     });
     connect(buttons, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+    connect(menuButton, &QPushButton::clicked, &dlg, [&]() {
+        returnToMenu = true;
+        dlg.accept();
+    });
     connect(exitButton, &QPushButton::clicked, &dlg, [&dlg]() {
         if (QMessageBox::question(&dlg, QString::fromUtf8("退出游戏"),
                 QString::fromUtf8("确定要退出游戏吗？"),
@@ -847,6 +956,13 @@ void MainWindow::showSettings()
     });
     applyRuntimeArtSkin(dlg);
     dlg.exec();
+    if (returnToMenu) {
+        m_movementQueueTimer.stop();
+        m_heldMoveState.clear();
+        m_hasPendingMove = false;
+        m_pendingTeleport = {};
+        close();
+    }
 }
 
 void MainWindow::showStoryMessage(const QString& message)
@@ -1037,6 +1153,7 @@ bool MainWindow::runBossBattleAt(int x, int y, bool floor32FirstStrike)
         return m_game->player().hp > 0;
     };
     callbacks.fight = [&]() {
+        GameAudio::play(GameAudio::Cue::Battle);
         gameFightResult = m_game->fightAt(x, y, battleLog);
         switch (gameFightResult) {
         case Game::Fight_PlayerWin: return BossFlowFightResult::PlayerWin;
@@ -1050,6 +1167,8 @@ bool MainWindow::runBossBattleAt(int x, int y, bool floor32FirstStrike)
         ui.mapWidget->update();
         updateHUD();
         showBattleFeedback(QString::fromStdString(summarizeBattleLog(battleLog)));
+        if (result == BossFlowFightResult::PlayerWin || result == BossFlowFightResult::GameWin)
+            GameAudio::play(GameAudio::Cue::Victory);
         if (result == BossFlowFightResult::PlayerWin && bossId == BossEncounterId::Floor32Knight)
             showScriptSceneOnce(20);
         if (result == BossFlowFightResult::PlayerWin && bossId == BossEncounterId::Floor10Umiri)
@@ -1445,6 +1564,14 @@ bool MainWindow::showVisualNovelDialogue(const std::vector<VisualNovelPage>& pag
     boxLayout->addLayout(buttonRow);
     root->addWidget(box, 0);
 
+    StoryPortraitStage portraits(":/images/characters/portraits/variants/anon_calm.png");
+    // Establish the actual interlocutor even when Anon speaks first.
+    for (const auto& page : pages) {
+        if (!page.speaker.contains(QString::fromUtf8("爱音")) && !page.portrait.isEmpty()) {
+            portraits.observe(false, page.portrait.toStdString());
+            break;
+        }
+    }
     StoryPager pager(static_cast<int>(pages.size()));
     const auto renderPage = [&]() {
         const VisualNovelPage& page = pages[static_cast<size_t>(pager.page())];
@@ -1465,10 +1592,9 @@ bool MainWindow::showVisualNovelDialogue(const std::vector<VisualNovelPage>& pag
         stageWidget->setVisible(!hasExplicitCg);
 
         const bool playerSpeaking = page.speaker.contains(QString::fromUtf8("爱音"));
-        const QString leftPath = dialoguePortraitPath(playerSpeaking ? page.portrait
-                                                : QStringLiteral(":/images/characters/portraits/anon.png"));
-        const QString rightPath = dialoguePortraitPath(playerSpeaking
-            ? QStringLiteral(":/images/characters/portraits/soyo.png") : page.portrait);
+        portraits.observe(playerSpeaking, page.portrait.toStdString());
+        const QString leftPath = dialoguePortraitPath(QString::fromStdString(portraits.left()));
+        const QString rightPath = dialoguePortraitPath(QString::fromStdString(portraits.right()));
         const auto setPortrait = [&dlg](QLabel* target, const QString& path, bool active) {
             const QPixmap image(path);
             if (!image.isNull()) {
@@ -1488,11 +1614,13 @@ bool MainWindow::showVisualNovelDialogue(const std::vector<VisualNovelPage>& pag
             }
         };
         setPortrait(leftPortrait, leftPath, playerSpeaking);
-        setPortrait(rightPortrait, rightPath, !playerSpeaking);
+        setPortrait(rightPortrait, rightPath, !playerSpeaking && !page.portrait.isEmpty());
+        GameAudio::playStoryVoice(page.speaker, page.text);
         next->setText(QString::fromUtf8("继续 ▶"));
     };
 
     const auto advance = [&]() {
+        GameAudio::play(GameAudio::Cue::Dialogue);
         if (pager.advance()) {
             renderPage();
         } else {
@@ -1507,43 +1635,43 @@ bool MainWindow::showVisualNovelDialogue(const std::vector<VisualNovelPage>& pag
     renderPage();
     backdrop->lower();
     dlg.move(mapToGlobal(QPoint(0, 0)));
-    return dlg.exec() == QDialog::Accepted && dlg.completed();
+    const bool completed = dlg.exec() == QDialog::Accepted && dlg.completed();
+    GameAudio::stopStoryVoice();
+    return completed;
 }
 
 std::vector<MainWindow::VisualNovelPage> MainWindow::storyPages(int scene) const
 {
     std::vector<VisualNovelPage> pages;
     const QString cg = QString::fromUtf8(storySceneCg(scene));
-    for (const StoryLine& line : storyScene(scene)) {
+    const StoryContext context{
+        m_game->storyShown("anon_soyo_scene_2") || m_game->storyShown("anon_soyo_scene_5") ||
+            m_game->storyShown("anon_soyo_scene_12") || m_game->storyShown("anon_soyo_scene_17") ||
+            m_game->storyShown("anon_soyo_scene_18") || m_game->storyShown("anon_soyo_scene_23"),
+        m_game->storyShown("anon_soyo_scene_17"),
+        m_game->storyShown("anon_soyo_scene_18"),
+        m_game->storyShown("anon_soyo_scene_23")
+    };
+    for (const StoryLine& line : storyScene(scene, context)) {
         const QString speaker = QString::fromUtf8(line.speaker);
-        QString portrait;
+        const QString portrait = QString::fromStdString(storyPortrait(line, scene));
         QString accent = QStringLiteral("#ffd66b");
         if (speaker.contains(QString::fromUtf8("爱音"))) {
-            portrait = QStringLiteral(":/images/characters/portraits/variants/anon_calm.png");
             accent = QStringLiteral("#ff8fc7");
         } else if (speaker.contains(QString::fromUtf8("小长崎"))) {
-            portrait = QStringLiteral(":/images/characters/portraits/variants/soyo_child_calm.png");
             accent = QStringLiteral("#b58cff");
         } else if (speaker.contains(QString::fromUtf8("素世")) ||
                    speaker.contains(QString::fromUtf8("假魔王"))) {
-            portrait = scene == 4 || scene == 25 || scene == 26 || scene == 29
-                ? QStringLiteral(":/images/characters/portraits/variants/soyo_witch_calm.png")
-                : QStringLiteral(":/images/characters/portraits/variants/soyo_school_calm.png");
             accent = QStringLiteral("#b58cff");
         } else if (speaker.contains(QString::fromUtf8("米歇尔"))) {
-            portrait = QStringLiteral(":/images/characters/portraits/variants/michelle_caring.png");
             accent = QStringLiteral("#ffb5d7");
         } else if (speaker.contains(QString::fromUtf8("海铃"))) {
-            portrait = QStringLiteral(":/images/characters/portraits/umiri.png");
             accent = QStringLiteral("#c7d8ff");
         } else if (speaker.contains(QString::fromUtf8("友希那"))) {
-            portrait = QStringLiteral(":/images/characters/portraits/variants/yukina_new_stage_singing.png");
             accent = QStringLiteral("#b5c8ff");
         } else if (speaker.contains(QString::fromUtf8("香澄"))) {
-            portrait = QStringLiteral(":/images/characters/portraits/variants/kasumi_new_stage_guitar.png");
             accent = QStringLiteral("#ff5f91");
         } else if (speaker.contains(QString::fromUtf8("心"))) {
-            portrait = QStringLiteral(":/images/characters/portraits/kokoro_shop.png");
             accent = QStringLiteral("#ffd66b");
         }
         pages.push_back({speaker, QString::fromUtf8(line.text), portrait, accent, cg});
@@ -1745,7 +1873,7 @@ void MainWindow::showFirstFloorOpeningStory()
          QString::fromUtf8("拿到怪物手册后，左侧才会显示怪物与预计损失。获得灯的单词本后，点击右侧图标可重读线索；右下角可保存、读取、撤销。F5 即时存档，Ctrl+Z 可连续撤销。"),
          QString(), QStringLiteral("#9fd8ff")});
     pages.push_back({QString::fromUtf8("千早爱音"),
-         QString::fromUtf8("来不来是我自己决定的。我要找到素世，把话听完。第一层，出发！"),
+         QString::fromUtf8("好，先看清楚路。素世，你可别再往更高的地方跑了……第一层，出发！"),
          QStringLiteral(":/images/characters/portraits/variants/anon_confident.png"),
          QStringLiteral("#ff8fc7"), QString::fromUtf8(storySceneCg(1))});
     m_game->markStoryShown("anon_soyo_scene_1");
@@ -2009,7 +2137,7 @@ void MainWindow::showNPCDialog(int x, int y)
         npc->SetGiven(true);
         showScriptSceneOnce(23);
         m_game->recordNotebookClue("npc_35_michelle", 35, "米歇尔",
-                                   "35层暗墙已经全部打开；米歇尔将前往50层终幕。");
+                                   "35层的实墙已显露为暗墙，仍需逐格撞开，不消耗钥匙；米歇尔将前往50层终幕。");
         m_game->completeFloor35MichelleStory();
         ui.mapWidget->update();
         updateHUD();
@@ -2432,6 +2560,7 @@ void MainWindow::showShopDialog(int x, int y)
                 p.gold -= offer.price;
                 item.apply();
                 ++p.shopUseCount;
+                GameAudio::play(GameAudio::Cue::Pickup);
                 dlg.accept();
             });
             cardLayout->addWidget(button);
@@ -3182,11 +3311,44 @@ void MainWindow::updateHUD()
         keyText += QString::fromUtf8("   万能 ×%1").arg(formatNumber(m_game->player().magicKeyUses));
     ui.keysLabel->setText(keyText);
 
+    // 移动时每一格都要更新数值，但没有拾取道具或怪物变化时，不要把
+    // 两侧的整块 QWidget 列表销毁重建；这会阻塞下一格动画的起帧。
+    const bool gameChanged = m_hudPanelGame != m_game;
+    m_hudPanelGame = m_game;
+    std::vector<std::string> inventoryNames;
+    inventoryNames.reserve(m_game->player().InventoryCount());
+    for (int i = 0; i < m_game->player().InventoryCount(); ++i) {
+        const Item* item = m_game->player().GetItem(i);
+        inventoryNames.push_back(item ? Game::canonicalItemName(item->GetName()) : std::string());
+    }
+    const bool inventoryChanged = gameChanged || inventoryNames != m_hudInventoryNames;
+    if (inventoryChanged) m_hudInventoryNames = std::move(inventoryNames);
+
+    const bool handbookUnlocked = m_game->player().HasMonsterBook();
+    std::vector<std::pair<std::string, int>> monsterRoster;
+    if (handbookUnlocked) {
+        for (const Monster& monster : m_game->uniqueMonsterTypesOnCurrentFloor()) {
+            const auto count = std::count_if(m_game->currentFloorData().monsters.begin(),
+                                             m_game->currentFloorData().monsters.end(),
+                [&monster](const auto& entry) {
+                    return entry.second.GetName() == monster.GetName();
+                });
+            monsterRoster.emplace_back(monster.GetName(), static_cast<int>(count));
+        }
+    }
+    const bool monstersChanged = gameChanged || floor != m_hudMonsterFloor ||
+        handbookUnlocked != m_hudMonsterBookUnlocked || monsterRoster != m_hudMonsterRoster;
+    if (monstersChanged) {
+        m_hudMonsterFloor = floor;
+        m_hudMonsterBookUnlocked = handbookUnlocked;
+        m_hudMonsterRoster = std::move(monsterRoster);
+    }
+
     // 道具图标栏位于属性区域下方；旧文字栏位保留兼容但不再占用界面空间。
     ui.invItemsLabel->setVisible(false);
-    updateItemPanel();
+    if (inventoryChanged) updateItemPanel();
 
-    updateMonsterPanel();
+    if (monstersChanged) updateMonsterPanel();
 }
 
 void MainWindow::keyPressEvent(QKeyEvent* event)
@@ -3266,6 +3428,7 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
     int ny = playerYBefore + dy;
     ui.mapWidget->setPlayerDirection(dx, dy);
     const int floorBefore = m_game->currentFloor();
+    const int targetTileBefore = m_game->tileAt(nx, ny);
     const Item* steppedItem = m_game->itemAt(nx, ny);
     const QString pickedName = steppedItem
         ? QString::fromStdString(Game::canonicalItemName(steppedItem->GetName()))
@@ -3294,6 +3457,7 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
     case Game::Move_Block:
         break;
     case Game::Move_DoorLocked: {
+        GameAudio::play(GameAudio::Cue::Blocked);
         if (floorBefore == 24 && nx == 7 && ny == 9 &&
             !m_game->princessDollPassageUnlocked()) {
             QMessageBox::information(this, QString::fromUtf8("通道未开启"),
@@ -3310,6 +3474,12 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
         break;
     }
     case Game::Move_Ok:
+        if (targetTileBefore == Tile_DoorRed || targetTileBefore == Tile_DoorBlue ||
+            targetTileBefore == Tile_DoorGreen || targetTileBefore == Tile_DoorMagic ||
+            targetTileBefore == Tile_DoorIron || targetTileBefore == Tile_DarkWall)
+            GameAudio::play(GameAudio::Cue::Door);
+        else
+            GameAudio::play(GameAudio::Cue::Step);
         if (m_game->floor3PrisonStoryPending())
             showPrisonTrapPrompt();
         else if (floorBefore == 3 && m_game->currentFloor() == 2)
@@ -3323,6 +3493,7 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
         updateHUD();
         break;
     case Game::Move_Pickup:
+        GameAudio::play(GameAudio::Cue::Pickup);
         if (!pickedName.isEmpty())
             showBattleFeedback(QString::fromUtf8("获得 %1：%2").arg(pickedName).arg(
                 QString(pickedDescription).replace(QString::fromUtf8("（未生效）"), QString::fromUtf8("（已生效）"))));
@@ -3334,10 +3505,12 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
         Monster* m = m_game->monsterAt(nx, ny);
         if (!m) break;
         if (!m_game->canDefeatMonsterAt(nx, ny)) {
+            GameAudio::play(GameAudio::Cue::Blocked);
             showBattleFeedback(QString::fromUtf8("你无法击败对方。请先提升属性或恢复生命。"));
             break;
         }
         if (runBossBattleAt(nx, ny)) break;
+        GameAudio::play(GameAudio::Cue::Battle);
         const bool knightFight = floorBefore == 32 &&
             MonsterDB::hasIndex(m->GetName(), 24);
 
@@ -3355,6 +3528,7 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
         if (!battlePrefix.isEmpty()) dlg = battlePrefix + "\n" + dlg;
 
         if (fightRes == Game::Fight_GameWin) {
+            GameAudio::play(GameAudio::Cue::Victory);
             // 即使是最终战，也要先提交战斗产生的脚本移动队列。
             startMonsterMovementAnimation();
             ui.mapWidget->update();
@@ -3363,6 +3537,7 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
             gameWin();
             return;
         } else if (fightRes == Game::Fight_PlayerWin) {
+            GameAudio::play(GameAudio::Cue::Victory);
             ui.mapWidget->update();
             updateHUD();
             showBattleFeedback(dlg);
@@ -3390,20 +3565,24 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
         break;
     }
     case Game::Move_NPC: {
+        GameAudio::play(GameAudio::Cue::Dialogue);
         showNPCDialog(nx, ny);
         updateHUD();
         break;
     }
     case Game::Move_Shop:
+        GameAudio::play(GameAudio::Cue::Shop);
         showShopDialog(nx, ny);
         break;
         case Game::Move_StairsUp:
+            GameAudio::play(GameAudio::Cue::Stairs);
             m_game->goUpFloor(nx, ny);
             showOpeningFloorStory(floorBefore, m_game->currentFloor());
             ui.mapWidget->update();
             updateHUD();
             break;
         case Game::Move_StairsDown:
+            GameAudio::play(GameAudio::Cue::Stairs);
             m_game->goDownFloor(nx, ny);
             showOpeningFloorStory(floorBefore, m_game->currentFloor());
             ui.mapWidget->update();
@@ -3418,9 +3597,11 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
 
 void MainWindow::restartGame()
 {
-    delete m_game;
+    if (m_ownsGame) delete m_game;
     m_game = new Game();
+    m_ownsGame = true;
     m_game->loadDefaultMap();
+    m_hudPanelGame = nullptr;
     ui.mapWidget->setGame(m_game);
     ui.mapWidget->update();
     updateHUD();

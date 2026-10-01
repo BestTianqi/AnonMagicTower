@@ -1,0 +1,142 @@
+[
+  {
+    "id": 947,
+    "character": "冰川日菜",
+    "variant": "trained",
+    "path": ":/images/puzzle_cards/card_0947_trained.png",
+    "sourceFile": "hina-hikawa/cards/trained/0947-res017040.png"
+  },
+  {
+    "id": 2323,
+    "character": "千早爱音",
+    "variant": "normal",
+    "path": ":/images/puzzle_cards/card_2323_normal.png",
+    "sourceFile": "anon-chihaya/cards/normal/2323-res037016.png"
+  },
+  {
+    "id": 2287,
+    "character": "千早爱音",
+    "variant": "trained",
+    "path": ":/images/puzzle_cards/card_2287_trained.png",
+    "sourceFile": "anon-chihaya/cards/trained/2287-res037015.png"
+  },
+  {
+    "id": 2203,
+    "character": "千早爱音",
+    "variant": "trained",
+    "path": ":/images/puzzle_cards/card_2203_trained.png",
+    "sourceFile": "anon-chihaya/cards/trained/2203-res037013.png"
+  },
+  {
+    "id": 2289,
+    "character": "长崎素世",
+    "variant": "trained",
+    "path": ":/images/puzzle_cards/card_2289_trained.png",
+    "sourceFile": "soyo-nagasaki/cards/trained/2289-res039014.png"
+  },
+  {
+    "id": 2232,
+    "character": "长崎素世",
+    "variant": "normal",
+    "path": ":/images/puzzle_cards/card_2232_normal.png",
+    "sourceFile": "soyo-nagasaki/cards/normal/2232-res039013.png"
+  },
+  {
+    "id": 2205,
+    "character": "长崎素世",
+    "variant": "trained",
+    "path": ":/images/puzzle_cards/card_2205_trained.png",
+    "sourceFile": "soyo-nagasaki/cards/trained/2205-res039012.png"
+  },
+  {
+    "id": 2291,
+    "character": "高松灯",
+    "variant": "trained",
+    "path": ":/images/puzzle_cards/card_2291_trained.png",
+    "sourceFile": "tomori-takamatsu/cards/trained/2291-res036015.png"
+  },
+  {
+    "id": 2231,
+    "character": "高松灯",
+    "variant": "normal",
+    "path": ":/images/puzzle_cards/card_2231_normal.png",
+    "sourceFile": "tomori-takamatsu/cards/normal/2231-res036014.png"
+  },
+  {
+    "id": 2202,
+    "character": "高松灯",
+    "variant": "trained",
+    "path": ":/images/puzzle_cards/card_2202_trained.png",
+    "sourceFile": "tomori-takamatsu/cards/trained/2202-res036013.png"
+  },
+  {
+    "id": 2288,
+    "character": "要乐奈",
+    "variant": "trained",
+    "path": ":/images/puzzle_cards/card_2288_trained.png",
+    "sourceFile": "rana-kaname/cards/trained/2288-res038013.png"
+  },
+  {
+    "id": 2235,
+    "character": "要乐奈",
+    "variant": "normal",
+    "path": ":/images/puzzle_cards/card_2235_normal.png",
+    "sourceFile": "rana-kaname/cards/normal/2235-res038012.png"
+  },
+  {
+    "id": 2204,
+    "character": "要乐奈",
+    "variant": "trained",
+    "path": ":/images/puzzle_cards/card_2204_trained.png",
+    "sourceFile": "rana-kaname/cards/trained/2204-res038011.png"
+  },
+  {
+    "id": 2417,
+    "character": "椎名立希",
+    "variant": "trained",
+    "path": ":/images/puzzle_cards/card_2417_trained.png",
+    "sourceFile": "taki-shina/cards/trained/2417-res040017.png"
+  },
+  {
+    "id": 2290,
+    "character": "椎名立希",
+    "variant": "normal",
+    "path": ":/images/puzzle_cards/card_2290_normal.png",
+    "sourceFile": "taki-shina/cards/normal/2290-res040014.png"
+  },
+  {
+    "id": 2206,
+    "character": "椎名立希",
+    "variant": "trained",
+    "path": ":/images/puzzle_cards/card_2206_trained.png",
+    "sourceFile": "taki-shina/cards/trained/2206-res040012.png"
+  },
+  {
+    "id": 2492,
+    "character": "凑友希那",
+    "variant": "trained",
+    "path": ":/images/puzzle_cards/card_2492_trained.png",
+    "sourceFile": "yukina-minato/cards/trained/2492-res021087.png"
+  },
+  {
+    "id": 2474,
+    "character": "户山香澄",
+    "variant": "trained",
+    "path": ":/images/puzzle_cards/card_2474_trained.png",
+    "sourceFile": "kasumi-toyama/cards/trained/2474-res001100.png"
+  },
+  {
+    "id": 2475,
+    "character": "弦卷心",
+    "variant": "trained",
+    "path": ":/images/puzzle_cards/card_2475_trained.png",
+    "sourceFile": "kokoro-tsurumaki/cards/trained/2475-res011094.png"
+  },
+  {
+    "id": 2503,
+    "character": "冰川纱夜",
+    "variant": "trained",
+    "path": ":/images/puzzle_cards/card_2503_trained.png",
+    "sourceFile": "sayo-hikawa/cards/trained/2503-res022086.png"
+  }
+]

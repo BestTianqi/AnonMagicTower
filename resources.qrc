@@ -1,5 +1,24 @@
 <RCC>
     <qresource prefix="/">
+        <file>Audio/sfx/menu_select.wav</file>
+        <file>Audio/sfx/step.wav</file>
+        <file>Audio/sfx/door.wav</file>
+        <file>Audio/sfx/pickup.wav</file>
+        <file>Audio/sfx/battle.wav</file>
+        <file>Audio/sfx/victory.wav</file>
+        <file>Audio/sfx/blocked.wav</file>
+        <file>Audio/sfx/stairs.wav</file>
+        <file>Audio/sfx/dialogue.wav</file>
+        <file>Audio/sfx/shop.wav</file>
+        <file>Audio/sfx/puzzle_slide.wav</file>
+        <file>Audio/sfx/undo.wav</file>
+        <file>Audio/sfx/puzzle_solved.wav</file>
+        <file>Audio/sfx/merge_move.wav</file>
+        <file>Audio/sfx/merge_small.wav</file>
+        <file>Audio/sfx/merge_large.wav</file>
+        <file>Audio/sfx/merge_goal.wav</file>
+        <file>Audio/music/haruhikage_8bit.wav</file>
+        <file>Audio/music/killkiss_8bit.wav</file>
         <file>images/backgrounds/anon_soyo_puzzle.jpg</file>
         <!-- 默认地图 -->
         <file>data/classic50_map.txt</file>

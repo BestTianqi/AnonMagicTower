@@ -20,6 +20,8 @@ private slots:
     void onLoadGame();
     void onSettings();
     void onPuzzle();
+    void on2048();
+    void onRhythm();
 
 private:
     void enterGame(class Game* game, bool isNewGame = false);
@@ -30,4 +32,6 @@ private:
     QPixmap m_backgroundImage;
     MainWindow* m_gameWindow = nullptr;
     class SlidingPuzzlePage* m_puzzlePage = nullptr;
+    class Game2048Page* m_mergePage = nullptr;
+    class RhythmGamePage* m_rhythmPage = nullptr;
 };

@@ -1,6 +1,23 @@
 #pragma once
 
 #include <algorithm>
+#include <string>
+#include <string_view>
+
+// Speaking changes an expression, not the other character's identity.
+class StoryPortraitStage {
+public:
+    explicit StoryPortraitStage(std::string_view protagonist) : m_left(protagonist) {}
+    void observe(bool playerSpeaking, std::string_view portrait) {
+        if (portrait.empty()) return;
+        (playerSpeaking ? m_left : m_right) = portrait;
+    }
+    const std::string& left() const { return m_left; }
+    const std::string& right() const { return m_right; }
+private:
+    std::string m_left;
+    std::string m_right;
+};
 
 enum class StoryBackdropSource {
     ExplicitCg,

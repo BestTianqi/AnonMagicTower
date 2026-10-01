@@ -9,8 +9,12 @@
 #include <QLabel>
 #include <QListWidget>
 #include <QMouseEvent>
+#include <QPointer>
 #include <QPushButton>
 #include <QScrollArea>
+#include <QSettings>
+#include <QTemporaryDir>
+#include <QFontDatabase>
 #include <QStandardPaths>
 #include <QTimer>
 #include <algorithm>
@@ -19,12 +23,30 @@
 #include <vector>
 
 #include "Game/Game.h"
+#include "Audio/GameAudio.h"
 #include "UI/MainWindow.h"
 #include "UI/MapWidget.h"
+#include "UI/MenuWindow.h"
+#include "UI/StoryScript.h"
 
 int main(int argc, char** argv)
 {
     QApplication app(argc, argv);
+    // The story-only run never reaches the separate AppData quick-save tests.
+    const bool storyOnly = app.arguments().contains(QStringLiteral("--story-only"));
+    QTemporaryDir storySettings(QDir::currentPath() + "/build/story-ui-settings-XXXXXX");
+    if (storyOnly) {
+        assert(storySettings.isValid());
+        QSettings::setDefaultFormat(QSettings::IniFormat);
+        QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, storySettings.path());
+        QFontDatabase::addApplicationFont(QStringLiteral("C:/Windows/Fonts/msyh.ttc"));
+        const auto opening = storyScene(1);
+        assert(GameAudio::playStoryVoice(QString::fromUtf8(opening[0].speaker),
+                                         QString::fromUtf8(opening[0].text)));
+        assert(GameAudio::playStoryVoice(QString::fromUtf8(opening[1].speaker),
+                                         QString::fromUtf8(opening[1].text)));
+        GameAudio::stopStoryVoice();
+    }
     const QImage highQualityWalkSheet(
         QStringLiteral(":/images/characters/player_outfits/anon_reference_walk_8x8_hq.png"));
     assert(!highQualityWalkSheet.isNull());
@@ -162,6 +184,24 @@ int main(int argc, char** argv)
                      [&]() { ++finishedSignals; });
     window.show();
     QApplication::processEvents();
+
+    // Crossing an ordinary floor tile must not destroy and rebuild the item
+    // panel: that work runs on the animation boundary and causes a visible hitch.
+    auto* stableItemPanel = window.findChild<QWidget*>(QStringLiteral("itemPanel"));
+    assert(stableItemPanel);
+    auto* emptyItemLabel = stableItemPanel->findChild<QLabel*>();
+    assert(emptyItemLabel && emptyItemLabel->text() == QString::fromUtf8("暂无道具"));
+    QPointer<QLabel> stableEmptyItemLabel(emptyItemLabel);
+    QKeyEvent oneStepPress(QEvent::KeyPress, Qt::Key_Right, Qt::NoModifier,
+                           QString(), false, 1);
+    QKeyEvent oneStepRelease(QEvent::KeyRelease, Qt::Key_Right, Qt::NoModifier,
+                             QString(), false, 1);
+    QApplication::sendEvent(&window, &oneStepPress);
+    QApplication::sendEvent(&window, &oneStepRelease);
+    assert(game.player().x == 4);
+    assert(!stableEmptyItemLabel.isNull());
+    game.player().x = 3;
+    mapWidget->snapPlayerToGame();
 
     auto* monsterScroll = window.findChild<QScrollArea*>(QStringLiteral("monsterScroll"));
     assert(monsterScroll);
@@ -467,8 +507,9 @@ int main(int argc, char** argv)
     QTimer::singleShot(800, &storyWait, &QEventLoop::quit);
     storyWait.exec();
     storyKeys.stop();
-    assert(openingPages.size() == 6);
-    const QString guide = openingPages[3] + openingPages[4];
+    const auto openingLength = storyScene(1).size();
+    assert(openingPages.size() == openingLength + 3);
+    const QString guide = openingPages[openingLength] + openingPages[openingLength + 1];
     assert(guide.contains(QString::fromUtf8("方向键")));
     assert(guide.contains(QString::fromUtf8("点击")));
     assert(guide.contains(QString::fromUtf8("点击与当前位置连通的地板、道具、怪物和门")));
@@ -488,9 +529,11 @@ int main(int argc, char** argv)
     floor35StoryGame.activateFloor35Michelle();
     assert(floor35StoryGame.npcAt(7, 6));
     MainWindow floor35StoryWindow(&floor35StoryGame, nullptr, false);
+    floor35StoryWindow.loadAssets();
     floor35StoryWindow.show();
     QApplication::processEvents();
     QStringList floor35Pages;
+    bool sawMichelleDuringAnonLine = false;
     QTimer advanceFloor35;
     advanceFloor35.setInterval(10);
     QObject::connect(&advanceFloor35, &QTimer::timeout, [&]() {
@@ -500,6 +543,22 @@ int main(int argc, char** argv)
         if (!text) return;
         if (floor35Pages.isEmpty() || floor35Pages.back() != text->text())
             floor35Pages.push_back(text->text());
+        if (dialog->findChild<QLabel*>("vnName")->text() == QString::fromUtf8("千早爱音")) {
+            const auto portraits = dialog->findChildren<QLabel*>("vnPortrait");
+            assert(portraits.size() == 2);
+            const QPixmap michelle(":/images/characters/portraits/variants/michelle_caring.png");
+            assert(portraits[1]->pixmap().toImage() == michelle.scaled(portraits[1]->size(),
+                Qt::KeepAspectRatio, Qt::SmoothTransformation).toImage());
+            if (!sawMichelleDuringAnonLine) {
+                advanceFloor35.stop();
+                QEventLoop fade;
+                QTimer::singleShot(220, &fade, &QEventLoop::quit);
+                fade.exec();
+                assert(dialog->grab().save("build/story_floor35_preview.png"));
+                advanceFloor35.start();
+            }
+            sawMichelleDuringAnonLine = true;
+        }
         QKeyEvent nextPage(QEvent::KeyPress, Qt::Key_A, Qt::NoModifier);
         QApplication::sendEvent(dialog, &nextPage);
     });
@@ -508,9 +567,56 @@ int main(int argc, char** argv)
     QApplication::sendEvent(&floor35StoryWindow, &walkToMichelle);
     advanceFloor35.stop();
     assert(!floor35Pages.isEmpty());
+    assert(sawMichelleDuringAnonLine);
+    assert(floor35Pages.join(" ").contains(QString::fromUtf8("撞开")));
     assert(!floor35Pages.join(QStringLiteral(" ")).contains(QString::fromUtf8("摘下粉色熊头套")));
     assert(floor35StoryGame.tileAt(7, 4) == Tile_DarkWall);
     floor35StoryWindow.close();
+
+    if (storyOnly) {
+        // Shortcut entry: no earlier Michelle scenes are assumed or marked as seen.
+        Game finale;
+        finale.generateClassicTower();
+        assert(finale.debugTeleport(50, 6, 5));
+        finale.setTile(6, 5, Tile_Floor);
+        finale.prepareFloor50MichelleReveal();
+        MainWindow finaleWindow(&finale, nullptr, false);
+        finaleWindow.show();
+        QApplication::processEvents();
+        QStringList finalePages;
+        QTimer advanceFinale;
+        advanceFinale.setInterval(10);
+        QObject::connect(&advanceFinale, &QTimer::timeout, [&]() {
+            auto* dialog = qobject_cast<QDialog*>(QApplication::activeModalWidget());
+            if (!dialog) return;
+            auto* body = dialog->findChild<QLabel*>("vnText");
+            if (!body) return;
+            if (finalePages.isEmpty() || finalePages.back() != body->text()) finalePages.push_back(body->text());
+            QKeyEvent advance(QEvent::KeyPress, Qt::Key_A, Qt::NoModifier);
+            QApplication::sendEvent(dialog, &advance);
+        });
+        advanceFinale.start();
+        QKeyEvent meetFinale(QEvent::KeyPress, Qt::Key_Right, Qt::NoModifier);
+        QApplication::sendEvent(&finaleWindow, &meetFinale);
+        advanceFinale.stop();
+        assert(finalePages.size() == int(storyScene(28).size()));
+        assert(finalePages.join(" ").contains(QString::fromUtf8("塔把我没说出口的话")));
+        assert(finale.storyShown("anon_soyo_scene_28"));
+        assert(!finale.storyShown("anon_soyo_scene_23"));
+        assert(finale.monsterAt(7, 6) && !finale.npcAt(7, 5));
+        const std::string storySave = (storySettings.path() + "/story-once.sav").toStdString();
+        assert(finale.saveToFile(storySave));
+        Game restoredFinale;
+        assert(restoredFinale.loadFromFile(storySave));
+        assert(restoredFinale.storyShown("anon_soyo_scene_28"));
+        assert(!restoredFinale.storyShown("anon_soyo_scene_23"));
+        restoredFinale.prepareFloor50MichelleReveal();
+        assert(!restoredFinale.npcAt(7, 5));
+        assert(restoredFinale.monsterAt(7, 6));
+        finaleWindow.close();
+        std::fprintf(stderr, "story-only UI checks passed; no AppData save tests executed\n");
+        return 0;
+    }
 
     Game notebookUiGame;
     assert(notebookUiGame.loadDefaultMap());
@@ -872,6 +978,60 @@ int main(int argc, char** argv)
     dismissQuickLoadPopup.stop();
     assert(quickGame.player().hp == 321);
     assert(!quickLoadPoppedModal);
+
+    // Menu and in-game loading share the same slots, including quick save.
+    quickGame.player().hp = 654;
+    const QString regularDir = QDir(quickDir).filePath("saves");
+    const QString regularPath = QDir(regularDir).filePath("slot_3.sav");
+    assert(quickGame.saveToFile(regularPath.toStdString()));
+    MenuWindow menu;
+    menu.show();
+    auto* menuLoad = menu.findChild<QPushButton*>("menuLoadButton");
+    assert(menuLoad);
+    QTimer::singleShot(0, &menu, [&]() {
+        auto* dialog = qobject_cast<QDialog*>(QApplication::activeModalWidget());
+        assert(dialog && dialog->objectName() == "saveSlotsDialog");
+        assert(dialog->findChild<QListWidget*>()->count() == 11);
+        assert(!dialog->findChild<QPushButton*>("saveSelectedSlot")->isVisible());
+        dialog->findChild<QPushButton*>("closeSaveSlots")->click();
+    });
+    menuLoad->click();
+    assert(!menu.findChild<MainWindow*>() && menuLoad->isVisible());
+    for (const int slot : {0, 3}) {
+        QTimer::singleShot(0, &menu, [&]() {
+            auto* dialog = qobject_cast<QDialog*>(QApplication::activeModalWidget());
+            assert(dialog && dialog->objectName() == "saveSlotsDialog");
+            auto* menuSlots = dialog->findChild<QListWidget*>();
+            auto* load = dialog->findChild<QPushButton*>("loadSelectedSlot");
+            menuSlots->setCurrentRow(10);
+            load->click();
+            assert(dialog->isVisible()); // Empty slots do not leave the menu.
+            menuSlots->setCurrentRow(slot);
+            assert(dialog->grab().save("build/menu_save_slots_preview.png"));
+            load->click();
+        });
+        menuLoad->click();
+        QPointer<MainWindow> gamePage = menu.findChild<MainWindow*>();
+        assert(gamePage && !gamePage->isWindow() && !menuLoad->isVisible());
+        assert(gamePage->findChild<QLabel*>("hpLabel")->text().contains(slot == 0 ? "321" : "654"));
+        QTimer::singleShot(0, &menu, [&]() {
+            auto* dialog = qobject_cast<QDialog*>(QApplication::activeModalWidget());
+            assert(dialog);
+            auto* returnButton = dialog->findChild<QPushButton*>("returnToMenuButton");
+            assert(returnButton);
+            assert(dialog->grab().save("build/game_settings_preview.png"));
+            returnButton->click();
+        });
+        gamePage->findChild<QPushButton*>("settingsButton")->click();
+        QApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QApplication::processEvents();
+        assert(gamePage.isNull());
+        assert(menu.isVisible() && menuLoad->isVisible());
+        assert(!menu.findChild<MainWindow*>());
+    }
+    menu.close();
+    assert(QFile::remove(regularPath));
+    QDir().rmdir(regularDir);
     quickWindow.close();
     assert(QFile::remove(quickPath));
     QDir().rmdir(quickDir);
